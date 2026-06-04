@@ -10,7 +10,8 @@
   var LOTUS_HOST_RE = /^(www\.|shoponline\.|mcprod\.)?lotuss\.com\.my$/i;
   var MAPS_HOST_RE = /^maps\.(googleapis|gstatic)\.com$/i;
   var GOOGLE_MAPS_KEY = '__GOOGLE_MAPS_KEY__';
-  window.__LOTUS_GOOGLE_MAPS_KEY_CONFIGURED = !!(GOOGLE_MAPS_KEY && GOOGLE_MAPS_KEY !== '__GOOGLE_MAPS_KEY__');
+  var GOOGLE_MAPS_KEY_CONFIGURED = /^AIzaSy[A-Za-z0-9_-]+$/.test(GOOGLE_MAPS_KEY);
+  window.__LOTUS_GOOGLE_MAPS_KEY_CONFIGURED = GOOGLE_MAPS_KEY_CONFIGURED;
 
   function rewriteMapsUrl(input) {
     if (typeof input !== 'string' || !input) return input;
@@ -18,7 +19,7 @@
       var raw = input.indexOf('//') === 0 ? location.protocol + input : input;
       var url = new URL(raw, location.href);
       if (!MAPS_HOST_RE.test(url.host)) return input;
-      if (GOOGLE_MAPS_KEY && GOOGLE_MAPS_KEY !== '__GOOGLE_MAPS_KEY__' && url.searchParams.has('key')) {
+      if (GOOGLE_MAPS_KEY_CONFIGURED && url.searchParams.has('key')) {
         url.searchParams.set('key', GOOGLE_MAPS_KEY);
         return url.toString();
       }
