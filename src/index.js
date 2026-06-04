@@ -6,7 +6,6 @@ import {
   handleApiPassthrough,
   handleGraphql,
   handleMapsPassthrough,
-  handlePatchedReactBundle,
 } from './proxy.js';
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
@@ -63,8 +62,6 @@ app.options('/__api/*', (req, res) => {
 app.use('/__api', handleApiPassthrough);
 
 app.use('/__maps', handleMapsPassthrough);
-
-app.get('/__patched-react/*', handlePatchedReactBundle);
 
 app.use('/', createLotusProxy());
 
