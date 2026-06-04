@@ -154,6 +154,9 @@ export function createLotusProxy() {
           // Inject base href + client-side fix script
           html = html.replace(/<head[^>]*>/i, `<head><base href="/"><script>${CLIENT_INJECT}</script>`);
 
+          // Inject hidden commerce config div (CIF reads from DOM)
+          html = html.replace(/<body[^>]*>/i, `<body><div style="display:none" data-cmp-graphql-endpoint="/graphql" data-cmp-store-view="default" data-graphql-endpoint="/graphql"></div>`);
+
           // Strip tracking
           html = html.replace(/<script[^>]*googletagmanager[^>]*>[\s\S]*?<\/script>/gi, '');
           html = html.replace(/<script[^>]*helix-rum-js[^>]*>[\s\S]*?<\/script>/gi, '');
