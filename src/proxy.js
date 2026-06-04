@@ -38,7 +38,7 @@ function rewriteLotusLocation(location) {
 }
 
 const MAX_SOCKETS = parseInt(process.env.MAX_SOCKETS || '24');
-const agent = new https.Agent({ keepAlive: true, maxSockets: MAX_SOCKETS });
+const agent = new https.Agent({ keepAlive: false, maxSockets: MAX_SOCKETS });
 
 // Throttling: serializes upstream requests. A large global gap starves the SPA's
 // data fetches and makes the app time out and redirect to /errors/500, so default to off.
@@ -191,7 +191,6 @@ export function createLotusProxy() {
       Host: targetHost,
       origin: TARGET_ORIGIN,
       referer: TARGET_ORIGIN + '/',
-      'accept-encoding': 'identity',
     },
     on: {
       proxyRes: (proxyRes, req, res) => {
@@ -250,38 +249,33 @@ export function createLotusProxy() {
           const isStatic = isJs || /\.(css|woff2?|ttf|png|jpe?g|gif|svg|ico|webp)(\?|$)/i.test(req.url);
 
           if (req.method === 'GET' && isStatic) {
-            // For large non-JS files, stream without buffering
-            const needsBuffer = isJs;
-            if (!needsBuffer) {
-              const cached = cacheGetStatic(ck);
-              if (cached) { res.writeHead(200, { 'content-type': ct, 'content-length': String(cached.length) }); res.end(cached); proxyRes.resume(); return; }
-              // Stream directly to browser, tee to cache
-              const teeChunks = [];
-              proxyRes.on('data', c => { teeChunks.push(c); res.write(c); });
-              proxyRes.on('end', () => {
-                if (!res.headersSent) return;
-                try { cacheSet(ck, Buffer.concat(teeChunks)); } catch {}
-                res.end();
+            // Buffer static assets and return a fixed Content-Length. This is
+            // friendlier to HTTP/2/HTTP/3 frontends such as Cloudflare than
+            // streaming chunked upstream bodies through the origin.
+            const cached = cacheGetStatic(ck);
+            if (cached) {
+              res.writeHead(200, {
+                'content-type': ct,
+                'content-length': String(cached.length),
+                'cache-control': 'public, max-age=1800',
+                'access-control-allow-origin': '*'
               });
-              proxyRes.on('error', () => { if (!res.headersSent) res.writeHead(502).end(); });
-              const shdr = { 'content-type': ct, 'access-control-allow-origin': '*' };
-              if (proxyRes.headers['content-encoding']) shdr['content-encoding'] = proxyRes.headers['content-encoding'];
-              res.writeHead(status, shdr);
+              res.end(cached);
+              proxyRes.resume();
               return;
             }
-
-            // JS files: buffer for CIF patching
-            const cached = cacheGetStatic(ck);
-            if (cached) { res.writeHead(200, { 'content-type': ct, 'content-length': String(cached.length) }); res.end(cached); proxyRes.resume(); return; }
             const ce = proxyRes.headers['content-encoding'];
             const chunks = [];
             proxyRes.on('data', c => chunks.push(c));
             proxyRes.on('end', () => {
               if (res.headersSent) return;
               let b = Buffer.concat(chunks);
-              // Cheap Buffer scan first; only stringify (expensive on multi-MB
-              // bundles) when the CIF marker is actually present and uncompressed.
-              if (!ce && b.indexOf('commerce API') !== -1) {
+              // Decompress if needed so we can inspect/patch
+              if (ce) {
+                try { b = ce.includes('br') ? zlib.brotliDecompressSync(b) : zlib.gunzipSync(b); } catch {}
+              }
+              // CIF JS patch
+              if (b.indexOf('commerce API') !== -1) {
                 let js = b.toString('utf8');
                 js = js.replace(
                   /!(\w+)\s*\|\|\s*!\1\.graphqlEndpoint\s*\)\s*throw\s+(?:new\s+)?Error\s*\(\s*"The\s+commerce\s+API[^"]*"\)\s*;/gi,
@@ -290,9 +284,12 @@ export function createLotusProxy() {
                 b = Buffer.from(js, 'utf8');
               }
               cacheSet(ck, b);
-              const hdr = { 'content-type': ct, 'content-length': String(b.length), 'access-control-allow-origin': '*' };
-              if (ce) hdr['content-encoding'] = ce;
-              res.writeHead(status, hdr);
+              res.writeHead(status, {
+                'content-type': ct,
+                'content-length': String(b.length),
+                'cache-control': 'public, max-age=1800',
+                'access-control-allow-origin': '*'
+              });
               res.end(b);
             });
             proxyRes.on('error', () => { if (!res.headersSent) res.writeHead(502).end(); });
