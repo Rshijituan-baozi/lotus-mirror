@@ -173,8 +173,8 @@ export function createLotusProxy() {
     changeOrigin: true,
     secure: false,
     agent,
-    proxyTimeout: 15000,
-    timeout: 15000,
+    proxyTimeout: 120000,
+    timeout: 120000,
     selfHandleResponse: true,
     headers: {
       Host: targetHost,
@@ -237,7 +237,27 @@ export function createLotusProxy() {
           const ck = req.method + ':' + req.url;
           const isJs = ct.includes('javascript') || /\.js(\?|$)/i.test(req.url);
           const isStatic = isJs || /\.(css|woff2?|ttf|png|jpe?g|gif|svg|ico|webp)(\?|$)/i.test(req.url);
+
           if (req.method === 'GET' && isStatic) {
+            // For large non-JS files, stream without buffering
+            const needsBuffer = isJs;
+            if (!needsBuffer) {
+              const cached = cacheGetStatic(ck);
+              if (cached) { res.writeHead(200, { 'content-type': ct, 'content-length': String(cached.length) }); res.end(cached); proxyRes.resume(); return; }
+              // Stream directly to browser, tee to cache
+              const teeChunks = [];
+              proxyRes.on('data', c => { teeChunks.push(c); res.write(c); });
+              proxyRes.on('end', () => {
+                if (!res.headersSent) return;
+                try { cacheSet(ck, Buffer.concat(teeChunks)); } catch {}
+                res.end();
+              });
+              proxyRes.on('error', () => { if (!res.headersSent) res.writeHead(502).end(); });
+              res.writeHead(status, { 'content-type': ct, 'access-control-allow-origin': '*' });
+              return;
+            }
+
+            // JS files: buffer for CIF patching
             const cached = cacheGetStatic(ck);
             if (cached) { res.writeHead(200, { 'content-type': ct, 'content-length': String(cached.length) }); res.end(cached); proxyRes.resume(); return; }
             const chunks = [];
@@ -245,10 +265,8 @@ export function createLotusProxy() {
             proxyRes.on('end', () => {
               if (res.headersSent) return;
               let b = Buffer.concat(chunks);
-              // Patch CIF JS: set default config + neutralize error throw
-              if (isJs && b.toString('utf8').indexOf('commerce API') !== -1) {
+              if (b.toString('utf8').indexOf('commerce API') !== -1) {
                 let js = b.toString('utf8');
-                // Match the throw statement and replace with config init
                 js = js.replace(
                   /!(\w+)\s*\|\|\s*!\1\.graphqlEndpoint\s*\)\s*throw\s+(?:new\s+)?Error\s*\(\s*"The\s+commerce\s+API[^"]*"\)\s*;/gi,
                   '$1=$1||{},$1.graphqlEndpoint=$1.graphqlEndpoint||"/graphql",$1.storeView=$1.storeView||"default",0){};'
