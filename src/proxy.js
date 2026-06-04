@@ -12,7 +12,6 @@ const CLIENT_INJECT = fs.readFileSync(new URL('./inject.js', import.meta.url), '
 
 const agent = new https.Agent({ keepAlive: false, maxSockets: 8 });
 
-const CIF_JS_RE = /\/core\/cif\/|clientlib-cif\.|clientlib-cplotus\./i;
 const MODEL_RE = /\.model\.json/i;
 
 function rewriteToAbsolute(html, TARGET_ORIGIN) {
@@ -21,13 +20,10 @@ function rewriteToAbsolute(html, TARGET_ORIGIN) {
     /(<link[^>]*rel=["'](?:stylesheet|icon|shortcut icon|apple-touch-icon)["'][^>]*href=")(\/[^"]*)"/gi,
     '$1' + TARGET_ORIGIN + '$2"'
   );
-  // <script src="..."> → absolute  (BUT skip CIF-related JS, they go through proxy for patching)
+  // <script src="..."> → absolute
   html = html.replace(
-    /(<script[^>]*src=")(\/[^"]*\.js(?:\?[^"]*)?)"/gi,
-    (m, prefix, path) => {
-      if (CIF_JS_RE.test(path)) return prefix + path + '"'; // keep relative, go through proxy
-      return prefix + TARGET_ORIGIN + path + '"'; // absolute CDN
-    }
+    /(<script[^>]*src=")(\/[^"]*")/gi,
+    '$1' + TARGET_ORIGIN + '$2'
   );
   // <img src="..."> → absolute
   html = html.replace(
@@ -93,7 +89,7 @@ export function createLotusProxy() {
         const status = proxyRes.statusCode || 200;
         const ct = String(proxyRes.headers['content-type'] || '');
         const isHtml = ct.includes('text/html');
-        const isCifJs = CIF_JS_RE.test(req.url);
+        // Model JSON: buffer + fix (goes through proxy)
         const isModel = MODEL_RE.test(req.url);
 
         delete proxyRes.headers['content-security-policy'];
@@ -112,31 +108,8 @@ export function createLotusProxy() {
           return;
         }
 
-        // CIF JS: buffer + patch (goes through proxy)
-        if (isCifJs) {
-          const chunks = [];
-          proxyRes.on('data', c => chunks.push(c));
-          proxyRes.on('end', () => {
-            if (res.headersSent) return;
-            let b = Buffer.concat(chunks);
-            const ce = proxyRes.headers['content-encoding'];
-            if (ce) { try { b = ce.includes('br') ? zlib.brotliDecompressSync(b) : zlib.gunzipSync(b); } catch {} }
-            if (b.indexOf('commerce API') !== -1) {
-              let js = b.toString('utf8');
-              js = js.replace(
-                /!(\w+)\s*\|\|\s*!\1\.graphqlEndpoint\s*\)\s*throw\s+(?:new\s+)?Error\s*\(\s*"The\s+commerce\s+API[^"]*"\)\s*;/gi,
-                '$1=$1||{},$1.graphqlEndpoint=$1.graphqlEndpoint||"/graphql",$1.storeView=$1.storeView||"default",0){};'
-              );
-              b = Buffer.from(js, 'utf8');
-            }
-            res.writeHead(status, { 'content-type': 'application/javascript; charset=utf-8', 'content-length': String(b.length) });
-            res.end(b);
-          });
-          proxyRes.on('error', () => { if (!res.headersSent) res.writeHead(502).end(); });
-          return;
-        }
-
         // Model JSON: buffer + fix (goes through proxy)
+        const isModel = MODEL_RE.test(req.url);
         if (isModel && !isHtml) {
           const chunks = [];
           proxyRes.on('data', c => chunks.push(c));
