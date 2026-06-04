@@ -1,4 +1,5 @@
 import { createProxyMiddleware } from 'http-proxy-middleware';
+import crypto from 'crypto';
 import fs from 'fs';
 import https from 'https';
 import zlib from 'zlib';
@@ -35,6 +36,8 @@ const MAPS_HOSTS = new Set([
 const DEFAULT_BFF_KEY = process.env.LOTUS_BFF_KEY ||
   'SeiRQmEDnaZXOlpfKhCjV4Bo2y6vAcW99QKmzifsgP2uCMN7wF3ahRXex84kH6qUVIWoY5Dp0GEljdAvS1JytOZcLbnBTr';
 const GOOGLE_MAPS_KEY = process.env.GOOGLE_MAPS_KEY || '';
+const PATCHED_CACHE_DIR = new URL('../.cache/', import.meta.url);
+fs.mkdirSync(PATCHED_CACHE_DIR, { recursive: true });
 
 const CLIENT_INJECT = fs.readFileSync(new URL('./inject.js', import.meta.url), 'utf8')
   .replace(/__GOOGLE_MAPS_KEY__/g, GOOGLE_MAPS_KEY)
@@ -149,7 +152,14 @@ function fixModelJson(data) {
 function rewriteStaticHtmlUrls(html) {
   // The server should not proxy heavy immutable clientlibs. Load them directly
   // from the origin CDN, while runtime API/model calls remain same-origin.
-  html = html.replace(/(<script\b[^>]*\bsrc=["'])(\/[^"']+)(["'][^>]*>)/gi, `$1${TARGET_ORIGIN}$2$3`);
+  // The React bundle is the exception: it embeds the Google Maps key, so serve a
+  // patched, cached copy instead of a streaming proxy.
+  html = html.replace(/(<script\b[^>]*\bsrc=["'])(\/[^"']+)(["'][^>]*>)/gi, (m, pre, scriptPath, post) => {
+    if (GOOGLE_MAPS_KEY && /clientlib-react\.[^"']+\.js(?:\?|$)/i.test(scriptPath)) {
+      return `${pre}/__patched-react${scriptPath}${post}`;
+    }
+    return `${pre}${TARGET_ORIGIN}${scriptPath}${post}`;
+  });
   html = html.replace(/(<link\b[^>]*\bhref=["'])(\/[^"']+)(["'][^>]*>)/gi, `$1${TARGET_ORIGIN}$2$3`);
   html = html.replace(/(<img\b[^>]*\bsrc=["'])(\/[^"']+)(["'][^>]*>)/gi, `$1${TARGET_ORIGIN}$2$3`);
   html = html.replace(/(<source\b[^>]*\bsrc=["'])(\/[^"']+)(["'][^>]*>)/gi, `$1${TARGET_ORIGIN}$2$3`);
@@ -287,6 +297,90 @@ export function handleMapsPassthrough(req, res) {
   r.on('timeout', () => r.destroy(new Error('maps timeout')));
   r.on('error', () => { if (!res.headersSent) { res.writeHead(502, { 'content-type': 'text/plain; charset=utf-8' }); res.end('maps upstream error'); } });
   req.pipe(r);
+}
+
+function fetchUpstreamBuffer(path) {
+  return new Promise((resolve, reject) => {
+    const r = https.request({
+      hostname: TARGET_HOST,
+      port: 443,
+      path,
+      method: 'GET',
+      agent,
+      timeout: TIMEOUT_MS,
+      headers: {
+        Host: TARGET_HOST,
+        Referer: TARGET_ORIGIN + '/',
+        Origin: TARGET_ORIGIN,
+        'Accept-Encoding': 'identity',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36',
+      },
+    }, pRes => {
+      const chunks = [];
+      pRes.on('data', c => chunks.push(c));
+      pRes.on('end', () => {
+        const body = decodeBody(Buffer.concat(chunks), pRes.headers['content-encoding']);
+        resolve({ status: pRes.statusCode || 200, headers: pRes.headers, body });
+      });
+    });
+    r.on('timeout', () => r.destroy(new Error('patched react timeout')));
+    r.on('error', reject);
+    r.end();
+  });
+}
+
+export async function handlePatchedReactBundle(req, res) {
+  try {
+    const upstreamPath = req.url.replace(/^\/__patched-react/, '') || '';
+    if (
+      !upstreamPath.startsWith('/etc.clientlibs/') ||
+      !/clientlib-react\.[^/]+\.js(?:\?|$)/i.test(upstreamPath)
+    ) {
+      res.writeHead(404);
+      res.end('not found');
+      return;
+    }
+    if (!GOOGLE_MAPS_KEY) {
+      res.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });
+      res.end('GOOGLE_MAPS_KEY is not configured');
+      return;
+    }
+
+    const cacheName = crypto.createHash('sha256')
+      .update(upstreamPath + '\n' + GOOGLE_MAPS_KEY)
+      .digest('hex') + '.js';
+    const cacheFile = new URL(cacheName, PATCHED_CACHE_DIR);
+
+    let body;
+    try {
+      body = await fs.promises.readFile(cacheFile);
+    } catch {
+      const upstream = await fetchUpstreamBuffer(upstreamPath);
+      if (upstream.status >= 400) {
+        res.writeHead(upstream.status, { 'content-type': 'text/plain; charset=utf-8' });
+        res.end('upstream error');
+        return;
+      }
+      const patched = upstream.body
+        .toString('utf8')
+        .replace(/AIzaSy[A-Za-z0-9_-]{20,}/g, GOOGLE_MAPS_KEY);
+      body = Buffer.from(patched, 'utf8');
+      await fs.promises.writeFile(cacheFile, body);
+    }
+
+    res.writeHead(200, {
+      'content-type': 'application/javascript; charset=utf-8',
+      'content-length': String(body.length),
+      'cache-control': 'public, max-age=1800',
+      'access-control-allow-origin': '*',
+    });
+    res.end(body);
+  } catch (err) {
+    if (!res.headersSent) {
+      res.writeHead(502, { 'content-type': 'text/plain; charset=utf-8' });
+      res.end('patched react error');
+    }
+  }
 }
 
 export function createLotusProxy() {

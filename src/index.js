@@ -1,7 +1,13 @@
 import 'dotenv/config';
 import express from 'express';
 import http from 'http';
-import { createLotusProxy, handleApiPassthrough, handleGraphql, handleMapsPassthrough } from './proxy.js';
+import {
+  createLotusProxy,
+  handleApiPassthrough,
+  handleGraphql,
+  handleMapsPassthrough,
+  handlePatchedReactBundle,
+} from './proxy.js';
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const app = express();
@@ -57,6 +63,8 @@ app.options('/__api/*', (req, res) => {
 app.use('/__api', handleApiPassthrough);
 
 app.use('/__maps', handleMapsPassthrough);
+
+app.get('/__patched-react/*', handlePatchedReactBundle);
 
 app.use('/', createLotusProxy());
 
