@@ -1,4 +1,5 @@
 import { createProxyMiddleware } from 'http-proxy-middleware';
+import fs from 'fs';
 import https from 'https';
 import zlib from 'zlib';
 
@@ -6,7 +7,70 @@ const TARGET = 'https://www.lotuss.com.my';
 const TARGET_ORIGIN = 'https://www.lotuss.com.my';
 const targetHost = new URL(TARGET).host;
 
+const CLIENT_INJECT = fs.readFileSync(new URL('./inject.js', import.meta.url), 'utf8')
+  .replace(/<\/script/gi, '<\\/script');
+
 const agent = new https.Agent({ keepAlive: false, maxSockets: 8 });
+
+const CIF_JS_RE = /\/core\/cif\/|clientlib-cif\.|clientlib-cplotus\./i;
+const MODEL_RE = /\.model\.json/i;
+
+function rewriteToAbsolute(html, TARGET_ORIGIN) {
+  // <link rel="stylesheet|icon" href="..."> → absolute
+  html = html.replace(
+    /(<link[^>]*rel=["'](?:stylesheet|icon|shortcut icon|apple-touch-icon)["'][^>]*href=")(\/[^"]*)"/gi,
+    '$1' + TARGET_ORIGIN + '$2"'
+  );
+  // <script src="..."> → absolute  (BUT skip CIF-related JS, they go through proxy for patching)
+  html = html.replace(
+    /(<script[^>]*src=")(\/[^"]*\.js(?:\?[^"]*)?)"/gi,
+    (m, prefix, path) => {
+      if (CIF_JS_RE.test(path)) return prefix + path + '"'; // keep relative, go through proxy
+      return prefix + TARGET_ORIGIN + path + '"'; // absolute CDN
+    }
+  );
+  // <img src="..."> → absolute
+  html = html.replace(
+    /(<img[^>]*src=")(\/[^"]*)"/gi,
+    '$1' + TARGET_ORIGIN + '$2"'
+  );
+  // srcset → absolute
+  html = html.replace(
+    /(<(?:img|source)[^>]*srcset=")(\/[^"]*)"/gi,
+    '$1' + TARGET_ORIGIN + '$2"'
+  );
+  // video poster → absolute
+  html = html.replace(
+    /(<video[^>]*poster=")(\/[^"]*)"/gi,
+    '$1' + TARGET_ORIGIN + '$2"'
+  );
+  // inline CSS url() → absolute
+  html = html.replace(
+    /url\((["']?)(\/[^"')]+)\1\)/gi,
+    'url($1' + TARGET_ORIGIN + '$2$1)'
+  );
+  return html;
+}
+
+function fixModelJson(data) {
+  if (!data || typeof data !== 'object') return;
+  if (data.title === '404' || (data[':path'] && data[':path'].indexOf('errors') !== -1)) {
+    data.title = "Lotus's Shop Online";
+    data[':path'] = '/en/home';
+  }
+  function walk(obj) {
+    if (!obj || typeof obj !== 'object') return;
+    if (Array.isArray(obj)) { obj.forEach(walk); return; }
+    if (obj.endpoint && typeof obj.endpoint === 'string') {
+      obj.endpoint = obj.endpoint.replace(/https?:\/\/mcprod\.lotuss\.com\.my\/graphql/gi, '/graphql')
+        .replace(/https?:\/\/mcprod\.lotuss\.com\.my/gi, '');
+    }
+    if (!obj['cq:cifHttpEndpoint']) obj['cq:cifHttpEndpoint'] = '/graphql';
+    if (!obj['cq:cifStoreView']) obj['cq:cifStoreView'] = 'default';
+    Object.keys(obj).forEach(k => walk(obj[k]));
+  }
+  walk(data);
+}
 
 export function createLotusProxy() {
   return createProxyMiddleware({
@@ -29,6 +93,8 @@ export function createLotusProxy() {
         const status = proxyRes.statusCode || 200;
         const ct = String(proxyRes.headers['content-type'] || '');
         const isHtml = ct.includes('text/html');
+        const isCifJs = CIF_JS_RE.test(req.url);
+        const isModel = MODEL_RE.test(req.url);
 
         delete proxyRes.headers['content-security-policy'];
         delete proxyRes.headers['x-frame-options'];
@@ -46,7 +112,50 @@ export function createLotusProxy() {
           return;
         }
 
-        // Non-HTML: just pipe (shouldn't happen with base tag redirect, but handle it)
+        // CIF JS: buffer + patch (goes through proxy)
+        if (isCifJs) {
+          const chunks = [];
+          proxyRes.on('data', c => chunks.push(c));
+          proxyRes.on('end', () => {
+            if (res.headersSent) return;
+            let b = Buffer.concat(chunks);
+            const ce = proxyRes.headers['content-encoding'];
+            if (ce) { try { b = ce.includes('br') ? zlib.brotliDecompressSync(b) : zlib.gunzipSync(b); } catch {} }
+            if (b.indexOf('commerce API') !== -1) {
+              let js = b.toString('utf8');
+              js = js.replace(
+                /!(\w+)\s*\|\|\s*!\1\.graphqlEndpoint\s*\)\s*throw\s+(?:new\s+)?Error\s*\(\s*"The\s+commerce\s+API[^"]*"\)\s*;/gi,
+                '$1=$1||{},$1.graphqlEndpoint=$1.graphqlEndpoint||"/graphql",$1.storeView=$1.storeView||"default",0){};'
+              );
+              b = Buffer.from(js, 'utf8');
+            }
+            res.writeHead(status, { 'content-type': 'application/javascript; charset=utf-8', 'content-length': String(b.length) });
+            res.end(b);
+          });
+          proxyRes.on('error', () => { if (!res.headersSent) res.writeHead(502).end(); });
+          return;
+        }
+
+        // Model JSON: buffer + fix (goes through proxy)
+        if (isModel && !isHtml) {
+          const chunks = [];
+          proxyRes.on('data', c => chunks.push(c));
+          proxyRes.on('end', () => {
+            if (res.headersSent) return;
+            try {
+              let body = Buffer.concat(chunks).toString('utf8');
+              let data = JSON.parse(body);
+              fixModelJson(data);
+              body = Buffer.from(JSON.stringify(data), 'utf8');
+              res.writeHead(status, { 'content-type': 'application/json', 'content-length': String(body.length) });
+              res.end(body);
+            } catch { if (!res.headersSent) { res.writeHead(status, { 'content-type': ct }); res.end(Buffer.concat(chunks)); } }
+          });
+          proxyRes.on('error', () => { if (!res.headersSent) res.writeHead(502).end(); });
+          return;
+        }
+
+        // Non-HTML: pipe through (CSS/images/other JS from CDN shouldn't come here, but handle anyway)
         if (!isHtml) {
           const headers = {};
           Object.keys(proxyRes.headers).forEach(k => {
@@ -57,54 +166,21 @@ export function createLotusProxy() {
           return;
         }
 
-        // HTML: rewrite resource URLs to absolute CDN, keep nav URLs relative
-        const chunks = [];
-        proxyRes.on('data', c => chunks.push(c));
+        // HTML: rewrite, inject, serve
+        const htmlChunks = [];
+        proxyRes.on('data', c => htmlChunks.push(c));
         proxyRes.on('end', () => {
           if (res.headersSent) return;
-          let body = Buffer.concat(chunks);
+          let body = Buffer.concat(htmlChunks);
           const ce = proxyRes.headers['content-encoding'];
           if (ce) { try { body = ce.includes('br') ? zlib.brotliDecompressSync(body) : zlib.gunzipSync(body); } catch {} }
           let html = body.toString('utf8');
 
-          // Rewrite CSS/JS/image resource URLs to absolute CDN
-          // <link rel="stylesheet" href="...">  → absolute
-          html = html.replace(
-            /(<link[^>]*rel=["']stylesheet["'][^>]*href=")(\/[^"]*)"/gi,
-            '$1' + TARGET_ORIGIN + '$2"'
-          );
-          // <link rel="icon" href="...">  → absolute
-          html = html.replace(
-            /(<link[^>]*rel=["'](?:icon|shortcut icon|apple-touch-icon)["'][^>]*href=")(\/[^"]*)"/gi,
-            '$1' + TARGET_ORIGIN + '$2"'
-          );
-          // <script src="...">  → absolute
-          html = html.replace(
-            /(<script[^>]*src=")(\/[^"]*)"/gi,
-            '$1' + TARGET_ORIGIN + '$2"'
-          );
-          // <img src="..."> and srcset="..."  → absolute
-          html = html.replace(
-            /(<img[^>]*src=")(\/[^"]*)"/gi,
-            '$1' + TARGET_ORIGIN + '$2"'
-          );
-          html = html.replace(
-            /(<img[^>]*srcset=")(\/[^"]*)"/gi,
-            '$1' + TARGET_ORIGIN + '$2"'
-          );
-          // <source srcset="..." or <video poster="..."> → absolute
-          html = html.replace(
-            /((?:source|video)[^>]*(?:srcset|poster)=")(\/[^"]*)"/gi,
-            '$1' + TARGET_ORIGIN + '$2"'
-          );
-          // CSS url(...) paths in inline <style> → absolute
-          html = html.replace(
-            /url\((["']?)(\/[^"')]+)\1\)/gi,
-            'url($1' + TARGET_ORIGIN + '$2$1)'
-          );
+          // Rewrite resource URLs to absolute CDN (except CIF JS stays relative)
+          html = rewriteToAbsolute(html, TARGET_ORIGIN);
 
-          // Inject base href for navigation to stay in proxy
-          html = html.replace(/<head[^>]*>/i, '<head><base href="/">');
+          // Inject base href + client-side fix script
+          html = html.replace(/<head[^>]*>/i, `<head><base href="/"><script>${CLIENT_INJECT}</script>`);
 
           // Strip tracking
           html = html.replace(/<script[^>]*googletagmanager[^>]*>[\s\S]*?<\/script>/gi, '');
