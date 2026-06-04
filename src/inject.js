@@ -11,7 +11,12 @@
   var MAPS_HOST_RE = /^maps\.(googleapis|gstatic)\.com$/i;
   var GOOGLE_MAPS_KEY = '__GOOGLE_MAPS_KEY__';
   var GOOGLE_MAPS_KEY_CONFIGURED = /^AIzaSy[A-Za-z0-9_-]+$/.test(GOOGLE_MAPS_KEY);
+  var DEFAULT_MAP_CENTER = { lat: 3.139003, lng: 101.686855 };
   window.__LOTUS_GOOGLE_MAPS_KEY_CONFIGURED = GOOGLE_MAPS_KEY_CONFIGURED;
+
+  function isGoogleMapsApiUrl(url) {
+    return url && /^maps\.googleapis\.com$/i.test(url.host) && /^\/maps\/api\/js$/i.test(url.pathname);
+  }
 
   function rewriteMapsUrl(input) {
     if (typeof input !== 'string' || !input) return input;
@@ -21,9 +26,9 @@
       if (!MAPS_HOST_RE.test(url.host)) return input;
       if (GOOGLE_MAPS_KEY_CONFIGURED && url.searchParams.has('key')) {
         url.searchParams.set('key', GOOGLE_MAPS_KEY);
-        return url.toString();
       }
-      return input;
+      if (isGoogleMapsApiUrl(url) && !url.searchParams.has('v')) url.searchParams.set('v', 'weekly');
+      return url.toString();
     } catch (e) {}
     return input;
   }
@@ -158,6 +163,53 @@
       });
     }).observe(document.documentElement, { childList: true, subtree: true });
   } catch (e) {}
+
+  function toFiniteLatLng(value) {
+    if (!value) return null;
+    if (typeof value.lat === 'function' && typeof value.lng === 'function') {
+      var fnLat = Number(value.lat());
+      var fnLng = Number(value.lng());
+      if (isFinite(fnLat) && isFinite(fnLng)) return value;
+    }
+    var lat = Number(value.lat);
+    var lng = Number(value.lng);
+    if (isFinite(lat) && isFinite(lng)) return { lat: lat, lng: lng };
+    return null;
+  }
+
+  function patchGoogleMapsCenter() {
+    var maps = window.google && window.google.maps;
+    if (!maps || !maps.Map || maps.Map.__lotusCenterPatched) return false;
+
+    var OriginalMap = maps.Map;
+    var originalSetCenter = OriginalMap.prototype && OriginalMap.prototype.setCenter;
+    if (!originalSetCenter) return false;
+
+    function PatchedMap(element, options) {
+      if (options && options.center && !toFiniteLatLng(options.center)) {
+        options = Object.assign({}, options, { center: DEFAULT_MAP_CENTER });
+      }
+      return new OriginalMap(element, options);
+    }
+
+    Object.keys(OriginalMap).forEach(function(key) {
+      try { PatchedMap[key] = OriginalMap[key]; } catch (e) {}
+    });
+    PatchedMap.prototype = OriginalMap.prototype;
+    PatchedMap.__lotusCenterPatched = true;
+
+    OriginalMap.prototype.setCenter = function(center) {
+      return originalSetCenter.call(this, toFiniteLatLng(center) || DEFAULT_MAP_CENTER);
+    };
+
+    maps.Map = PatchedMap;
+    return true;
+  }
+
+  var mapsPatchTimer = setInterval(function() {
+    if (patchGoogleMapsCenter()) clearInterval(mapsPatchTimer);
+  }, 50);
+  setTimeout(function() { clearInterval(mapsPatchTimer); }, 15000);
 
   function preventKnownNoise(e) {
     var msg = (e && (e.message || (e.reason && e.reason.message) || String(e.reason || ''))) || '';
