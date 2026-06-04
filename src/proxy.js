@@ -5,61 +5,131 @@ import zlib from 'zlib';
 
 const TARGET = 'https://www.lotuss.com.my';
 const TARGET_ORIGIN = 'https://www.lotuss.com.my';
-const targetHost = new URL(TARGET).host;
+const TARGET_HOST = new URL(TARGET).host;
+
+const MAX_SOCKETS = parseInt(process.env.MAX_SOCKETS || '32', 10);
+const TIMEOUT_MS = parseInt(process.env.UPSTREAM_TIMEOUT || '120000', 10);
+
+const agent = new https.Agent({ keepAlive: true, maxSockets: MAX_SOCKETS });
+const apiAgent = new https.Agent({ keepAlive: true, maxSockets: MAX_SOCKETS });
+const magentoAgent = new https.Agent({ keepAlive: true, maxSockets: MAX_SOCKETS });
+
+const LOTUS_HOST_RE = /^(?:www\.|shoponline\.|mcprod\.)?lotuss\.com\.my$/i;
+const LOTUS_DOMAIN_RE = /(?:https?:)?\/\/(?:www\.|shoponline\.|mcprod\.)?lotuss\.com\.my/gi;
+const STATIC_RE = /\.(js|mjs|css|woff2?|ttf|otf|eot|png|jpe?g|gif|svg|ico|webp|avif|map)(\?|$)/i;
+const MODEL_RE = /\.model\.json(?:\?|$)/i;
+
+export const API_HOSTS = new Set([
+  'api-o2o.lotuss.com.my',
+  'api-customer.lotuss.com.my',
+  'shoponline-bffapi.lotuss.com.my',
+]);
+
+// Public value embedded in the upstream storefront bundle. Keep it as a fallback
+// for API calls whose headers are stripped by a browser/proxy.
+const DEFAULT_BFF_KEY = process.env.LOTUS_BFF_KEY ||
+  'SeiRQmEDnaZXOlpfKhCjV4Bo2y6vAcW99QKmzifsgP2uCMN7wF3ahRXex84kH6qUVIWoY5Dp0GEljdAvS1JytOZcLbnBTr';
 
 const CLIENT_INJECT = fs.readFileSync(new URL('./inject.js', import.meta.url), 'utf8')
   .replace(/<\/script/gi, '<\\/script');
 
-const agent = new https.Agent({ keepAlive: false, maxSockets: 8 });
+const HOP_BY_HOP = new Set([
+  'connection',
+  'keep-alive',
+  'proxy-authenticate',
+  'proxy-authorization',
+  'te',
+  'trailer',
+  'transfer-encoding',
+  'upgrade',
+]);
 
-const MODEL_RE = /\.model\.json/i;
+const cache = new Map();
+const CACHE_MAX = 2000;
+const HTML_TTL = 60 * 1000;
+const STATIC_TTL = 30 * 60 * 1000;
 
-function rewriteToAbsolute(html, TARGET_ORIGIN) {
-  // <link rel="stylesheet|icon" href="..."> → absolute
-  html = html.replace(
-    /(<link[^>]*rel=["'](?:stylesheet|icon|shortcut icon|apple-touch-icon)["'][^>]*href=")(\/[^"]*)"/gi,
-    '$1' + TARGET_ORIGIN + '$2"'
-  );
-  // <script src="..."> → absolute
-  html = html.replace(
-    /(<script[^>]*src=")(\/[^"]*")/gi,
-    '$1' + TARGET_ORIGIN + '$2'
-  );
-  // <img src="..."> → absolute
-  html = html.replace(
-    /(<img[^>]*src=")(\/[^"]*)"/gi,
-    '$1' + TARGET_ORIGIN + '$2"'
-  );
-  // srcset → absolute
-  html = html.replace(
-    /(<(?:img|source)[^>]*srcset=")(\/[^"]*)"/gi,
-    '$1' + TARGET_ORIGIN + '$2"'
-  );
-  // video poster → absolute
-  html = html.replace(
-    /(<video[^>]*poster=")(\/[^"]*)"/gi,
-    '$1' + TARGET_ORIGIN + '$2"'
-  );
-  // inline CSS url() → absolute
-  html = html.replace(
-    /url\((["']?)(\/[^"')]+)\1\)/gi,
-    'url($1' + TARGET_ORIGIN + '$2$1)'
-  );
-  return html;
+function cacheGet(key, ttl) {
+  const e = cache.get(key);
+  if (!e || Date.now() - e.ts > ttl) return null;
+  return e.data;
+}
+
+function cacheSet(key, data) {
+  if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value);
+  cache.set(key, { data, ts: Date.now() });
+}
+
+function cleanResponseHeaders(headers) {
+  const h = { ...headers };
+  for (const k of Object.keys(h)) {
+    const lk = k.toLowerCase();
+    if (HOP_BY_HOP.has(lk)) delete h[k];
+  }
+  delete h['content-security-policy'];
+  delete h['content-security-policy-report-only'];
+  delete h['x-frame-options'];
+  delete h['x-content-type-options'];
+  delete h['content-length'];
+  return h;
+}
+
+function rewriteLocation(location) {
+  const value = String(location || '');
+  try {
+    const u = new URL(value, TARGET_ORIGIN);
+    if (LOTUS_HOST_RE.test(u.host)) return `${u.pathname}${u.search}${u.hash}` || '/';
+  } catch {}
+  return value.replace(LOTUS_DOMAIN_RE, '') || '/';
+}
+
+function decodeBody(buffer, encoding) {
+  if (!encoding) return buffer;
+  try {
+    if (String(encoding).includes('br')) return zlib.brotliDecompressSync(buffer);
+    if (String(encoding).includes('gzip')) return zlib.gunzipSync(buffer);
+    if (String(encoding).includes('deflate')) return zlib.inflateSync(buffer);
+  } catch {}
+  return buffer;
+}
+
+function readRequestBody(req, cb) {
+  const chunks = [];
+  req.on('data', c => chunks.push(c));
+  req.on('end', () => cb(Buffer.concat(chunks)));
+}
+
+function makeForwardHeaders(req, host, extra = {}) {
+  const headers = {};
+  for (const [k, v] of Object.entries(req.headers)) {
+    const lk = k.toLowerCase();
+    if (HOP_BY_HOP.has(lk) || lk === 'host' || lk === 'content-length') continue;
+    headers[k] = v;
+  }
+  headers.Host = host;
+  headers.Origin = `https://${host}`;
+  headers.Referer = `https://${host}/`;
+  headers['User-Agent'] = headers['user-agent'] || headers['User-Agent'] ||
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36';
+  Object.assign(headers, extra);
+  return headers;
 }
 
 function fixModelJson(data) {
   if (!data || typeof data !== 'object') return;
-  if (data.title === '404' || (data[':path'] && data[':path'].indexOf('errors') !== -1)) {
+  if (data.title === '404' || (data[':path'] && String(data[':path']).includes('errors'))) {
     data.title = "Lotus's Shop Online";
     data[':path'] = '/en/home';
   }
   function walk(obj) {
     if (!obj || typeof obj !== 'object') return;
     if (Array.isArray(obj)) { obj.forEach(walk); return; }
-    if (obj.endpoint && typeof obj.endpoint === 'string') {
-      obj.endpoint = obj.endpoint.replace(/https?:\/\/mcprod\.lotuss\.com\.my\/graphql/gi, '/graphql')
-        .replace(/https?:\/\/mcprod\.lotuss\.com\.my/gi, '');
+    for (const key of ['endpoint', 'commerceEndpoint', 'graphqlEndpoint', 'url']) {
+      if (typeof obj[key] === 'string') {
+        obj[key] = obj[key]
+          .replace(/https?:\/\/mcprod\.lotuss\.com\.my\/graphql/gi, '/graphql')
+          .replace(/https?:\/\/mcprod\.lotuss\.com\.my/gi, '');
+      }
     }
     if (!obj['cq:cifHttpEndpoint']) obj['cq:cifHttpEndpoint'] = '/graphql';
     if (!obj['cq:cifStoreView']) obj['cq:cifStoreView'] = 'default';
@@ -68,113 +138,214 @@ function fixModelJson(data) {
   walk(data);
 }
 
+function rewriteStaticHtmlUrls(html) {
+  // The server should not proxy heavy immutable clientlibs. Load them directly
+  // from the origin CDN, while runtime API/model calls remain same-origin.
+  html = html.replace(/(<script\b[^>]*\bsrc=["'])(\/[^"']+)(["'][^>]*>)/gi, `$1${TARGET_ORIGIN}$2$3`);
+  html = html.replace(/(<link\b[^>]*\bhref=["'])(\/[^"']+)(["'][^>]*>)/gi, `$1${TARGET_ORIGIN}$2$3`);
+  html = html.replace(/(<img\b[^>]*\bsrc=["'])(\/[^"']+)(["'][^>]*>)/gi, `$1${TARGET_ORIGIN}$2$3`);
+  html = html.replace(/(<source\b[^>]*\bsrc=["'])(\/[^"']+)(["'][^>]*>)/gi, `$1${TARGET_ORIGIN}$2$3`);
+  html = html.replace(/(<video\b[^>]*\bposter=["'])(\/[^"']+)(["'][^>]*>)/gi, `$1${TARGET_ORIGIN}$2$3`);
+  html = html.replace(/(\bsrcset=["'])([^"']+)(["'])/gi, (_, pre, value, post) => {
+    const rewritten = value.split(',').map(part => {
+      const p = part.trim();
+      if (!p.startsWith('/')) return p;
+      const pieces = p.split(/\s+/);
+      pieces[0] = TARGET_ORIGIN + pieces[0];
+      return pieces.join(' ');
+    }).join(', ');
+    return `${pre}${rewritten}${post}`;
+  });
+  return html;
+}
+
+function patchHtml(html) {
+  html = rewriteStaticHtmlUrls(html);
+  html = html.replace(/<script[^>]*(googletagmanager|helix-rum-js|facebook|dtm-drcn|dynatrace)[^>]*>[\s\S]*?<\/script>/gi, '');
+  html = html.replace(/<link[^>]*manifest["'][^>]*>/gi, '');
+
+  const headPatch = `<base href="/"><script>${CLIENT_INJECT}</script>`;
+  if (/<head[^>]*>/i.test(html)) {
+    html = html.replace(/<head([^>]*)>/i, (m) => `${m}${headPatch}`);
+  } else {
+    html = headPatch + html;
+  }
+
+  const bodyPatch = '<div style="display:none" data-cmp-graphql-endpoint="/graphql" data-cmp-store-view="default" data-graphql-endpoint="/graphql"></div>';
+  if (/<body[^>]*>/i.test(html)) {
+    html = html.replace(/<body([^>]*)>/i, (m) => `${m}${bodyPatch}`);
+  }
+  return html;
+}
+
+export function handleGraphql(req, res) {
+  readRequestBody(req, body => {
+    const qsIndex = req.url.indexOf('?');
+    const path = '/graphql' + (qsIndex >= 0 ? req.url.slice(qsIndex) : '');
+    const headers = makeForwardHeaders(req, 'mcprod.lotuss.com.my', {
+      'Content-Type': req.headers['content-type'] || 'application/json',
+      Store: req.headers.store || 'default',
+      Accept: req.headers.accept || 'application/json',
+    });
+    if (body.length) headers['Content-Length'] = String(body.length);
+
+    const r = https.request({ hostname: 'mcprod.lotuss.com.my', port: 443, path, method: req.method, headers, agent: magentoAgent, timeout: TIMEOUT_MS }, pRes => {
+      const h = cleanResponseHeaders(pRes.headers);
+      h['access-control-allow-origin'] = '*';
+      h['access-control-allow-credentials'] = 'true';
+      res.writeHead(pRes.statusCode || 502, h);
+      pRes.pipe(res);
+    });
+    r.on('timeout', () => r.destroy(new Error('graphql timeout')));
+    r.on('error', () => { if (!res.headersSent) { res.writeHead(502, { 'content-type': 'application/json' }); res.end('{"error":"upstream"}'); } });
+    if (body.length) r.write(body);
+    r.end();
+  });
+}
+
+export function handleApiPassthrough(req, res) {
+  const m = req.url.match(/^\/([^/]+)(\/[^?]*)?(\?.*)?$/);
+  if (!m) { res.writeHead(400); res.end('bad api path'); return; }
+  const host = m[1];
+  if (!API_HOSTS.has(host)) { res.writeHead(403); res.end('host not allowed'); return; }
+  const path = (m[2] || '/') + (m[3] || '');
+
+  readRequestBody(req, body => {
+    const headers = makeForwardHeaders(req, host, {
+      Accept: req.headers.accept || 'application/json',
+      key: req.headers.key || DEFAULT_BFF_KEY,
+      channel: req.headers.channel || 'web',
+      version: req.headers.version || '1.0.0',
+    });
+    if (body.length) headers['Content-Length'] = String(body.length);
+
+    const r = https.request({ hostname: host, port: 443, path, method: req.method, headers, agent: apiAgent, timeout: TIMEOUT_MS }, pRes => {
+      const h = cleanResponseHeaders(pRes.headers);
+      h['access-control-allow-origin'] = '*';
+      h['access-control-allow-credentials'] = 'true';
+      res.writeHead(pRes.statusCode || 502, h);
+      pRes.pipe(res);
+    });
+    r.on('timeout', () => r.destroy(new Error('api timeout')));
+    r.on('error', () => { if (!res.headersSent) { res.writeHead(502, { 'content-type': 'application/json' }); res.end('{"error":"upstream"}'); } });
+    if (body.length) r.write(body);
+    r.end();
+  });
+}
+
 export function createLotusProxy() {
   return createProxyMiddleware({
     target: TARGET,
     changeOrigin: true,
-    secure: false,
+    secure: true,
     agent,
-    proxyTimeout: 30000,
-    timeout: 30000,
+    proxyTimeout: TIMEOUT_MS,
+    timeout: TIMEOUT_MS,
     selfHandleResponse: true,
     headers: {
-      Host: targetHost,
-      origin: TARGET_ORIGIN,
-      referer: TARGET_ORIGIN + '/',
-      'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
+      Host: TARGET_HOST,
+      Origin: TARGET_ORIGIN,
+      Referer: TARGET_ORIGIN + '/',
+      'Accept-Encoding': 'identity',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36',
     },
     on: {
       proxyRes: (proxyRes, req, res) => {
         if (res.headersSent) { proxyRes.resume(); return; }
         const status = proxyRes.statusCode || 200;
         const ct = String(proxyRes.headers['content-type'] || '');
-        const isHtml = ct.includes('text/html');
-        // Model JSON: buffer + fix (goes through proxy)
-        const isModel = MODEL_RE.test(req.url);
 
-        delete proxyRes.headers['content-security-policy'];
-        delete proxyRes.headers['x-frame-options'];
-
-        // Redirects
-        if (status >= 300 && status < 400 && proxyRes.headers['location']) {
-          const h = {};
-          Object.keys(proxyRes.headers).forEach(k => {
-            if (k !== 'transfer-encoding' && k !== 'content-length') h[k] = proxyRes.headers[k];
-          });
-          h.location = proxyRes.headers['location'].replace(/https?:\/\/[^/]*lotuss\.com\.my/gi, '');
+        if (status >= 300 && status < 400 && proxyRes.headers.location) {
+          const h = cleanResponseHeaders(proxyRes.headers);
+          h.location = rewriteLocation(proxyRes.headers.location);
           res.writeHead(status, h);
           proxyRes.resume();
           res.end();
           return;
         }
 
-        // Model JSON: buffer + fix (goes through proxy)
-        if (isModel && !isHtml) {
-          const chunks = [];
-          proxyRes.on('data', c => chunks.push(c));
-          proxyRes.on('end', () => {
-            if (res.headersSent) return;
-            try {
-              let body = Buffer.concat(chunks).toString('utf8');
-              let data = JSON.parse(body);
-              fixModelJson(data);
-              body = Buffer.from(JSON.stringify(data), 'utf8');
-              res.writeHead(status, { 'content-type': 'application/json', 'content-length': String(body.length) });
-              res.end(body);
-            } catch { if (!res.headersSent) { res.writeHead(status, { 'content-type': ct }); res.end(Buffer.concat(chunks)); } }
-          });
-          proxyRes.on('error', () => { if (!res.headersSent) res.writeHead(502).end(); });
-          return;
+        const ck = `${req.method}:${req.url}`;
+        const isHtml = ct.includes('text/html');
+        const isJson = ct.includes('json') || MODEL_RE.test(req.url);
+        const isStatic = STATIC_RE.test(req.url);
+
+        if (req.method === 'GET' && isStatic) {
+          const cached = cacheGet(ck, STATIC_TTL);
+          if (cached) {
+            res.writeHead(200, {
+              'content-type': cached.type,
+              'content-length': String(cached.body.length),
+              'cache-control': 'public, max-age=1800',
+              'access-control-allow-origin': '*',
+            });
+            res.end(cached.body);
+            proxyRes.resume();
+            return;
+          }
         }
 
-        // Non-HTML: pipe through (CSS/images/other JS from CDN shouldn't come here, but handle anyway)
-        if (!isHtml) {
-          const headers = {};
-          Object.keys(proxyRes.headers).forEach(k => {
-            if (k !== 'transfer-encoding') headers[k] = proxyRes.headers[k];
-          });
-          res.writeHead(status, headers);
+        if (!isHtml && !isJson && !isStatic) {
+          const h = cleanResponseHeaders(proxyRes.headers);
+          res.writeHead(status, h);
           proxyRes.pipe(res);
           return;
         }
 
-        // HTML: rewrite, inject, serve
-        const htmlChunks = [];
-        proxyRes.on('data', c => htmlChunks.push(c));
+        const chunks = [];
+        proxyRes.on('data', c => chunks.push(c));
         proxyRes.on('end', () => {
           if (res.headersSent) return;
-          let body = Buffer.concat(htmlChunks);
+          let body = Buffer.concat(chunks);
           const ce = proxyRes.headers['content-encoding'];
-          if (ce) { try { body = ce.includes('br') ? zlib.brotliDecompressSync(body) : zlib.gunzipSync(body); } catch {} }
-          let html = body.toString('utf8');
 
-          // Rewrite resource URLs to absolute CDN (except CIF JS stays relative)
-          html = rewriteToAbsolute(html, TARGET_ORIGIN);
+          if (isHtml || isJson) {
+            body = decodeBody(body, ce);
+          }
 
-          // Inject base href + client-side fix script
-          html = html.replace(/<head[^>]*>/i, `<head><base href="/"><script>${CLIENT_INJECT}</script>`);
+          if (isHtml) {
+            let html = patchHtml(body.toString('utf8'));
+            body = Buffer.from(html, 'utf8');
+            if (req.method === 'GET') cacheSet(ck, { type: 'text/html; charset=utf-8', body });
+            res.writeHead(status, {
+              'content-type': 'text/html; charset=utf-8',
+              'content-length': String(body.length),
+              'cache-control': 'no-cache',
+            });
+            res.end(body);
+            return;
+          }
 
-          // Inject hidden commerce config div (CIF reads from DOM)
-          html = html.replace(/<body[^>]*>/i, `<body><div style="display:none" data-cmp-graphql-endpoint="/graphql" data-cmp-store-view="default" data-graphql-endpoint="/graphql"></div>`);
+          if (isJson) {
+            try {
+              const data = JSON.parse(body.toString('utf8'));
+              fixModelJson(data);
+              body = Buffer.from(JSON.stringify(data), 'utf8');
+            } catch {}
+            res.writeHead(status, {
+              'content-type': 'application/json; charset=utf-8',
+              'content-length': String(body.length),
+              'access-control-allow-origin': '*',
+            });
+            res.end(body);
+            return;
+          }
 
-          // Strip tracking
-          html = html.replace(/<script[^>]*googletagmanager[^>]*>[\s\S]*?<\/script>/gi, '');
-          html = html.replace(/<script[^>]*helix-rum-js[^>]*>[\s\S]*?<\/script>/gi, '');
-          html = html.replace(/<script[^>]*facebook[^>]*>[\s\S]*?<\/script>/gi, '');
-          html = html.replace(/<link[^>]*manifest["'][^>]*>/gi, '');
-
-          body = Buffer.from(html, 'utf8');
+          // Static fallback if a browser still requests assets through the mirror.
+          if (req.method === 'GET') cacheSet(ck, { type: ct || 'application/octet-stream', body });
           res.writeHead(status, {
-            'content-type': 'text/html; charset=utf-8',
+            'content-type': ct || 'application/octet-stream',
             'content-length': String(body.length),
+            'cache-control': 'public, max-age=1800',
+            'access-control-allow-origin': '*',
           });
           res.end(body);
         });
-        proxyRes.on('error', () => { if (!res.headersSent) res.writeHead(502).end(); });
+        proxyRes.on('error', () => { if (!res.headersSent) res.writeHead(502).end('upstream error'); });
       },
       error: (err, req, res) => {
         if (res.headersSent) return;
-        res.writeHead(502); res.end('Proxy error');
+        res.writeHead(502, { 'content-type': 'text/plain; charset=utf-8' });
+        res.end('Proxy error');
       },
     },
   });
