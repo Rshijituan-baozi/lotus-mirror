@@ -8,12 +8,31 @@
 
   var API_HOST_RE = /^(api-o2o|api-customer|shoponline-bffapi)\.lotuss\.com\.my$/i;
   var LOTUS_HOST_RE = /^(www\.|shoponline\.|mcprod\.)?lotuss\.com\.my$/i;
+  var MAPS_HOST_RE = /^maps\.(googleapis|gstatic)\.com$/i;
+  var GOOGLE_MAPS_KEY = '__GOOGLE_MAPS_KEY__';
 
-  function rewriteUrl(input) {
+  function rewriteMapsUrl(input) {
     if (typeof input !== 'string' || !input) return input;
     try {
       var raw = input.indexOf('//') === 0 ? location.protocol + input : input;
       var url = new URL(raw, location.href);
+      if (!MAPS_HOST_RE.test(url.host)) return input;
+      if (GOOGLE_MAPS_KEY && GOOGLE_MAPS_KEY !== '__GOOGLE_MAPS_KEY__' && url.searchParams.has('key')) {
+        url.searchParams.set('key', GOOGLE_MAPS_KEY);
+        return url.toString();
+      }
+      return '/__maps/' + url.host + url.pathname + url.search + url.hash;
+    } catch (e) {}
+    return input;
+  }
+
+  function rewriteUrl(input) {
+    if (typeof input !== 'string' || !input) return input;
+    input = rewriteMapsUrl(input);
+    try {
+      var raw = input.indexOf('//') === 0 ? location.protocol + input : input;
+      var url = new URL(raw, location.href);
+      if (MAPS_HOST_RE.test(url.host)) return rewriteMapsUrl(input);
       if (API_HOST_RE.test(url.host)) {
         return '/__api/' + url.host + url.pathname + url.search + url.hash;
       }
@@ -59,6 +78,38 @@
     if (typeof url === 'string') args[1] = rewriteUrl(url);
     return originalOpen.apply(this, args);
   };
+
+  function patchScriptUrl(el) {
+    if (!el || String(el.tagName || '').toLowerCase() !== 'script') return;
+    var src = el.getAttribute('src') || el.src || '';
+    var next = rewriteMapsUrl(src);
+    if (next && next !== src) el.setAttribute('src', next);
+  }
+
+  var originalCreateElement = document.createElement.bind(document);
+  document.createElement = function(tagName) {
+    var el = originalCreateElement(tagName);
+    if (String(tagName).toLowerCase() === 'script') {
+      var desc = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src');
+      if (desc && desc.set && desc.get) {
+        Object.defineProperty(el, 'src', {
+          configurable: true,
+          enumerable: true,
+          get: function() { return desc.get.call(this); },
+          set: function(value) { return desc.set.call(this, rewriteMapsUrl(value)); }
+        });
+      }
+    }
+    return el;
+  };
+
+  ['appendChild', 'insertBefore'].forEach(function(method) {
+    var original = Node.prototype[method];
+    Node.prototype[method] = function(node) {
+      patchScriptUrl(node);
+      return original.apply(this, arguments);
+    };
+  });
 
   function preventKnownNoise(e) {
     var msg = (e && (e.message || (e.reason && e.reason.message) || String(e.reason || ''))) || '';

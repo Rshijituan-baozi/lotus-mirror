@@ -25,12 +25,19 @@ export const API_HOSTS = new Set([
   'shoponline-bffapi.lotuss.com.my',
 ]);
 
+const MAPS_HOSTS = new Set([
+  'maps.googleapis.com',
+  'maps.gstatic.com',
+]);
+
 // Public value embedded in the upstream storefront bundle. Keep it as a fallback
 // for API calls whose headers are stripped by a browser/proxy.
 const DEFAULT_BFF_KEY = process.env.LOTUS_BFF_KEY ||
   'SeiRQmEDnaZXOlpfKhCjV4Bo2y6vAcW99QKmzifsgP2uCMN7wF3ahRXex84kH6qUVIWoY5Dp0GEljdAvS1JytOZcLbnBTr';
+const GOOGLE_MAPS_KEY = process.env.GOOGLE_MAPS_KEY || '';
 
 const CLIENT_INJECT = fs.readFileSync(new URL('./inject.js', import.meta.url), 'utf8')
+  .replace(/__GOOGLE_MAPS_KEY__/g, GOOGLE_MAPS_KEY)
   .replace(/<\/script/gi, '<\\/script');
 
 const HOP_BY_HOP = new Set([
@@ -159,8 +166,24 @@ function rewriteStaticHtmlUrls(html) {
   return html;
 }
 
+function rewriteMapsUrlForBrowser(value) {
+  if (!value) return value;
+  try {
+    const u = new URL(value, TARGET_ORIGIN);
+    if (!MAPS_HOSTS.has(u.host)) return value;
+    if (GOOGLE_MAPS_KEY && u.searchParams.has('key')) {
+      u.searchParams.set('key', GOOGLE_MAPS_KEY);
+      return u.toString();
+    }
+    return `/__maps/${u.host}${u.pathname}${u.search}${u.hash}`;
+  } catch {
+    return value;
+  }
+}
+
 function patchHtml(html) {
   html = rewriteStaticHtmlUrls(html);
+  html = html.replace(/(https:\/\/maps\.(?:googleapis|gstatic)\.com[^"'<>\s]+)/gi, (m) => rewriteMapsUrlForBrowser(m));
   html = html.replace(/<script[^>]*(googletagmanager|helix-rum-js|facebook|dtm-drcn|dynatrace)[^>]*>[\s\S]*?<\/script>/gi, '');
   html = html.replace(/<link[^>]*manifest["'][^>]*>/gi, '');
 
@@ -231,6 +254,29 @@ export function handleApiPassthrough(req, res) {
     if (body.length) r.write(body);
     r.end();
   });
+}
+
+export function handleMapsPassthrough(req, res) {
+  const m = req.url.match(/^\/([^/]+)(\/[^?]*)?(\?.*)?$/);
+  if (!m) { res.writeHead(400); res.end('bad maps path'); return; }
+  const host = m[1];
+  if (!MAPS_HOSTS.has(host)) { res.writeHead(403); res.end('maps host not allowed'); return; }
+  const path = (m[2] || '/') + (m[3] || '');
+  const headers = makeForwardHeaders(req, host, {
+    Accept: req.headers.accept || '*/*',
+    Referer: TARGET_ORIGIN + '/en',
+    Origin: TARGET_ORIGIN,
+  });
+
+  const r = https.request({ hostname: host, port: 443, path, method: req.method, headers, agent: apiAgent, timeout: TIMEOUT_MS }, pRes => {
+    const h = cleanResponseHeaders(pRes.headers);
+    h['access-control-allow-origin'] = '*';
+    res.writeHead(pRes.statusCode || 502, h);
+    pRes.pipe(res);
+  });
+  r.on('timeout', () => r.destroy(new Error('maps timeout')));
+  r.on('error', () => { if (!res.headersSent) { res.writeHead(502, { 'content-type': 'text/plain; charset=utf-8' }); res.end('maps upstream error'); } });
+  req.pipe(r);
 }
 
 export function createLotusProxy() {
