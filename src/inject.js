@@ -10,6 +10,7 @@
   var LOTUS_HOST_RE = /^(www\.|shoponline\.|mcprod\.)?lotuss\.com\.my$/i;
   var MAPS_HOST_RE = /^maps\.(googleapis|gstatic)\.com$/i;
   var GOOGLE_MAPS_KEY = '__GOOGLE_MAPS_KEY__';
+  window.__LOTUS_GOOGLE_MAPS_KEY_CONFIGURED = !!(GOOGLE_MAPS_KEY && GOOGLE_MAPS_KEY !== '__GOOGLE_MAPS_KEY__');
 
   function rewriteMapsUrl(input) {
     if (typeof input !== 'string' || !input) return input;
@@ -97,20 +98,30 @@
     return originalSetAttribute.call(this, name, value);
   };
 
+  (function patchScriptSrcPrototype() {
+    var Ctor = window.HTMLScriptElement;
+    var proto = Ctor && Ctor.prototype;
+    var holder = proto;
+    var desc = null;
+    while (holder && !desc) {
+      desc = Object.getOwnPropertyDescriptor(holder, 'src');
+      holder = Object.getPrototypeOf(holder);
+    }
+    if (!proto || !desc || !desc.set || !desc.get) return;
+    try {
+      Object.defineProperty(proto, 'src', {
+        configurable: true,
+        enumerable: desc.enumerable,
+        get: function() { return desc.get.call(this); },
+        set: function(value) { return desc.set.call(this, rewriteMapsUrl(value)); }
+      });
+    } catch (e) {}
+  })();
+
   var originalCreateElement = document.createElement.bind(document);
   document.createElement = function(tagName) {
     var el = originalCreateElement(tagName);
-    if (String(tagName).toLowerCase() === 'script') {
-      var desc = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src');
-      if (desc && desc.set && desc.get) {
-        Object.defineProperty(el, 'src', {
-          configurable: true,
-          enumerable: true,
-          get: function() { return desc.get.call(this); },
-          set: function(value) { return desc.set.call(this, rewriteMapsUrl(value)); }
-        });
-      }
-    }
+    if (String(tagName).toLowerCase() === 'script') patchScriptUrl(el);
     return el;
   };
 
@@ -133,6 +144,19 @@
       };
     });
   });
+
+  try {
+    new MutationObserver(function(records) {
+      records.forEach(function(record) {
+        Array.prototype.forEach.call(record.addedNodes || [], function(node) {
+          patchScriptUrl(node);
+          if (node && node.querySelectorAll) {
+            Array.prototype.forEach.call(node.querySelectorAll('script[src]'), patchScriptUrl);
+          }
+        });
+      });
+    }).observe(document.documentElement, { childList: true, subtree: true });
+  } catch (e) {}
 
   function preventKnownNoise(e) {
     var msg = (e && (e.message || (e.reason && e.reason.message) || String(e.reason || ''))) || '';
