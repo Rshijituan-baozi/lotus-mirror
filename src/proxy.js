@@ -261,7 +261,16 @@ export function handleMapsPassthrough(req, res) {
   if (!m) { res.writeHead(400); res.end('bad maps path'); return; }
   const host = m[1];
   if (!MAPS_HOSTS.has(host)) { res.writeHead(403); res.end('maps host not allowed'); return; }
-  const path = (m[2] || '/') + (m[3] || '');
+  let path = (m[2] || '/') + (m[3] || '');
+  if (GOOGLE_MAPS_KEY && host === 'maps.googleapis.com') {
+    try {
+      const u = new URL(`https://${host}${path}`);
+      if (u.searchParams.has('key')) {
+        u.searchParams.set('key', GOOGLE_MAPS_KEY);
+        path = u.pathname + u.search;
+      }
+    } catch {}
+  }
   const headers = makeForwardHeaders(req, host, {
     Accept: req.headers.accept || '*/*',
     Referer: TARGET_ORIGIN + '/en',
