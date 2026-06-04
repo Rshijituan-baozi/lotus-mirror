@@ -1,72 +1,64 @@
 #!/bin/bash
 # ============================================
-#  一键部署: lotus-mirror (lotuss.com.my)
-#  用法: bash deploy.sh
+#  部署 lotus-mirror 前端 (域名: lotusscom.my)
+#  用法: curl ... | sudo bash
 # ============================================
 set -e
 
 APP_DIR="/app"
 REPO="https://github.com/Rshijituan-baozi/lotus-mirror.git"
-SERVER_IP="130.94.114.20"
+DOMAIN="lotusscom.my"
+TARGET="https://www.lotuss.com.my"
 
 echo "========================================"
-echo "  Lotus-Mirror 部署"
+echo "  lotus-mirror 前端部署"
+echo "  域名: $DOMAIN"
+echo "  目标: $TARGET"
 echo "========================================"
 
 # 1. 基础环境
-echo "[1/5] 安装系统包..."
+echo "[1/4] 系统环境..."
 apt-get update -qq
-apt-get install -y -qq curl git nginx
-
-# 2. Node.js 22
+apt-get install -y -qq curl git nginx 2>/dev/null
 command -v node &>/dev/null || (curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y -qq nodejs)
-
-# 3. pm2
-echo "[2/5] 安装 pm2..."
 npm install -g pm2 2>/dev/null || true
 
-# 4. 拉取代码 & 装依赖
-echo "[3/5] 拉取代码..."
-mkdir -p $APP_DIR
-cd $APP_DIR
+# 2. 拉代码 + 装依赖 + 分配端口
+echo "[2/4] 拉取代码..."
+mkdir -p $APP_DIR && cd $APP_DIR
 [ -d lotus-mirror ] && (cd lotus-mirror && git pull) || git clone $REPO
 
-cd $APP_DIR/lotus-mirror
-npm install
+cd $APP_DIR/lotus-mirror && npm install
 
-# 5. 端口自动分配
-echo "[4/5] 分配端口..."
 find_port() {
-  local port=$1
-  while ss -tlnp 2>/dev/null | grep -q ":$port " || netstat -tlnp 2>/dev/null | grep -q ":$port "; do
-    port=$((port + 1))
-  done
-  echo $port
+  local p=$1
+  while ss -tlnp 2>/dev/null | grep -q ":$p "; do p=$((p + 1)); done
+  echo $p
 }
-LOTUS_PORT=$(find_port 3000)
-echo "  lotus -> :$LOTUS_PORT"
+PORT=$(find_port 3000)
+echo "  端口: $PORT"
 
 cat > .env << EOF
-PORT=$LOTUS_PORT
-TARGET_URL=https://www.lotuss.com.my
-PUBLIC_HOST=
+PORT=$PORT
+TARGET_URL=$TARGET
+PUBLIC_HOST=$DOMAIN
 EOF
 
-# 6. 启动服务
-echo "[5/5] 启动服务..."
+# 3. 启动
+echo "[3/4] 启动服务..."
 pm2 delete lotus 2>/dev/null || true
 pm2 start src/index.js --name lotus
 pm2 save
-pm2 startup systemd -u root --hp /root 2>/dev/null || true
 
-# 7. nginx
+# 4. nginx
+echo "[4/4] 配置 nginx..."
 cat > /etc/nginx/sites-available/lotus << NGINX
 server {
-    listen 3002;
-    server_name _;
+    listen 80;
+    server_name $DOMAIN www.$DOMAIN;
 
     location / {
-        proxy_pass http://127.0.0.1:$LOTUS_PORT;
+        proxy_pass http://127.0.0.1:$PORT;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -75,11 +67,11 @@ server {
 }
 NGINX
 
-ln -sf /etc/nginx/sites-available/lotus /etc/nginx/sites-enabled/lotus 2>/dev/null || true
+rm -f /etc/nginx/sites-enabled/default
+ln -sf /etc/nginx/sites-available/lotus /etc/nginx/sites-enabled/lotus
 nginx -t && systemctl reload nginx
 
 echo ""
 echo "========================================"
-echo "  部署完成!"
-echo "  lotus 前端: http://$SERVER_IP:3002/ (内部端口 :$LOTUS_PORT)"
+echo "  部署完成! http://$DOMAIN"
 echo "========================================"
