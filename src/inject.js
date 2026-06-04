@@ -86,6 +86,17 @@
     if (next && next !== src) el.setAttribute('src', next);
   }
 
+  var originalSetAttribute = Element.prototype.setAttribute;
+  Element.prototype.setAttribute = function(name, value) {
+    if (
+      String(this.tagName || '').toLowerCase() === 'script' &&
+      String(name || '').toLowerCase() === 'src'
+    ) {
+      value = rewriteMapsUrl(value);
+    }
+    return originalSetAttribute.call(this, name, value);
+  };
+
   var originalCreateElement = document.createElement.bind(document);
   document.createElement = function(tagName) {
     var el = originalCreateElement(tagName);
@@ -105,10 +116,22 @@
 
   ['appendChild', 'insertBefore'].forEach(function(method) {
     var original = Node.prototype[method];
-    Node.prototype[method] = function(node) {
-      patchScriptUrl(node);
+    if (!original) return;
+    Node.prototype[method] = function() {
+      Array.prototype.forEach.call(arguments, patchScriptUrl);
       return original.apply(this, arguments);
     };
+  });
+
+  ['append', 'prepend'].forEach(function(method) {
+    [Element.prototype, DocumentFragment.prototype].forEach(function(proto) {
+      var original = proto && proto[method];
+      if (!original) return;
+      proto[method] = function() {
+        Array.prototype.forEach.call(arguments, patchScriptUrl);
+        return original.apply(this, arguments);
+      };
+    });
   });
 
   function preventKnownNoise(e) {
