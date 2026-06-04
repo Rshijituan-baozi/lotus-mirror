@@ -176,7 +176,7 @@ function rewriteMapsUrlForBrowser(value) {
       u.searchParams.set('key', GOOGLE_MAPS_KEY);
       return u.toString();
     }
-    return `/__maps/${u.host}${u.pathname}${u.search}${u.hash}`;
+    return value;
   } catch {
     return value;
   }

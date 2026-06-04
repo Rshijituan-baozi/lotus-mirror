@@ -21,7 +21,7 @@
         url.searchParams.set('key', GOOGLE_MAPS_KEY);
         return url.toString();
       }
-      return '/__maps/' + url.host + url.pathname + url.search + url.hash;
+      return input;
     } catch (e) {}
     return input;
   }
