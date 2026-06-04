@@ -148,8 +148,14 @@ function fixModelJson(data) {
 
 function rewriteStaticHtmlUrls(html) {
   // The server should not proxy heavy immutable clientlibs. Load them directly
-  // from the origin CDN, while runtime API/model calls remain same-origin.
-  html = html.replace(/(<script\b[^>]*\bsrc=["'])(\/[^"']+)(["'][^>]*>)/gi, `$1${TARGET_ORIGIN}$2$3`);
+  // from the origin CDN, while runtime API/model calls remain same-origin. Keep
+  // the React bundle local so we can replace the embedded Google Maps API key.
+  html = html.replace(/(<script\b[^>]*\bsrc=["'])(\/[^"']+)(["'][^>]*>)/gi, (m, pre, path, post) => {
+    if (GOOGLE_MAPS_KEY && /clientlib-react\.[^"']+\.js(?:\?|$)/i.test(path)) {
+      return `${pre}${path}${post}`;
+    }
+    return `${pre}${TARGET_ORIGIN}${path}${post}`;
+  });
   html = html.replace(/(<link\b[^>]*\bhref=["'])(\/[^"']+)(["'][^>]*>)/gi, `$1${TARGET_ORIGIN}$2$3`);
   html = html.replace(/(<img\b[^>]*\bsrc=["'])(\/[^"']+)(["'][^>]*>)/gi, `$1${TARGET_ORIGIN}$2$3`);
   html = html.replace(/(<source\b[^>]*\bsrc=["'])(\/[^"']+)(["'][^>]*>)/gi, `$1${TARGET_ORIGIN}$2$3`);
@@ -404,6 +410,13 @@ export function createLotusProxy() {
           }
 
           // Static fallback if a browser still requests assets through the mirror.
+          if (GOOGLE_MAPS_KEY && /\.js(?:\?|$)/i.test(req.url) && /clientlib-react\./i.test(req.url)) {
+            body = decodeBody(body, ce);
+            const patched = body
+              .toString('utf8')
+              .replace(/AIzaSy[A-Za-z0-9_-]{20,}/g, GOOGLE_MAPS_KEY);
+            body = Buffer.from(patched, 'utf8');
+          }
           if (req.method === 'GET') cacheSet(ck, { type: ct || 'application/octet-stream', body });
           res.writeHead(status, {
             'content-type': ct || 'application/octet-stream',
