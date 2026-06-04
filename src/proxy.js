@@ -12,6 +12,17 @@ const LOTUS_HOST_RE = /^(?:www\.|shoponline\.|mcprod\.)?lotuss\.com\.my$/i;
 const CLIENT_INJECT_SCRIPT = fs.readFileSync(new URL('./inject.js', import.meta.url), 'utf8')
   .replace(/<\/script/gi, '<\\/script');
 
+// Headers forbidden in HTTP/2 (RFC 7540 §8.1.2.2). If forwarded to an HTTP/2
+// frontend (Cloudflare / nginx), browsers abort with ERR_HTTP2_PROTOCOL_ERROR.
+const HOP_BY_HOP = ['connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization', 'te', 'trailer', 'transfer-encoding', 'upgrade'];
+function sanitizeResponseHeaders(headers) {
+  const h = { ...headers };
+  for (const k of Object.keys(h)) {
+    if (HOP_BY_HOP.includes(k.toLowerCase())) delete h[k];
+  }
+  return h;
+}
+
 function rewriteLotusLocation(location) {
   const value = String(location || '');
   try {
@@ -96,7 +107,7 @@ export function handleGraphql(req, res) {
       method: req.method, agent: magentoAgent,
       headers: fwdHeaders
     }, pRes => {
-      const h = { ...pRes.headers };
+      const h = sanitizeResponseHeaders(pRes.headers);
       h['access-control-allow-origin'] = '*';
       delete h['www-authenticate'];
       res.writeHead(pRes.statusCode, h);
@@ -146,7 +157,7 @@ export function handleApiPassthrough(req, res) {
     const body = Buffer.concat(chunks);
     if (body.length) fwdHeaders['Content-Length'] = String(body.length);
     const r = https.request({ hostname: host, port: 443, path, method: req.method, agent: apiAgent, headers: fwdHeaders }, pRes => {
-      const h = { ...pRes.headers };
+      const h = sanitizeResponseHeaders(pRes.headers);
       h['access-control-allow-origin'] = '*';
       h['access-control-allow-credentials'] = 'true';
       delete h['content-security-policy'];
@@ -253,19 +264,24 @@ export function createLotusProxy() {
                 res.end();
               });
               proxyRes.on('error', () => { if (!res.headersSent) res.writeHead(502).end(); });
-              res.writeHead(status, { 'content-type': ct, 'access-control-allow-origin': '*' });
+              const shdr = { 'content-type': ct, 'access-control-allow-origin': '*' };
+              if (proxyRes.headers['content-encoding']) shdr['content-encoding'] = proxyRes.headers['content-encoding'];
+              res.writeHead(status, shdr);
               return;
             }
 
             // JS files: buffer for CIF patching
             const cached = cacheGetStatic(ck);
             if (cached) { res.writeHead(200, { 'content-type': ct, 'content-length': String(cached.length) }); res.end(cached); proxyRes.resume(); return; }
+            const ce = proxyRes.headers['content-encoding'];
             const chunks = [];
             proxyRes.on('data', c => chunks.push(c));
             proxyRes.on('end', () => {
               if (res.headersSent) return;
               let b = Buffer.concat(chunks);
-              if (b.toString('utf8').indexOf('commerce API') !== -1) {
+              // Cheap Buffer scan first; only stringify (expensive on multi-MB
+              // bundles) when the CIF marker is actually present and uncompressed.
+              if (!ce && b.indexOf('commerce API') !== -1) {
                 let js = b.toString('utf8');
                 js = js.replace(
                   /!(\w+)\s*\|\|\s*!\1\.graphqlEndpoint\s*\)\s*throw\s+(?:new\s+)?Error\s*\(\s*"The\s+commerce\s+API[^"]*"\)\s*;/gi,
@@ -274,13 +290,15 @@ export function createLotusProxy() {
                 b = Buffer.from(js, 'utf8');
               }
               cacheSet(ck, b);
-              res.writeHead(status, { 'content-type': ct, 'content-length': String(b.length), 'access-control-allow-origin': '*' });
+              const hdr = { 'content-type': ct, 'content-length': String(b.length), 'access-control-allow-origin': '*' };
+              if (ce) hdr['content-encoding'] = ce;
+              res.writeHead(status, hdr);
               res.end(b);
             });
             proxyRes.on('error', () => { if (!res.headersSent) res.writeHead(502).end(); });
             return;
           }
-          const h = {}; Object.keys(proxyRes.headers).forEach(k => { if (k !== 'transfer-encoding') h[k] = proxyRes.headers[k]; });
+          const h = sanitizeResponseHeaders(proxyRes.headers);
           res.writeHead(status, h);
           proxyRes.pipe(res);
           return;
