@@ -109,7 +109,6 @@ export function createLotusProxy() {
         }
 
         // Model JSON: buffer + fix (goes through proxy)
-        const isModel = MODEL_RE.test(req.url);
         if (isModel && !isHtml) {
           const chunks = [];
           proxyRes.on('data', c => chunks.push(c));
