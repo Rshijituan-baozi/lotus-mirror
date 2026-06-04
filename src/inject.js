@@ -88,6 +88,31 @@
     if (next && next !== src) el.setAttribute('src', next);
   }
 
+  function replaceMapsScriptIfNeeded(el) {
+    if (!el || String(el.tagName || '').toLowerCase() !== 'script') return false;
+    var src = el.getAttribute('src') || el.src || '';
+    if (!src || src.indexOf('maps.googleapis.com/maps/api/js') === -1) return false;
+    var next = rewriteMapsUrl(src);
+    if (!next || next === src) return false;
+
+    var replacement = document.createElement('script');
+    replacement.src = next;
+    replacement.async = el.async;
+    replacement.defer = el.defer;
+    replacement.type = el.type || 'text/javascript';
+    replacement.charset = el.charset || 'UTF-8';
+    if (el.nonce) replacement.nonce = el.nonce;
+    if (el.crossOrigin) replacement.crossOrigin = el.crossOrigin;
+    if (el.referrerPolicy) replacement.referrerPolicy = el.referrerPolicy;
+
+    if (el.parentNode) {
+      el.parentNode.replaceChild(replacement, el);
+      return true;
+    }
+    el.setAttribute('src', next);
+    return true;
+  }
+
   var originalSetAttribute = Element.prototype.setAttribute;
   Element.prototype.setAttribute = function(name, value) {
     if (
@@ -150,9 +175,11 @@
     new MutationObserver(function(records) {
       records.forEach(function(record) {
         Array.prototype.forEach.call(record.addedNodes || [], function(node) {
-          patchScriptUrl(node);
+          if (!replaceMapsScriptIfNeeded(node)) patchScriptUrl(node);
           if (node && node.querySelectorAll) {
-            Array.prototype.forEach.call(node.querySelectorAll('script[src]'), patchScriptUrl);
+            Array.prototype.forEach.call(node.querySelectorAll('script[src]'), function(script) {
+              if (!replaceMapsScriptIfNeeded(script)) patchScriptUrl(script);
+            });
           }
         });
       });
