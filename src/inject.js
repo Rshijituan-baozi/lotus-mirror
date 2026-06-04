@@ -12,34 +12,82 @@
   var GOOGLE_MAPS_KEY = '__GOOGLE_MAPS_KEY__';
   var GOOGLE_MAPS_KEY_CONFIGURED = /^AIzaSy[A-Za-z0-9_-]+$/.test(GOOGLE_MAPS_KEY);
   var DEFAULT_MAP_CENTER = { lat: 3.139003, lng: 101.686855 };
+  var nativeCreateElement = document.createElement.bind(document);
+  var mapsApiLoadStarted = false;
+  var mapsApiLoaded = false;
+  var mapsApiWaiters = [];
   window.__LOTUS_GOOGLE_MAPS_KEY_CONFIGURED = GOOGLE_MAPS_KEY_CONFIGURED;
 
   function isGoogleMapsApiUrl(url) {
     return url && /^maps\.googleapis\.com$/i.test(url.host) && /^\/maps\/api\/js$/i.test(url.pathname);
   }
 
-  function rewriteMapsUrl(input) {
-    if (typeof input !== 'string' || !input) return input;
-    try {
-      var raw = input.indexOf('//') === 0 ? location.protocol + input : input;
-      var url = new URL(raw, location.href);
-      if (!MAPS_HOST_RE.test(url.host)) return input;
-      if (GOOGLE_MAPS_KEY_CONFIGURED && url.searchParams.has('key')) {
-        url.searchParams.set('key', GOOGLE_MAPS_KEY);
-      }
-      if (isGoogleMapsApiUrl(url) && !url.searchParams.has('v')) url.searchParams.set('v', 'weekly');
-      return url.toString();
-    } catch (e) {}
-    return input;
+  function getGoogleMapsApiUrl() {
+    var url = new URL('https://maps.googleapis.com/maps/api/js');
+    url.searchParams.set('key', GOOGLE_MAPS_KEY);
+    url.searchParams.set('libraries', 'places');
+    url.searchParams.set('language', 'en');
+    url.searchParams.set('region', 'en');
+    url.searchParams.set('v', 'weekly');
+    return url.toString();
   }
+
+  function isGoogleMapsScript(node) {
+    if (!node || String(node.tagName || '').toLowerCase() !== 'script') return false;
+    var src = node.getAttribute('src') || node.src || '';
+    if (!src) return false;
+    try {
+      return isGoogleMapsApiUrl(new URL(src, location.href));
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function dispatchScriptEvent(node, type) {
+    setTimeout(function() {
+      try {
+        var ev = document.createEvent('Event');
+        ev.initEvent(type, false, false);
+        node.dispatchEvent(ev);
+      } catch (e) {}
+      var handler = node && node['on' + type];
+      if (typeof handler === 'function') {
+        try { handler.call(node); } catch (e) {}
+      }
+    }, 0);
+  }
+
+  function flushMapsApiWaiters(type) {
+    var waiters = mapsApiWaiters.splice(0);
+    waiters.forEach(function(node) { dispatchScriptEvent(node, type); });
+  }
+
+  function loadGoogleMapsApiEarly() {
+    if (!GOOGLE_MAPS_KEY_CONFIGURED || mapsApiLoadStarted) return;
+    mapsApiLoadStarted = true;
+
+    var script = nativeCreateElement('script');
+    script.src = getGoogleMapsApiUrl();
+    script.async = true;
+    script.onload = function() {
+      mapsApiLoaded = true;
+      flushMapsApiWaiters('load');
+    };
+    script.onerror = function() {
+      flushMapsApiWaiters('error');
+    };
+
+    (document.head || document.documentElement).appendChild(script);
+  }
+
+  loadGoogleMapsApiEarly();
 
   function rewriteUrl(input) {
     if (typeof input !== 'string' || !input) return input;
-    input = rewriteMapsUrl(input);
     try {
       var raw = input.indexOf('//') === 0 ? location.protocol + input : input;
       var url = new URL(raw, location.href);
-      if (MAPS_HOST_RE.test(url.host)) return rewriteMapsUrl(input);
+      if (MAPS_HOST_RE.test(url.host)) return input;
       if (API_HOST_RE.test(url.host)) {
         return '/__api/' + url.host + url.pathname + url.search + url.hash;
       }
@@ -86,56 +134,21 @@
     return originalOpen.apply(this, args);
   };
 
-  function patchScriptUrl(el) {
-    if (!el || String(el.tagName || '').toLowerCase() !== 'script') return;
-    var src = el.getAttribute('src') || el.src || '';
-    var next = rewriteMapsUrl(src);
-    if (next && next !== src) el.setAttribute('src', next);
+  function handleDuplicateMapsScript(node) {
+    if (!isGoogleMapsScript(node) || !mapsApiLoadStarted) return false;
+    if (mapsApiLoaded) {
+      dispatchScriptEvent(node, 'load');
+    } else {
+      mapsApiWaiters.push(node);
+    }
+    return true;
   }
-
-  var originalSetAttribute = Element.prototype.setAttribute;
-  Element.prototype.setAttribute = function(name, value) {
-    if (
-      String(this.tagName || '').toLowerCase() === 'script' &&
-      String(name || '').toLowerCase() === 'src'
-    ) {
-      value = rewriteMapsUrl(value);
-    }
-    return originalSetAttribute.call(this, name, value);
-  };
-
-  (function patchScriptSrcPrototype() {
-    var Ctor = window.HTMLScriptElement;
-    var proto = Ctor && Ctor.prototype;
-    var holder = proto;
-    var desc = null;
-    while (holder && !desc) {
-      desc = Object.getOwnPropertyDescriptor(holder, 'src');
-      holder = Object.getPrototypeOf(holder);
-    }
-    if (!proto || !desc || !desc.set || !desc.get) return;
-    try {
-      Object.defineProperty(proto, 'src', {
-        configurable: true,
-        enumerable: desc.enumerable,
-        get: function() { return desc.get.call(this); },
-        set: function(value) { return desc.set.call(this, rewriteMapsUrl(value)); }
-      });
-    } catch (e) {}
-  })();
-
-  var originalCreateElement = document.createElement.bind(document);
-  document.createElement = function(tagName) {
-    var el = originalCreateElement(tagName);
-    if (String(tagName).toLowerCase() === 'script') patchScriptUrl(el);
-    return el;
-  };
 
   ['appendChild', 'insertBefore'].forEach(function(method) {
     var original = Node.prototype[method];
     if (!original) return;
     Node.prototype[method] = function() {
-      Array.prototype.forEach.call(arguments, patchScriptUrl);
+      if (handleDuplicateMapsScript(arguments[0])) return arguments[0];
       return original.apply(this, arguments);
     };
   });
@@ -145,24 +158,14 @@
       var original = proto && proto[method];
       if (!original) return;
       proto[method] = function() {
-        Array.prototype.forEach.call(arguments, patchScriptUrl);
-        return original.apply(this, arguments);
+        var args = Array.prototype.filter.call(arguments, function(node) {
+          return !handleDuplicateMapsScript(node);
+        });
+        if (!args.length) return undefined;
+        return original.apply(this, args);
       };
     });
   });
-
-  try {
-    new MutationObserver(function(records) {
-      records.forEach(function(record) {
-        Array.prototype.forEach.call(record.addedNodes || [], function(node) {
-          patchScriptUrl(node);
-          if (node && node.querySelectorAll) {
-            Array.prototype.forEach.call(node.querySelectorAll('script[src]'), patchScriptUrl);
-          }
-        });
-      });
-    }).observe(document.documentElement, { childList: true, subtree: true });
-  } catch (e) {}
 
   function toFiniteLatLng(value) {
     if (!value) return null;
