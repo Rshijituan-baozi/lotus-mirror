@@ -55,6 +55,7 @@ const cache = new Map();
 const CACHE_MAX = 2000;
 const HTML_TTL = 60 * 1000;
 const STATIC_TTL = 30 * 60 * 1000;
+const JSON_TTL = 10 * 60 * 1000;
 
 function cacheGet(key, ttl) {
   const e = cache.get(key);
@@ -324,6 +325,21 @@ export function createLotusProxy() {
         const isJson = ct.includes('json') || MODEL_RE.test(req.url);
         const isStatic = STATIC_RE.test(req.url);
 
+        if (req.method === 'GET' && isJson) {
+          const cached = cacheGet(ck, JSON_TTL);
+          if (cached) {
+            res.writeHead(200, {
+              'content-type': cached.type,
+              'content-length': String(cached.body.length),
+              'cache-control': 'public, max-age=300, stale-while-revalidate=3600',
+              'access-control-allow-origin': '*',
+            });
+            res.end(cached.body);
+            proxyRes.resume();
+            return;
+          }
+        }
+
         if (req.method === 'GET' && isStatic) {
           const cached = cacheGet(ck, STATIC_TTL);
           if (cached) {
@@ -376,9 +392,11 @@ export function createLotusProxy() {
               fixModelJson(data);
               body = Buffer.from(JSON.stringify(data), 'utf8');
             } catch {}
+            if (req.method === 'GET') cacheSet(ck, { type: 'application/json; charset=utf-8', body });
             res.writeHead(status, {
               'content-type': 'application/json; charset=utf-8',
               'content-length': String(body.length),
+              'cache-control': 'public, max-age=300, stale-while-revalidate=3600',
               'access-control-allow-origin': '*',
             });
             res.end(body);
