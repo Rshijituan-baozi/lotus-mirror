@@ -29,4 +29,6 @@ app.use('/__api', handleApiPassthrough);
 app.use('/', createLotusProxy());
 
 const server = http.createServer(app);
+server.timeout = 0;
+server.keepAliveTimeout = 65000;
 server.listen(PORT, '0.0.0.0', () => console.log(`[Lotus] http://localhost:${PORT}`));
