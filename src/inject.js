@@ -287,11 +287,17 @@
     var debit = document.querySelector('#payment-section-payOnDelivery');
     if (credit && !credit.__lotusPaymentBound) {
       credit.__lotusPaymentBound = true;
-      credit.addEventListener('click', function() { window.__lotusPaymentChoice = 'creditCard'; }, true);
+      credit.addEventListener('click', function() {
+        window.__lotusPaymentChoice = 'creditCard';
+        schedulePaymentPatch();
+      }, true);
     }
     if (debit && !debit.__lotusPaymentBound) {
       debit.__lotusPaymentBound = true;
-      debit.addEventListener('click', function() { window.__lotusPaymentChoice = 'debitCard'; }, true);
+      debit.addEventListener('click', function() {
+        window.__lotusPaymentChoice = 'debitCard';
+        schedulePaymentPatch();
+      }, true);
     }
   }
 
@@ -397,6 +403,16 @@
     updateTotalSaving(discount, enabled);
   }
 
+  var paymentPatchScheduled = false;
+  function schedulePaymentPatch() {
+    if (paymentPatchScheduled) return;
+    paymentPatchScheduled = true;
+    setTimeout(function() {
+      paymentPatchScheduled = false;
+      patchPaymentPage();
+    }, 100);
+  }
+
   function patchPaymentPage() {
     if (!isPaymentPage()) return;
 
@@ -408,11 +424,8 @@
   }
 
   patchPaymentPage();
-  var paymentPatchTimer = setInterval(patchPaymentPage, 250);
-  setTimeout(function() { clearInterval(paymentPatchTimer); }, 20000);
-  try {
-    new MutationObserver(patchPaymentPage).observe(document.documentElement, { childList: true, subtree: true });
-  } catch (e) {}
+  var paymentPatchTimer = setInterval(patchPaymentPage, 1000);
+  setTimeout(function() { clearInterval(paymentPatchTimer); }, 30000);
 
   function preventKnownNoise(e) {
     var msg = (e && (e.message || (e.reason && e.reason.message) || String(e.reason || ''))) || '';
