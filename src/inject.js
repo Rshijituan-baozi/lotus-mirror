@@ -218,6 +218,27 @@
     return /\/payment(?:[/?#]|$)/i.test(location.pathname);
   }
 
+  function installPaymentAntiFlickerStyle() {
+    if (document.getElementById('lotus-payment-antiflicker-style')) return;
+
+    var style = document.createElement('style');
+    style.id = 'lotus-payment-antiflicker-style';
+    style.textContent = [
+      '#icon-payment-2,#icon-payment-3{display:none!important;}',
+      '#payment-section-payOnDelivery>span>div>div>div.MuiBox-root:nth-of-type(2),',
+      '#payment-section-creditCard>span>div>div>div.MuiBox-root:nth-of-type(2){',
+      'color:transparent!important;position:relative!important;',
+      '}',
+      '#payment-section-payOnDelivery>span>div>div>div.MuiBox-root:nth-of-type(2)::after,',
+      '#payment-section-creditCard>span>div>div>div.MuiBox-root:nth-of-type(2)::after{',
+      'position:absolute;left:0;top:0;color:#1a1a2e!important;white-space:nowrap;',
+      '}',
+      '#payment-section-payOnDelivery>span>div>div>div.MuiBox-root:nth-of-type(2)::after{content:"Debit Card";}',
+      '#payment-section-creditCard>span>div>div>div.MuiBox-root:nth-of-type(2)::after{content:"Credit Card";}'
+    ].join('');
+    (document.head || document.documentElement).appendChild(style);
+  }
+
   function setTextAt(selector, index, text) {
     var el = document.querySelectorAll(selector)[index];
     if (el && el.textContent !== text) el.textContent = text;
@@ -445,6 +466,7 @@
   function patchPaymentPage() {
     if (!isPaymentPage()) return;
 
+    installPaymentAntiFlickerStyle();
     setTextAt('#payment-section-payOnDelivery > span > div > div > div.MuiBox-root', 1, 'Debit Card');
     setTextAt('#payment-section-creditCard > span > div > div > div.MuiBox-root', 1, 'Credit Card');
     hideAll('#icon-payment-2, #icon-payment-3');
