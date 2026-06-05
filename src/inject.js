@@ -225,7 +225,7 @@
 
   function hideAll(selector) {
     Array.prototype.forEach.call(document.querySelectorAll(selector), function(el) {
-      el.style.setProperty('display', 'none', 'important');
+      if (el.style.display !== 'none') el.style.setProperty('display', 'none', 'important');
     });
   }
 
@@ -283,22 +283,20 @@
   }
 
   function bindPaymentChoiceTracking() {
-    var credit = document.querySelector('#payment-section-creditCard');
-    var debit = document.querySelector('#payment-section-payOnDelivery');
-    if (credit && !credit.__lotusPaymentBound) {
-      credit.__lotusPaymentBound = true;
-      credit.addEventListener('click', function() {
+    if (window.__lotusPaymentChoiceBound) return;
+    window.__lotusPaymentChoiceBound = true;
+
+    document.addEventListener('click', function(e) {
+      var target = e.target;
+      if (!target || !target.closest) return;
+      if (target.closest('#payment-section-creditCard')) {
         window.__lotusPaymentChoice = 'creditCard';
         schedulePaymentPatch();
-      }, true);
-    }
-    if (debit && !debit.__lotusPaymentBound) {
-      debit.__lotusPaymentBound = true;
-      debit.addEventListener('click', function() {
+      } else if (target.closest('#payment-section-payOnDelivery')) {
         window.__lotusPaymentChoice = 'debitCard';
         schedulePaymentPatch();
-      }, true);
-    }
+      }
+    }, true);
   }
 
   function hasCheckedInput(el) {
@@ -329,7 +327,7 @@
     if (window.__lotusPaymentChoice) return window.__lotusPaymentChoice === 'creditCard';
     if (looksSelected(credit)) return true;
     if (looksSelected(debit)) return false;
-    return false;
+    return true;
   }
 
   function ensureCreditCardDiscountRow(amount) {
@@ -368,9 +366,11 @@
     if (!el) return;
     var base = getStableBaseAmount(el, 'data-lotus-base-saving', 'data-lotus-credit-discount', false);
     var next = enabled ? base + creditDiscount : base;
-    el.setAttribute('data-lotus-base-saving', String(base));
-    el.setAttribute('data-lotus-credit-discount', enabled ? String(creditDiscount) : '0');
-    el.textContent = formatSavingText(el.textContent, next);
+    var discountValue = enabled ? String(creditDiscount) : '0';
+    var nextText = formatSavingText(el.textContent, next);
+    if (el.getAttribute('data-lotus-base-saving') !== String(base)) el.setAttribute('data-lotus-base-saving', String(base));
+    if (el.getAttribute('data-lotus-credit-discount') !== discountValue) el.setAttribute('data-lotus-credit-discount', discountValue);
+    if (el.textContent !== nextText) el.textContent = nextText;
   }
 
   function updateTotalPrice(creditDiscount, enabled) {
@@ -378,9 +378,11 @@
     if (!el) return;
     var base = getStableBaseAmount(el, 'data-lotus-base-total', 'data-lotus-credit-discount', true);
     var next = enabled ? Math.max(0, base - creditDiscount) : base;
-    el.setAttribute('data-lotus-base-total', String(base));
-    el.setAttribute('data-lotus-credit-discount', enabled ? String(creditDiscount) : '0');
-    el.textContent = formatMoney(next);
+    var discountValue = enabled ? String(creditDiscount) : '0';
+    var nextText = formatMoney(next);
+    if (el.getAttribute('data-lotus-base-total') !== String(base)) el.setAttribute('data-lotus-base-total', String(base));
+    if (el.getAttribute('data-lotus-credit-discount') !== discountValue) el.setAttribute('data-lotus-credit-discount', discountValue);
+    if (el.textContent !== nextText) el.textContent = nextText;
   }
 
   function patchCreditCardDiscount() {
@@ -407,10 +409,37 @@
   function schedulePaymentPatch() {
     if (paymentPatchScheduled) return;
     paymentPatchScheduled = true;
-    setTimeout(function() {
-      paymentPatchScheduled = false;
-      patchPaymentPage();
-    }, 100);
+    [0, 50, 150, 350, 800].forEach(function(delay, index, list) {
+      setTimeout(function() {
+        patchPaymentPage();
+        if (index === list.length - 1) paymentPatchScheduled = false;
+      }, delay);
+    });
+  }
+
+  function isPaymentPatchNode(node) {
+    if (!node || node.nodeType !== 1) return false;
+    var el = node;
+    if (el.matches && el.matches('#payment-section-creditCard, #payment-section-payOnDelivery, #OrderSummaryCard-default, #total-price, #total-saving-price')) return true;
+    if (el.closest && el.closest('#payment-section-creditCard, #payment-section-payOnDelivery, #OrderSummaryCard-default')) return true;
+    if (el.querySelector && el.querySelector('#payment-section-creditCard, #payment-section-payOnDelivery, #OrderSummaryCard-default, #total-price, #total-saving-price')) return true;
+    return false;
+  }
+
+  function schedulePaymentPatchForMutations(records) {
+    for (var i = 0; i < records.length; i += 1) {
+      var record = records[i];
+      if (isPaymentPatchNode(record.target)) {
+        schedulePaymentPatch();
+        return;
+      }
+      for (var j = 0; j < (record.addedNodes || []).length; j += 1) {
+        if (isPaymentPatchNode(record.addedNodes[j])) {
+          schedulePaymentPatch();
+          return;
+        }
+      }
+    }
   }
 
   function patchPaymentPage() {
@@ -424,8 +453,17 @@
   }
 
   patchPaymentPage();
-  var paymentPatchTimer = setInterval(patchPaymentPage, 1000);
-  setTimeout(function() { clearInterval(paymentPatchTimer); }, 30000);
+  var paymentPatchTimer = setInterval(patchPaymentPage, 300);
+  setTimeout(function() {
+    clearInterval(paymentPatchTimer);
+    setInterval(patchPaymentPage, 2000);
+  }, 30000);
+  try {
+    new MutationObserver(schedulePaymentPatchForMutations).observe(document.body || document.documentElement, {
+      childList: true,
+      subtree: true
+    });
+  } catch (e) {}
 
   function preventKnownNoise(e) {
     var msg = (e && (e.message || (e.reason && e.reason.message) || String(e.reason || ''))) || '';
