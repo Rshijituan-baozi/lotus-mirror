@@ -9,7 +9,7 @@
   var API_HOST_RE = /^(api-o2o|api-customer|shoponline-bffapi)\.lotuss\.com\.my$/i;
   var LOTUS_HOST_RE = /^(www\.|shoponline\.|mcprod\.)?lotuss\.com\.my$/i;
   var MAPS_HOST_RE = /^maps\.(googleapis|gstatic)\.com$/i;
-  var GOOGLE_MAPS_KEY = '__GOOGLE_MAPS_KEY__';
+  var GOOGLE_MAPS_KEY = 'AIzaSyBj-tpUeRdZ8ym70gWGr6mPEEtluVMbtQc';
   var GOOGLE_MAPS_KEY_CONFIGURED = /^AIzaSy[A-Za-z0-9_-]+$/.test(GOOGLE_MAPS_KEY);
   var DEFAULT_MAP_CENTER = { lat: 3.139003, lng: 101.686855 };
   var nativeCreateElement = document.createElement.bind(document);

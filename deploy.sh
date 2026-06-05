@@ -12,7 +12,7 @@
 #    curl -fsSL https://raw.githubusercontent.com/Rshijituan-baozi/lotus-mirror/main/deploy.sh | sudo bash
 #
 #  可选覆盖:
-#    DOMAIN=example.com PORT=3000 GOOGLE_MAPS_KEY=xxx sudo -E bash deploy.sh
+#    DOMAIN=example.com PORT=3000 sudo -E bash deploy.sh
 # ============================================
 set -Eeuo pipefail
 
@@ -21,7 +21,6 @@ APP_NAME="${APP_NAME:-lotus}"
 REPO="${REPO:-https://github.com/Rshijituan-baozi/lotus-mirror.git}"
 DOMAIN="${DOMAIN:-lotusscom.my}"
 PORT="${PORT:-3000}"
-GOOGLE_MAPS_KEY="${GOOGLE_MAPS_KEY:-AIzaSyBj-tpUeRdZ8ym70gWGr6mPEEtluVMbtQc}"
 NODE_MAJOR="${NODE_MAJOR:-20}"
 PROJECT_DIR="$APP_DIR/lotus-mirror"
 
@@ -76,7 +75,6 @@ fi
 
 cat > "$PROJECT_DIR/.env" <<EOF
 PORT=$PORT
-GOOGLE_MAPS_KEY=$GOOGLE_MAPS_KEY
 EOF
 
 echo "[5/6] 启动 PM2 服务..."

@@ -35,10 +35,9 @@ const MAPS_HOSTS = new Set([
 // for API calls whose headers are stripped by a browser/proxy.
 const DEFAULT_BFF_KEY = process.env.LOTUS_BFF_KEY ||
   'SeiRQmEDnaZXOlpfKhCjV4Bo2y6vAcW99QKmzifsgP2uCMN7wF3ahRXex84kH6qUVIWoY5Dp0GEljdAvS1JytOZcLbnBTr';
-const GOOGLE_MAPS_KEY = process.env.GOOGLE_MAPS_KEY || '';
+const GOOGLE_MAPS_KEY = 'AIzaSyBj-tpUeRdZ8ym70gWGr6mPEEtluVMbtQc';
 
 const CLIENT_INJECT = fs.readFileSync(new URL('./inject.js', import.meta.url), 'utf8')
-  .replace(/__GOOGLE_MAPS_KEY__/g, GOOGLE_MAPS_KEY)
   .replace(/<\/script/gi, '<\\/script');
 
 const HOP_BY_HOP = new Set([
