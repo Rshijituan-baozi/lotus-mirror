@@ -255,6 +255,148 @@
     holder.appendChild(badge);
   }
 
+  function parseMoney(text) {
+    var cleaned = String(text || '').replace(/,/g, '');
+    var match = cleaned.match(/-?\d+(?:\.\d+)?/);
+    return match ? Math.abs(Number(match[0])) : 0;
+  }
+
+  function formatMoney(amount) {
+    return 'RM' + Number(amount || 0).toFixed(2);
+  }
+
+  function formatSavingText(template, amount) {
+    var value = formatMoney(amount);
+    if (/Savings/i.test(template)) return 'Savings ' + value;
+    if (/^-/.test(String(template || '').trim())) return '-' + value;
+    return value;
+  }
+
+  function getStableBaseAmount(el, baseAttr, discountAttr, discountedMode) {
+    var current = parseMoney(el.textContent);
+    var previousBase = parseMoney(el.getAttribute(baseAttr));
+    var previousDiscount = parseMoney(el.getAttribute(discountAttr));
+    var expected = discountedMode ? previousBase - previousDiscount : previousBase + previousDiscount;
+
+    if (previousBase > 0 && Math.abs(current - expected) < 0.02) return previousBase;
+    return current;
+  }
+
+  function bindPaymentChoiceTracking() {
+    var credit = document.querySelector('#payment-section-creditCard');
+    var debit = document.querySelector('#payment-section-payOnDelivery');
+    if (credit && !credit.__lotusPaymentBound) {
+      credit.__lotusPaymentBound = true;
+      credit.addEventListener('click', function() { window.__lotusPaymentChoice = 'creditCard'; }, true);
+    }
+    if (debit && !debit.__lotusPaymentBound) {
+      debit.__lotusPaymentBound = true;
+      debit.addEventListener('click', function() { window.__lotusPaymentChoice = 'debitCard'; }, true);
+    }
+  }
+
+  function hasCheckedInput(el) {
+    var input = el && el.querySelector('input[type="radio"], input[type="checkbox"]');
+    return !!(input && input.checked);
+  }
+
+  function looksSelected(el) {
+    if (!el) return false;
+    if (hasCheckedInput(el)) return true;
+    if (/\b(Mui-selected|Mui-checked|selected|active)\b/i.test(el.className || '')) return true;
+    if (el.getAttribute('aria-checked') === 'true' || el.getAttribute('aria-selected') === 'true') return true;
+    var child = el.querySelector('[aria-checked="true"], [aria-selected="true"], .Mui-selected, .Mui-checked');
+    if (child) return true;
+    try {
+      var color = getComputedStyle(el.querySelector('span') || el).backgroundColor;
+      return /rgba?\(\s*(?:19[0-9]|2[0-5][0-9])\s*,\s*(?:24[0-9]|25[0-5])\s*,\s*(?:24[0-9]|25[0-5])/i.test(color);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function isCreditCardSelected() {
+    var credit = document.querySelector('#payment-section-creditCard');
+    var debit = document.querySelector('#payment-section-payOnDelivery');
+    if (hasCheckedInput(credit)) return true;
+    if (hasCheckedInput(debit)) return false;
+    if (window.__lotusPaymentChoice) return window.__lotusPaymentChoice === 'creditCard';
+    if (looksSelected(credit)) return true;
+    if (looksSelected(debit)) return false;
+    return false;
+  }
+
+  function ensureCreditCardDiscountRow(amount) {
+    var hr = document.querySelector('#OrderSummaryCard-default > div > div > hr');
+    if (!hr || !hr.parentNode) return;
+    var row = document.querySelector('#lotus-credit-card-discount-row');
+    if (!row) {
+      row = document.createElement('div');
+      row.id = 'lotus-credit-card-discount-row';
+      row.innerHTML = [
+        '<div style="display:flex;justify-content:space-between;margin-bottom:4px;align-items:center;margin-top:12px;">',
+          '<div>',
+            '<div class="MuiBox-root" id="promotion-discount" style="align-items:center;cursor:pointer;display:flex;flex-direction:row;">',
+              '<img src="https://publish-p35803-e190640.adobeaemcloud.com/content/dam/aem-cplotusonlinecommerce-project/my/images/medias/icon/icon-percent.svg" width="16" height="16" style="margin-right:4px;">',
+              '<div class="sc-gmQyQr caEDvy" style="font-size:14px !important;line-height:1.7142857142857142 !important;font-weight:500 !important;">Credit Card Discounts</div>',
+            '</div>',
+          '</div>',
+          '<div>',
+            '<div id="promotion-discount-price" color="#E1221C" class="sc-gmQyQr blOeLO" style="font-size:14px !important;line-height:1.7142857142857142 !important;font-weight:500 !important;color:#E1221C;">-RM0.00</div>',
+          '</div>',
+        '</div>'
+      ].join('');
+      hr.parentNode.insertBefore(row, hr);
+    }
+    var price = row.querySelector('#promotion-discount-price');
+    if (price) price.textContent = '-' + formatMoney(amount);
+  }
+
+  function removeCreditCardDiscountRow() {
+    var row = document.querySelector('#lotus-credit-card-discount-row');
+    if (row && row.parentNode) row.parentNode.removeChild(row);
+  }
+
+  function updateTotalSaving(creditDiscount, enabled) {
+    var el = document.querySelector('#total-saving-price');
+    if (!el) return;
+    var base = getStableBaseAmount(el, 'data-lotus-base-saving', 'data-lotus-credit-discount', false);
+    var next = enabled ? base + creditDiscount : base;
+    el.setAttribute('data-lotus-base-saving', String(base));
+    el.setAttribute('data-lotus-credit-discount', enabled ? String(creditDiscount) : '0');
+    el.textContent = formatSavingText(el.textContent, next);
+  }
+
+  function updateTotalPrice(creditDiscount, enabled) {
+    var el = document.querySelector('#total-price');
+    if (!el) return;
+    var base = getStableBaseAmount(el, 'data-lotus-base-total', 'data-lotus-credit-discount', true);
+    var next = enabled ? Math.max(0, base - creditDiscount) : base;
+    el.setAttribute('data-lotus-base-total', String(base));
+    el.setAttribute('data-lotus-credit-discount', enabled ? String(creditDiscount) : '0');
+    el.textContent = formatMoney(next);
+  }
+
+  function patchCreditCardDiscount() {
+    if (!isPaymentPage()) return;
+    bindPaymentChoiceTracking();
+
+    var totalEl = document.querySelector('#total-price');
+    var total = totalEl
+      ? getStableBaseAmount(totalEl, 'data-lotus-base-total', 'data-lotus-credit-discount', true)
+      : 0;
+    var discount = Math.round(total * 20) / 100;
+    var enabled = isCreditCardSelected() && discount > 0;
+
+    if (enabled) {
+      ensureCreditCardDiscountRow(discount);
+    } else {
+      removeCreditCardDiscountRow();
+    }
+    updateTotalPrice(discount, enabled);
+    updateTotalSaving(discount, enabled);
+  }
+
   function patchPaymentPage() {
     if (!isPaymentPage()) return;
 
@@ -262,6 +404,7 @@
     setTextAt('#payment-section-creditCard > span > div > div > div.MuiBox-root', 1, 'Credit Card');
     hideAll('#icon-payment-2, #icon-payment-3');
     ensureCreditCardBadge();
+    patchCreditCardDiscount();
   }
 
   patchPaymentPage();
