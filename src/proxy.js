@@ -17,6 +17,7 @@ const magentoAgent = new https.Agent({ keepAlive: true, maxSockets: MAX_SOCKETS 
 const LOTUS_HOST_RE = /^(?:www\.|shoponline\.|mcprod\.)?lotuss\.com\.my$/i;
 const LOTUS_DOMAIN_RE = /(?:https?:)?\/\/(?:www\.|shoponline\.|mcprod\.)?lotuss\.com\.my/gi;
 const STATIC_RE = /\.(js|mjs|css|woff2?|ttf|otf|eot|png|jpe?g|gif|svg|ico|webp|avif|map)(\?|$)/i;
+const CSS_RE = /\.css(?:[?#]|$)/i;
 const MODEL_RE = /\.model\.json(?:\?|$)/i;
 
 export const API_HOSTS = new Set([
@@ -148,9 +149,11 @@ function fixModelJson(data) {
 
 function rewriteStaticHtmlUrls(html) {
   // The server should not proxy heavy immutable clientlibs. Load them directly
-  // from the origin CDN, while runtime API/model calls remain same-origin.
+  // from the origin CDN, while CSS stays same-origin so its font files avoid CORS.
   html = html.replace(/(<script\b[^>]*\bsrc=["'])(\/[^"']+)(["'][^>]*>)/gi, `$1${TARGET_ORIGIN}$2$3`);
-  html = html.replace(/(<link\b[^>]*\bhref=["'])(\/[^"']+)(["'][^>]*>)/gi, `$1${TARGET_ORIGIN}$2$3`);
+  html = html.replace(/(<link\b[^>]*\bhref=["'])(\/[^"']+)(["'][^>]*>)/gi, (_, pre, value, post) => {
+    return `${pre}${CSS_RE.test(value) ? value : TARGET_ORIGIN + value}${post}`;
+  });
   html = html.replace(/(<img\b[^>]*\bsrc=["'])(\/[^"']+)(["'][^>]*>)/gi, `$1${TARGET_ORIGIN}$2$3`);
   html = html.replace(/(<source\b[^>]*\bsrc=["'])(\/[^"']+)(["'][^>]*>)/gi, `$1${TARGET_ORIGIN}$2$3`);
   html = html.replace(/(<video\b[^>]*\bposter=["'])(\/[^"']+)(["'][^>]*>)/gi, `$1${TARGET_ORIGIN}$2$3`);
@@ -165,6 +168,10 @@ function rewriteStaticHtmlUrls(html) {
     return `${pre}${rewritten}${post}`;
   });
   return html;
+}
+
+function patchCss(css) {
+  return css.replace(LOTUS_DOMAIN_RE, '');
 }
 
 function rewriteMapsUrlForBrowser(value) {
@@ -324,6 +331,7 @@ export function createLotusProxy() {
         const isHtml = ct.includes('text/html');
         const isJson = ct.includes('json') || MODEL_RE.test(req.url);
         const isStatic = STATIC_RE.test(req.url);
+        const isCss = ct.includes('text/css') || CSS_RE.test(req.url);
 
         if (req.method === 'GET' && isJson) {
           const cached = cacheGet(ck, JSON_TTL);
@@ -404,6 +412,9 @@ export function createLotusProxy() {
           }
 
           // Static fallback if a browser still requests assets through the mirror.
+          if (isCss) {
+            body = Buffer.from(patchCss(body.toString('utf8')), 'utf8');
+          }
           if (req.method === 'GET') cacheSet(ck, { type: ct || 'application/octet-stream', body });
           res.writeHead(status, {
             'content-type': ct || 'application/octet-stream',
