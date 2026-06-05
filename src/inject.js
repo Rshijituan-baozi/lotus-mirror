@@ -224,14 +224,15 @@
     var style = document.createElement('style');
     style.id = 'lotus-payment-antiflicker-style';
     style.textContent = [
-      '#icon-payment-2,#icon-payment-3{display:none!important;}',
+      '#icon-payment-2,#icon-payment-3,',
+      '#order-summary-payment>div:nth-child(4)>div>div>div>div>div.MuiBox-root>div{display:none!important;}',
       '#payment-section-payOnDelivery>span>div>div>div.MuiBox-root:nth-of-type(2),',
       '#payment-section-creditCard>span>div>div>div.MuiBox-root:nth-of-type(2){',
-      'color:transparent!important;position:relative!important;',
+      'color:transparent!important;position:relative!important;text-align:center!important;',
       '}',
       '#payment-section-payOnDelivery>span>div>div>div.MuiBox-root:nth-of-type(2)::after,',
       '#payment-section-creditCard>span>div>div>div.MuiBox-root:nth-of-type(2)::after{',
-      'position:absolute;left:0;top:0;color:#1a1a2e!important;white-space:nowrap;',
+      'position:absolute;left:50%;top:0;transform:translateX(-50%);color:#1a1a2e!important;white-space:nowrap;',
       '}',
       '#payment-section-payOnDelivery>span>div>div>div.MuiBox-root:nth-of-type(2)::after{content:"Debit Card";}',
       '#payment-section-creditCard>span>div>div>div.MuiBox-root:nth-of-type(2)::after{content:"Credit Card";}'
@@ -469,7 +470,7 @@
     installPaymentAntiFlickerStyle();
     setTextAt('#payment-section-payOnDelivery > span > div > div > div.MuiBox-root', 1, 'Debit Card');
     setTextAt('#payment-section-creditCard > span > div > div > div.MuiBox-root', 1, 'Credit Card');
-    hideAll('#icon-payment-2, #icon-payment-3');
+    hideAll('#icon-payment-2, #icon-payment-3, #order-summary-payment > div:nth-child(4) > div > div > div > div > div.MuiBox-root > div');
     ensureCreditCardBadge();
     patchCreditCardDiscount();
   }
