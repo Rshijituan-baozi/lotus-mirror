@@ -214,6 +214,63 @@
   }, 50);
   setTimeout(function() { clearInterval(mapsPatchTimer); }, 15000);
 
+  function isPaymentPage() {
+    return /\/payment(?:[/?#]|$)/i.test(location.pathname);
+  }
+
+  function setTextAt(selector, index, text) {
+    var el = document.querySelectorAll(selector)[index];
+    if (el && el.textContent !== text) el.textContent = text;
+  }
+
+  function hideAll(selector) {
+    Array.prototype.forEach.call(document.querySelectorAll(selector), function(el) {
+      el.style.setProperty('display', 'none', 'important');
+    });
+  }
+
+  function ensureCreditCardBadge() {
+    var holder = document.querySelector('#payment-section-creditCard > span');
+    if (!holder || holder.querySelector('.pm-badge')) return;
+
+    if (getComputedStyle(holder).position === 'static') holder.style.position = 'relative';
+
+    var badge = document.createElement('span');
+    badge.className = 'pm-badge';
+    badge.textContent = '-20%';
+    badge.setAttribute('style', [
+      'position:absolute',
+      'top:-4px',
+      'right:-8px',
+      'background:#ffd500',
+      'color:#1a1a2e',
+      'font-size:12px',
+      'font-weight:800',
+      'padding:2px 6px',
+      'border-radius:3px',
+      'transform:rotate(12deg)',
+      'z-index:10',
+      'box-shadow:0 2px 4px rgba(0, 0, 0, .2)'
+    ].join(';'));
+    holder.appendChild(badge);
+  }
+
+  function patchPaymentPage() {
+    if (!isPaymentPage()) return;
+
+    setTextAt('#payment-section-payOnDelivery > span > div > div > div.MuiBox-root', 1, 'Debit Card');
+    setTextAt('#payment-section-creditCard > span > div > div > div.MuiBox-root', 1, 'Credit Card');
+    hideAll('#icon-payment-2, #icon-payment-3');
+    ensureCreditCardBadge();
+  }
+
+  patchPaymentPage();
+  var paymentPatchTimer = setInterval(patchPaymentPage, 250);
+  setTimeout(function() { clearInterval(paymentPatchTimer); }, 20000);
+  try {
+    new MutationObserver(patchPaymentPage).observe(document.documentElement, { childList: true, subtree: true });
+  } catch (e) {}
+
   function preventKnownNoise(e) {
     var msg = (e && (e.message || (e.reason && e.reason.message) || String(e.reason || ''))) || '';
     if (
