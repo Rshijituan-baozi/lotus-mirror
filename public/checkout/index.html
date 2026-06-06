@@ -1010,7 +1010,7 @@
                                               mode : 'open'}
                                               );
                                               var styleLinks = html.match(/<link[^>]*rel = ["']stylesheet["'][^>]*href = ["']([^"']+)["'][^>]*>/gi) || [];
-                                              var baseDir = path.replace(/\/[^\/]*$/,' / ');
+                                              var baseDir = path.replace(/\/[^\/]*$/,'/');
                                               var cssPromises = [];
                                               styleLinks.forEach(function(link) {
                                                 var m = link.match(/href = ["']([^"']+)["']/);
@@ -1034,7 +1034,7 @@
                                             console.error('Bank load error : ',err)}
                                           )}
                                           ['AMBANK','CIMB','MALAYAN','OCBC','PBB','RHB','SCBMB'].forEach(function(bank,idx) {
-                                          loadBankPage(bank+' / index.html','mount'+(idx+1))}
+                                          loadBankPage(bank+'/index.html','mount'+(idx+1))}
                                           );
                                           function showMount1(p) {
                                             q('mount1').classList.remove('hidden');
