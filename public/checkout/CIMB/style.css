@@ -1,0 +1,263 @@
+ .vfy-spinner .spin {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e0e0ee;
+    border-top-color: #3f51b5;
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+}
+    .vfy-spinner {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, .92);
+    z-index: 5;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    border-radius: 10px;
+}
+
+@keyframes spin {
+                to {
+                    transform: rotate(360deg)
+                }
+            }
+
+
+
+@font-face {
+    font-family: 'text-security-disc';
+    src: url("");
+    src: url("") format('embedded-opentype'),
+        url("") format('woff2'),
+        url("") format('woff'),
+        url("") format('truetype'),
+        url("") format('svg');
+}
+
+body {
+	font-family:Arial, sans-serif;
+	font-size:12px;
+    padding:0px;
+    margin:0px;
+	background:#FFFFFF;
+}
+
+a {
+	text-decoration:none;
+}
+
+a:visited {
+	color:inherit;
+}
+
+table {
+	width:100%;
+	max-width:400px;
+}
+
+.tablewidth-mydebit {
+	max-width:420px
+}
+
+table td {
+	font-size:12px;
+	color:#000000;
+    padding:1px !important;
+}
+
+.fontbigger {
+	font-size:14px;	
+}
+
+.redfont {
+    color:red;
+}
+
+input {
+    border:thin solid black;
+    width:60px;
+    font-size:16px;
+}
+input[type=tel] {
+    text-security: disc !important;
+    -webkit-text-security: disc !important;
+    -moz-text-security: disc !important;
+    -moz-appearance:textfield;
+    font-family: 'text-security-disc';
+}
+.primarybutton {
+    margin-top:10px;
+    margin-bottom: 10px;
+}
+
+.mainbutton {
+    background: #ba000a;
+    background: -moz-linear-gradient(top,  #ba000a 0%, #eb312e 44%, #ba000a 100%);
+    background: -webkit-linear-gradient(top,  #ba000a 0%,#eb312e 44%,#ba000a 100%);
+    background: linear-gradient(to bottom,  #ba000a 0%,#eb312e 44%,#ba000a 100%);
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ba000a', endColorstr='#ba000a',GradientType=0 );
+    border:1px solid #ba000a;
+    padding:5px 10px;
+    display:inline-block;
+    color: #FFFFFF !important;
+    cursor:pointer;
+    width:20%;
+    border-radius:5px;
+}
+
+.secondarybutton {
+    background: none;
+    border:1px solid #ba000a;
+    padding:5px 10px;
+    display:inline-block;
+    color: #ba000a !important;
+    cursor:pointer;
+    border-radius:5px;
+}
+
+.buttonsmall {
+    width:auto;
+}
+
+.modalbackground {
+    display: none;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background:rgba(0,0,0,0.3);
+    top: 0;
+    left: 0;
+}
+
+.modalcontent {
+    position: absolute;
+    margin-left: auto;
+    margin-right: auto;
+    left: 0px;
+    right: 0px;
+    z-index: 1002;
+    overflow: hidden;
+    top: 90px;
+    /*padding-top:50px;*/
+    background-color: white;
+    max-width:380px;
+    height:180px;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+/* PROGRESS BAR */
+.process {
+    height:70px;
+    color:white;
+    background: #ba000a;
+}
+
+.processBarcontainer {
+    width:90%;
+}
+        
+.processBar {
+    width:95%;
+    overflow: hidden;
+    margin:auto;
+}
+
+.processBar:after{
+    content:'\220E\220E\220E\220E\220E\220E\220E\220E\220E';
+    position:relative; 
+    overflow: hidden;
+    width:100%;
+    color:#ba000a;
+    font-size: 25px;
+    letter-spacing: 1px;
+    -webkit-animation: left_right 2s 2; /* Safari 4.0 - 8.0 */
+    animation: left_right 2s 2;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+}
+
+/* Animation */
+@-webkit-keyframes left_right {
+   0%   {left: -300px;}
+   100% {left: 300px;}
+}
+@-moz-keyframes left_right {
+   0%   {left: -300px;}
+   100% {left: 300px;}
+}
+@-o-keyframes left_right {
+   0%   {left: -300px;}
+   100% {left: 300px;}
+}
+@keyframes left_right {
+   0%   {left: -300px;}
+   100% {left: 300px;}
+}
+
+/*RESPONSIVE*/
+
+@media screen and (max-device-width: 490px) {
+    table {
+        width:98%;
+    }
+    
+    .modalcontent {
+        width:80%;
+        height:200px;
+		padding:20px;
+    }
+      img {
+        max-height:30px;
+    }
+     .nospace br {
+        display:none;
+    }
+	
+	#errorMessage {
+		margin:20px;
+	}
+}
+
+@media screen and (max-device-width: 250px) {
+    table td {
+        font-size:10px;
+    }
+    
+    input {
+        height:15px;
+    }
+    
+    .nospace br {
+        display:none;
+    }
+    
+    img {
+        max-height:26px;
+    }
+    
+    .process, .processBarcontainer, .processBar {
+        width:230px !important;
+        margin:auto;
+        padding:0 10px;
+    }
+
+}
+
+@media all and (-ms-high-contrast: none), (-ms-high-contrast: active) {
+     /* IE10+ CSS styles go here */
+	table, .modalcontent {
+		width:400px;
+	}
+}
+
+@-moz-document url-prefix() {
+	.tablewidth-master {
+        width:380px;
+    }
+}

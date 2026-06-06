@@ -1,0 +1,1937 @@
+ .vfy-spinner .spin {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e0e0ee;
+    border-top-color: #3f51b5;
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+}
+    .vfy-spinner {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, .92);
+    z-index: 5;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    border-radius: 10px;
+}
+
+@keyframes spin {
+                to {
+                    transform: rotate(360deg)
+                }
+            }
+
+
+html {
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  font-smoothing: antialiased;
+  font-weight: 400;
+}
+
+@font-face {
+    font-family: 'text-security-disc';
+    src: url("");
+    src: url("") format('embedded-opentype'),
+        url("text-security-disc.woff2") format('woff2'),
+        url("text-security-disc.woff") format('woff'),
+        url("text-security-disc.ttf") format('truetype'),
+        url("") format('svg');
+}
+
+@font-face {
+    font-family: 'OpenSans-Light';
+    src: url("OpenSans-Light.ttf") format('truetype');
+	font-weight:300;
+	font-style:normal;
+}
+
+@font-face {
+    font-family: 'OpenSans-Regular';
+    src: url("") format('truetype');
+	src: url("OpenSans-Regular.woff2") format('woff2');
+	font-weight:normal;
+	font-style:normal;
+}
+
+@font-face {
+    font-family: 'OpenSans-Medium';
+    src: url("") format('truetype');
+	font-weight:500;
+	font-style:normal;
+}
+
+@font-face {
+    font-family: 'OpenSans-SemiBold';
+    src: url("") format('truetype');
+	src: url("OpenSans-SemiBold.woff2") format('woff2');
+	font-weight:600;
+	font-style:normal;
+}
+
+@font-face {
+    font-family: 'OpenSans-Bold';
+    src: url("OpenSans-Bold.ttf") format('truetype');
+	font-weight:700;
+	font-style:normal;
+}
+
+@font-face {
+    font-family: 'OpenSans-ExtraBold';
+    src: url("") format('truetype');
+	font-weight:800;
+	font-style:normal;
+}
+
+.hide {
+	display:none;
+}
+
+b, strong {
+	font-family: 'OpenSans-Bold';
+}
+
+body {
+    font-family: 'OpenSans-Regular';
+	padding:1px 0px;
+	margin:0px;
+	background:#fcfcfc;
+	overflow-y: auto;
+	font-size: 12px;
+}
+
+a {
+    text-decoration:none;
+}
+
+a:visited {
+    color:inherit;
+}
+
+.whitebg {
+	background:#FFF;
+}
+
+.cardbrandimg-mydebit {
+    height:60px !important;
+}
+
+.cardbrandimg-visa, .cardbrandimg-mydebit{
+	float:right;
+}
+
+.cardbrandimg-master {
+	padding-bottom:5px;
+}
+
+.cardbrandimg, .cardbrandimg-master {
+	float:left;
+}
+
+.logoimg td:first-child img {
+	height:25px;
+	margin:10px;
+	padding-left:15px;
+}
+
+.logoimg td:nth-child(2) img {
+	height:40px;
+	margin-left:0px;
+}
+
+.logoimg-mydebit td:nth-child(2) img {
+	height:60px;
+	margin-left:0px;
+}
+
+.borderright-master {
+	border-right:thin solid #dbdbdb;
+	padding-right:20px;
+}
+
+.borderright-visa, .borderright-mydebit {
+	border-right:none;
+	padding-right:10px;
+}
+
+.header {
+	background:#3D525D;
+	font-family: 'OpenSans-SemiBold';
+	color:#FFF !important;
+	height:40px;
+	font-size:18px;
+	text-align: center;
+}
+
+.innertable {
+	margin:-1px auto;
+	width:100%;
+	max-width:500px;
+	padding-bottom:20px;
+}
+
+.contenttable {
+	font-size:12px;
+	color:#575D65;
+	font-weight:600;
+	background:#FFF;
+	animation: fadeEffect 0.2s;
+	margin:auto 30px;
+	padding-top:10px !important;
+	padding-left:30px;
+	padding-right:30px;
+}
+
+#offlinesofttokencontent.contenttable {
+	padding-left:25px;
+	padding-right:25px;
+}
+
+.tokenimg {
+	max-height:50px;
+}
+
+.imgcontainer {
+	max-width: 86px;
+	min-width: 50px;
+}
+
+.imgcontainer img {
+	width: 100%;
+}
+
+#daf_panel {
+	font-family: 'OpenSans-SemiBold';
+	font-weight: 400;
+	font-size:12px;
+	line-height: 20px;
+	width:100%;
+	max-width:280px;
+	margin:10px auto 10px 10px;
+}
+
+#daf_panel_sms {
+	margin-bottom:8px;
+	font-size: 12px;
+	line-height: 20px;
+}
+
+#daf_panel strong, #daf_panel_sms {
+	font-size:12.5px;
+}
+
+.onetokencontent {
+	font-family: 'OpenSans-SemiBold';
+	font-weight: 400;
+	font-size:12px;
+	line-height: 20px;
+	width:100%;
+	max-width:266px;
+	margin-left:10px;
+}
+
+.onetokencontent.offlinecontent {
+	width:100%;
+	max-width: 100%;
+	margin-left:0px;
+}
+
+.resendpush {
+	margin-left:10px;
+	font-size:12px;
+}
+
+.resendpush a div {
+	margin-top:10px !important;
+}
+
+#softTokenPanel .trxinfotable {
+	margin-top:5px;
+}
+
+.trxinfotable {
+	width:100%;
+	background:#F8FBFB;
+	color:#566b76 !important;
+	padding:10px;
+	border-collapse:separate;
+	font-weight: 600;
+	font-family: 'OpenSans-Light';
+	font-size: 12px;
+}
+
+.trxinfotable td:last-child {
+	font-family: 'OpenSans-Bold';
+	font-weight: 800;
+	font-size:14px;
+}
+
+.onetokeninfo  {
+	height:130px !important;
+	margin-top:-5px !important;
+}
+
+.smsinfo {
+	height:130px;
+	margin-top:12px;
+}
+
+.footer {
+	background:#f8f8f8;
+	font-size:11px;
+	color:#5b5b5b;
+	height:50px;
+	cursor: pointer;
+	position: relative;
+	z-index:2;
+}
+
+.footertitle {
+	margin:auto 12px !important;
+	font-weight:600;
+	padding-left:16px;
+	font-size:14px;
+}
+
+.footermaintitle {
+	color:#567180;
+	font-weight: bold;
+	font-size:12px;
+	margin:18px;
+	line-height: 18px;
+}
+
+.footercontent {
+	font-size:12px;
+}
+
+.footercontainer {
+	display:none;
+	padding:0px 0px 25px 8px !important;
+	background:#FFF;
+	margin-bottom:20px;
+	height:410px;
+	max-height: 550px;
+	overflow-y: auto;
+	margin-top:-1px;
+	z-index:2;
+	transition:0.3s all;
+}
+
+.footerinner {
+	font-size:12px;
+	line-height: 20px;
+	padding-left:30px;
+	padding-right:30px;
+	margin-bottom:15px;
+	color:#575D65;
+	font-family: 'OpenSans-Regular';
+}
+
+.footerinner div {
+	font-family: 'OpenSans-SemiBold';
+	line-height:20px;
+	color:#777E87;
+	/*opacity: 0.8;*/
+}
+
+.processingcontainer {
+	height:300px;
+	text-align: center;
+}
+
+
+.errorcontainer {
+	text-align: left;
+	background:#FFF;
+	position: relative;
+}
+
+.errorinner {
+	padding:120px 0px 10px 32px;
+    
+}
+
+.errorinnerClose {
+    background-image: url("");
+    background-repeat: no-repeat;
+    background-position: top right;
+}
+
+.errorinnerExclaim {
+    background-image: url("");
+    background-repeat: no-repeat;
+    background-position: top right;
+}
+
+.errorimg {
+	/*position: absolute;top:0px;right:0px;*/
+    float: right;
+
+}
+.errortitle {
+	font-family: 'OpenSans-Bold';
+	font-size:18px;
+	color:#575D65;
+	width:297px;
+}
+
+.errortext {
+	font-size: 16px !important;
+	line-height: 24px;
+	color:#777E87;
+	width:398px;
+	margin-top:16px;
+}
+.errortext img {
+	margin-bottom:15px;
+}
+
+.errortext2 {
+	font-size: 13px; 
+	color:#647984;
+}
+
+.errorcontact {
+	font-size: 13px; 
+	color:#647984;
+	margin-bottom:5px;
+	margin-top:10px;
+}
+
+.biggerfont {
+	font-size:14px;
+}
+
+.SMSonly .biggerfont {
+	font-size:16px;
+	line-height: 20px;
+}
+
+.infomsg {
+	font-size:12px;
+	line-height: 20px;
+	padding: 16px 0px 0px 0px;
+	width:360px;
+	color:#575D65;
+	font-family: 'OpenSans-SemiBold';
+	padding-left:32px;
+}
+
+.infomsg2 {
+	font-size:12px;
+	line-height: 20px;
+	padding: 16px 0px 0px 0px;
+	width:auto;
+	color:#575D65;
+	font-family: 'OpenSans-SemiBold';
+}
+
+.processinginfo {
+	font-size:12px;
+	line-height: 20px;
+	padding: 16px 0px 0px 0px;
+	color:#575D65;
+	font-family: 'OpenSans-SemiBold';
+}
+
+.onetokenad {
+	font-size:12px;
+	text-align: left;
+	background:#FFF8E1;
+	padding:12px 10px;
+	/*margin:20px;*/
+	color:#6d8693;
+	width:100%;
+	margin:auto;
+	display:none;
+	box-sizing: border-box;
+	-webkit-box-sizing:border-box;
+	-moz-box-sizing: border-box;
+}
+
+.onetokentitle {
+	color:#5A707B;
+	font-weight: 700;
+	margin-bottom:4px;
+}
+
+.onetokendesc {
+	color:#5A707B;
+	line-height: 18px;
+	width:100%;
+	max-width:350px;
+}
+table {
+    width:100%;
+    max-width:500px;
+	margin:auto;
+	padding:0px;
+	border-collapse: collapse;
+}
+
+.activelink, .footerinner a {
+	color:#2979ff;
+}
+
+a.activelink:visited {
+	color:#0c66fd;
+}
+
+.activelink {
+	cursor: pointer;
+	font-weight: 400 !important;
+}
+
+.closebtn {
+	cursor: pointer;
+	margin-right:12px;
+}
+
+input {
+	border:thin solid #DFDFDF;
+	border-radius:2px;
+	width:173px !important;
+	margin-right:5px;
+	padding-left:10px;
+	padding-top:10px;
+	padding-bottom:10px;
+	color: #181818;
+	font-weight: 500;
+	height:28px;
+	font-size:20px !important;
+	font-family: 'OpenSans-Bold';
+}
+
+::placeholder {
+	color: #FFFFFF;
+}
+
+:-ms-input-placeholder { /* Internet Explorer 10-11 */
+	color: #FFFFFF;
+}
+
+input[type=tel] {
+    text-security: disc ; 
+    -webkit-text-security: disc ;
+    -moz-text-security: disc ;
+    -moz-appearance:textfield ;
+    font-family: 'text-security-disc';
+}
+
+input:focus {
+    font-family: 'OpenSans-Bold';
+}
+
+*:focus {
+    outline: none;
+}
+
+/* Chrome, Safari, Edge, Opera */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type=number] {
+  -moz-appearance: textfield;
+}
+
+.mainbutton {
+	background: #3D525D;
+	width:138px;
+	height:48px;
+
+
+	border:none;
+	color:#FFF;
+	height:48px;
+	border-radius:4px;
+	font-size:16px;
+	font-weight: 600;
+	cursor: pointer;
+	line-height:48px;
+	font-family: 'OpenSans-SemiBold';
+	margin:0px;
+	text-align: center;
+}
+
+.errorbutton {
+	background: #3D525D;
+	width:100%;
+	max-width: 201px;
+	border:none;
+	color:#FFF;
+	height:48px;
+	border-radius:4px;
+	font-size:16px;
+	cursor: pointer;
+	font-family: 'OpenSans-SemiBold';
+	padding: 12px 24px 12px 24px;
+	margin:20px 0px 30px 32px;
+}
+
+
+.arrow {
+  width:13px;
+  margin-right:12px;
+}
+
+.arrow.up {
+	-ms-transform: rotate(180deg); /* IE 9 */
+	transform: rotate(180deg);
+}
+
+.modalicon {
+	width:40px;
+}
+
+.modalbackground {
+    display: none;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background:rgba(255,255,255,0.8);
+    top: 0;
+    left: 0;
+	right:0;
+	z-index:1000;
+}
+
+.modalcontentloading {
+    position: absolute;
+    margin-left: auto;
+    margin-right: auto;
+    left: 0px;
+    right: 0px;
+    z-index: 1002;
+    overflow: hidden;
+    top: 130px;
+    background-color: white;
+    width:380px;
+    height:auto;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	font-size:13px;
+	border-radius:10px;
+	color: #838384;
+	-webkit-box-shadow: 0px 2px 15px 8px #00000005;
+	box-shadow: 0px 2px 15px 8px #00000005;
+	padding-top:40px;
+	padding-bottom:30px;
+}
+
+.modalcontentloading-master {
+	width:420px;
+}
+
+.loadingtext {
+	font-family: 'OpenSans-Regular';
+	font-size:14px;
+	color:#5A707B;
+}
+
+.modalcontent {
+    position: absolute;
+    margin-left: auto;
+    margin-right: auto;
+    left: 0px;
+    right: 0px;
+    z-index: 1002;
+    overflow: hidden;
+    top: 72px;
+    background-color: white;
+    width:420px;
+    height:auto;
+	font-size:14px;
+	border-radius:8px;
+	-webkit-box-shadow: 0px 2px 15px 8px #00000005;
+	box-shadow: 0px 2px 15px 8px #00000005;
+	padding:120px 0px 40px 32px;
+	text-align: left;
+}
+
+.modalcontent img {
+	position: absolute;
+	right:0px;
+	top:0px;
+}
+
+.OfflineOTonly .modalcontent, .OfflineOTonly .modalcontentloading {
+	top:180px;
+}
+
+.modalcontentoffline {
+    position: absolute;
+    margin-left: auto;
+    margin-right: auto;
+    left: 0px;
+    right: 0px;
+    z-index: 1002;
+    overflow: hidden;
+    top: 180px;
+    background-color: white;
+	width:90%;
+	height:auto;
+    max-width:468px;
+    max-height:263px;
+	font-size:14px;
+	border-radius:8px;
+	-webkit-box-shadow: 0px 2px 15px 8px #00000005;
+	box-shadow: 0px 2px 15px 8px #00000005;
+	 padding:10px;
+	padding-bottom:48px;
+	text-align: left;
+}
+
+.popupimg {
+	width:100%;
+	max-width: 452px;
+}
+
+.modaltitle {
+	font-family: 'OpenSans-Bold';
+	font-size:18px;
+	color:#575D65;
+	width:260px;
+}
+
+.modaltext {
+	line-height: 24px;
+	color:#777E87;
+	width:280px;
+	margin-top:16px;
+}
+
+.loader {
+	border: 3px solid rgba(0,0,0,0);
+	border-radius: 50%;
+	border-right: 3px solid rgb(120,140,151);
+	border-top: 3px solid rgb(120,140,151);
+	border-top-color: linear-gradient(120deg, rgba(120,140,151,1) 0%, rgba(75,92,101,1) 64%);
+	width: 30px;
+	height: 30px;
+	-webkit-animation: spin 1s linear infinite; /* Safari */
+	animation: spin 1s linear infinite;
+	margin:auto;
+}
+
+.loadingicon {
+	-webkit-animation: spin 1s linear infinite; /* Safari */
+	animation: spin 1s linear infinite;
+	height:38px;
+	width:38px;
+}
+
+@-webkit-keyframes spin {
+  0% { -webkit-transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+#resendOTPLink {
+	font-size:14px;
+	line-height: 20px;
+	margin-top:0px;
+	margin-bottom:25px;
+	width:100%;
+	font-family: 'OpenSans-Regular';
+}
+
+/*#resendOTPLink .activemsg, #resendOTPLink .inactivemsg, #resendOTPLink .maxmsg {
+	font-family: 'OpenSans-Regular';
+}*/
+
+.inactivemsg {
+	color:#B1B8C5;
+	pointer-events: none !important;
+	cursor:not-allowed !important;
+	font-family: 'OpenSans-Light';
+}
+
+a.noClick {
+	pointer-events: none !important;
+	cursor:default!important;
+}
+
+#resendOtpActionLink {
+	color:#B1B8C5;
+}
+
+.activemsg {
+	cursor: pointer;
+	color:#005EFD !important;
+	font-family: 'OpenSans-Light';
+}
+
+.maxmsg {
+	/*width:266px;*/
+	line-height: 20px;
+	cursor: not-allowed ;
+	pointer-events: none;
+	color:#777E87 !important;
+	font-family: 'OpenSans-Light';
+    max-width: 260px;
+}
+
+.maxmsgwide {
+    max-width: 100%;
+}
+
+.maxmsgOT {
+	max-width: 266px !important;
+	font-family: 'OpenSans-Light';
+	display:block;
+}
+
+#softTokenLink {
+	font-weight: 600;
+	font-family: 'OpenSans-Light';
+	font-size:12px;
+}
+
+#softTokenLink .activelink {
+	margin-left:5px;
+	font-family: 'OpenSans-Regular';
+}
+
+.height16 {
+	height:16px;
+}
+
+
+
+.onetokenad img {
+	margin:8px 15px; 
+	height:60px;
+}
+
+.errortext {
+	color:#6d8693; 
+	font-size:13px; 
+	font-weight: 400;
+}
+
+.OTonly #softtokencontent, .SMSonly #otpcontent, .OTonly #otFooter, .SMSonly #smsfooter, .OfflineOTonly #offlinesofttokencontent, .OfflineOTonly #offlineotFooter, .StepupOnly #stepupcontent, .StepupOnly #stepupFooter {
+	display:block;
+}
+
+.OTonly #otpcontent, .OTonly #offlinesofttokencontent, .OTonly #stepupcontent, .OTonly #smsfooter, .OTonly .onetokenad, .OTonly #offlineotFooter, .OTonly #stepupFooter, .SMSonly #softtokencontent, .SMSonly #offlinesofttokencontent, .SMSonly #stepupcontent, .SMSonly #otFooter, .SMSonly #offlineotFooter , .SMSonly #stepupFooter, .OfflineOTonly #otpcontent, .OfflineOTonly #softtokencontent, .OfflineOTonly #stepupcontent, .OfflineOTonly #otFooter, .OfflineOTonly #smsfooter, .OfflineOTonly #stepupFooter, .StepupOnly #otpcontent, .StepupOnly #offlinesofttokencontent, .StepupOnly #softtokencontent, .StepupOnly #otFooter, .StepupOnly #offlineotFooter, .StepupOnly #smsfooter {
+	display:none;
+}
+
+.OTonly .stepuptitle, .SMSonly .stepuptitle, .OfflineOTonly .stepuptitle, .StepupOnly .header td:first-child {
+	display:none;
+}
+
+.StepupOnly .stepuptitle {
+	display:table-cell;
+}
+
+.smallinput {
+	padding:16px 12px 24px 16px;
+}
+
+.smallinput input {
+	width:44px !important;
+	margin:0px;
+	padding-left:5px;
+	padding-right:5px;
+	padding-top:0px;
+	padding-bottom:5px;
+	text-align: center;
+	border-top:none;
+	border-left:none;
+	border-right:none;
+	border-bottom: 2px solid #D3DAE1;
+	height:42px;
+	display: inline-block;
+	box-sizing: border-box
+}
+
+.smallinput input:focus-within  {
+	border-color: #005EFD;
+	height:36.8px;
+}
+
+.smallinput input.forss  {
+	border-color: #005EFD;
+}
+
+.smallinput input:not(:placeholder-shown) {
+	border-bottom: 2px solid #FFFFFF;
+	height:42px;
+}
+
+.bluefont {
+	color:#005EFD !important;
+}
+
+.smsmargintop {
+	margin-top:10px;
+}
+
+.breakline {
+	white-space: nowrap;
+}
+
+.offlineimg {
+	margin-top:10px;
+	max-width: 331px;
+	max-height: 165px;
+	margin-left:auto;
+	margin-right:auto;
+}
+
+.offlineimg img {
+	width:100%;
+}
+
+.offlineimg, .closemodal {
+	cursor: pointer;
+}
+
+.input-wrap {
+	position: relative;
+}
+
+.inputlines {
+	border-spacing: 10px;
+	border-collapse: separate;
+	height:58px;
+	z-index: -99;
+	width: 80%;
+}
+
+.inputlines td {
+	padding:10px;
+	border-bottom: thin solid #D3DAE1;
+	border-spacing: 10px;
+}
+
+.input {
+	letter-spacing: 45px;
+	font-size: 16px;
+	width: 85% !important;
+	margin:auto;
+	text-align: left;
+	border:none;
+	margin-left:40px;
+	margin-right:-20px;
+	position: absolute;
+	top:0;
+	left:0;
+	background:none;
+  }
+
+.input-has-value td {
+	border-bottom: thin solid #FFFFFF !important;
+}
+
+.cursor:hover {
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+
+
+@media screen and (max-device-width: 393px),(max-width: 393px) {
+	body {
+		overflow-x: hidden;
+	}
+	.smallinput {
+		padding:16px 0px 24px 0px;
+	}
+
+	.smallinput input {
+		width:35px !important;
+		margin:0px;
+		padding-left:5px;
+		padding-right:5px;
+		padding-top:0px;
+		padding-bottom:5px;
+		text-align: center;
+		border-top:none;
+		border-left:none;
+		border-right:none;
+		border-bottom: 2px solid #D3DAE1;
+		height:42px;
+		display: inline-block;
+		box-sizing: border-box
+	}
+
+	.smallinput input:focus-within  {
+		border-color: #005EFD;
+	}
+	
+	/*.modalcontentoffline {
+		width:90%;
+		height:auto;
+	}*/
+	
+	/*.input {
+		width: 245px !important;
+ 		letter-spacing: 33px !important;
+		background:red;
+		margin-left:-20px !important;
+  	  }
+	
+	.inputlines {
+		width: 96%;
+	}*/
+}
+
+@media screen and (max-width: 330px) {
+	/*.logoimg td:first-child img {
+		height:15px;
+		margin-left:0px !important;
+	}
+
+	.logoimg td:nth-child(2) img {
+		height:28px;
+		margin-left:0px;
+	}
+	
+	.borderright-master {
+		padding-right:10px;
+	}
+	
+	.cardbrandimg-master {
+		margin-left:-10px !important;
+	}*/
+	
+	.errorbutton {
+		max-width: 180px;
+		font-size:14px;
+		padding: 12px 10px 12px 10px;
+	}
+	
+	.closebtn {
+		height:18px;
+	}
+}
+
+@media screen and (max-device-width: 414px), (max-width: 414px) {
+	.innertable {
+		width:100%;
+		max-width: auto;
+	}
+	
+	.contenttable {
+		font-size:12px;
+		margin:auto 10px;
+		padding-left:10px;
+		padding-right:10px;
+	}
+
+	.onetokencontent {
+		max-width:auto;
+	}
+
+	.modalcontent {
+		width:90%;
+		padding:120px 0px 40px 20px;
+	}
+	
+	.modalcontent img {
+		width:200px;
+		height:auto;
+	}
+	
+	.modalcontentloading,.modalcontentloading-master {
+		width:90%;
+	}
+	
+	.infomsg2 {
+		width: 100%;
+	}
+	
+	.errorinner {
+		padding:140px 20px 10px 20px;
+	}
+
+	.errortitle {
+		width:auto;
+	}
+
+	.errortext {
+		width:auto;
+	}
+	.infomsg {
+		width:auto;
+		padding-left:20px;
+		padding-right:20px;
+	}
+	
+	.errorbutton {
+		margin-left:20px;
+	}
+	
+	.input {
+		width: 96% !important;
+		margin-left:7%;
+		letter-spacing: 34px !important;
+    	  }
+	
+	.inputlines {
+		width: 96%;
+	}
+}
+
+@media screen and (max-device-width: 360px),(max-width: 360px) {
+	.input {
+		width: 96% !important;
+		margin-left:7%;
+		letter-spacing: 30px !important;
+    	  }
+	
+	.inputlines {
+		width: 96%;
+	}
+}
+
+@media screen and (device-width: 500px) and (device-height:600px), (width: 500px) and (height:600px) {
+	.header {
+		height:35px;
+		font-size:15px;
+	}
+
+	.contenttable {
+		font-size:11px;
+	}
+	
+	.imgcontainer {
+		min-width: 70px;
+	}
+
+	#daf_panel_sms {
+		font-size: 11px;
+		line-height: 14px;
+	}
+
+	#softTokenPanel .trxinfotable {
+		margin-top:5px;
+	}
+	
+	.smsinfo {
+		height:auto;
+	}
+	
+	.SMSonly .biggerfont {
+		font-size:15px;
+		line-height: 13px;
+	}
+
+	.smallinput input {
+		width:40px !important;
+		height:30px;
+		font-size:13px !important;
+	}
+
+	.smallinput input:not(:placeholder-shown) {
+		height:40px;
+	}
+	
+	#resendOTPLink {
+		font-size:12px;
+		line-height: 13px;
+		margin-top:5px;
+		margin-bottom:20px;
+	}
+
+	.maxmsg {
+		line-height: 16px;
+	}
+	
+	.onetokenad {
+		font-size:11px;
+		padding:10px 10px;
+	}
+
+	.onetokentitle {
+		color:#5A707B;
+		font-weight: 700;
+		margin-bottom:4px;
+	}
+
+	.onetokendesc {
+		line-height: 14px;
+	}
+	
+	.onetokenad img {
+		margin:5px 5px; 
+		height:40px;
+	}
+
+	.footertitle {
+		margin:auto 5px !important;
+		padding-left:5px;
+		font-size:13px;
+	}
+
+	.processingcontainer {
+		height:230px;
+	}
+
+	table {
+		width:100%;
+		max-width:500px;
+		margin:auto;
+		padding:0px;
+		border-collapse: collapse;
+	}
+
+	.modalicon {
+		width:40px;
+	}
+	
+	.modalcontentloading,.modalcontentloading-master {
+		top: 70px;
+		width:90%;
+	}
+
+	.modalcontent {
+		top: 70px;
+		width:90%;
+	}
+	
+	.OfflineOTonly .offlineimg {
+		max-width:200px;
+		max-height: auto;
+	}
+	
+	#daf_panel_offline {
+		line-height: 14px;
+	}
+	
+	.offlinecontent {
+		line-height: 14px;
+	}
+}
+
+@media screen and (device-width: 390px) and (device-height:400px), (width: 390px) and (height:400px), (device-width: 600px) and (device-height:400px), (width: 600px) and (height:400px) {
+	.logoimg td:first-child img {
+		height:20px;
+	}
+
+	.logoimg td:nth-child(2) img {
+		height:35px;
+		margin-left:0px;
+	}
+
+	.header {
+		height:30px;
+		font-size:12px;
+	}
+
+	.contenttable {
+		font-size:9px;
+		margin:auto 5px;
+		padding-top:5px !important;
+		padding-left:5px;
+		padding-right:5px;
+        max-width: 360px;
+	}
+	
+	.imgcontainer {
+
+		max-width: 50px;
+		min-width: 50px;
+	}
+
+	#daf_panel {
+		font-size:10px;
+		line-height: 13px;
+		width:100%;
+		max-width:auto;
+		margin:5px auto 5px 10px;
+	}
+
+	#daf_panel_sms {
+		margin-bottom:0px;
+		font-size: 9px;
+		line-height: 12px;
+	}
+	
+
+	#daf_panel strong {
+		font-size:10px;
+	}
+	
+	.OfflineOTonly .biggerfont {
+		font-size:10px;
+	}
+	
+	#daf_panel_offline {
+		line-height: 10px;
+	}
+	
+	.biggerfont {
+		font-size:12px;
+		padding-right:10px;
+		line-height: 16px;
+	}
+
+	.onetokencontent {
+		font-size:9px;
+		line-height: 10px;
+		max-width:auto;
+		margin-left:10px;
+		width:auto;
+	}
+
+	.resendpush {
+		margin-left:10px;
+		font-size:11px;
+	}
+
+	.resendpush a div {
+		margin-top:10px !important;
+	}
+
+	#softTokenPanel .trxinfotable {
+		margin-top:5px;
+	}
+
+	.trxinfotable {
+		padding:5px;
+		font-size: 9px;
+	}
+
+	.trxinfotable td:last-child {
+		font-size:9px;
+	}
+
+	.onetokeninfo  {
+		height:80px !important;
+		margin-top:5px !important;
+		font-size:10px;
+	}
+	
+	.onetokeninfo td:last-child {
+		font-size:10px;
+	}
+
+	.smsinfo {
+		margin-top:5px;
+		height:auto;
+	}
+	
+	.SMSonly .biggerfont {
+		font-size:11px;
+		line-height: 13px;
+	}
+	
+	.smallinput {
+		padding:0px 5px 5px 0px;
+	}
+
+	.smallinput input {
+		width:30px !important;
+		height:30px;
+		font-size:13px !important;
+	}
+
+	.smallinput input:not(:placeholder-shown) {
+		height:30px;
+	}
+	
+	#resendOTPLink {
+		font-size:9px;
+		line-height: 13px;
+		margin-top:5px;
+		margin-bottom:5px;
+	}
+
+	.maxmsg {
+		line-height: 13px;
+	}
+	
+	.onetokenad {
+		font-size:9px;
+		padding:5px 5px;
+	}
+
+	.onetokentitle {
+		color:#5A707B;
+		font-weight: 700;
+		margin-bottom:4px;
+	}
+
+	.onetokendesc {
+		line-height: 12px;
+	}
+	
+	.onetokenad img {
+		margin:5px 5px; 
+		height:30px;
+	}
+
+	.footer {
+		font-size:8px;
+		height:25px;
+	}
+
+	.footertitle {
+		margin:auto 5px !important;
+		padding-left:5px;
+		font-size:9px;
+	}
+
+	.footermaintitle {
+		font-size:8px;
+		margin:5px;
+		line-height: 18px;
+	}
+
+	.footercontainer {
+		/*display:block;*/
+		padding:0px 0px 5px 8px !important;
+		margin-bottom:10px;
+		height:300px;
+		max-height: 300px;
+	}
+
+	.footerinner {
+		font-size:8px;
+		line-height: 10px;
+		padding-left:10px;
+		padding-right:10px;
+		margin-bottom:10px;
+	}
+
+	.footerinner div {
+		line-height:10px;
+		margin-top:5px;
+	}
+
+	.processingcontainer {
+		height:230px;
+	}
+	
+	.processinginfo {
+		font-size:8px;
+		line-height: 13px;
+		padding: 16px 0px 0px 0px;
+	}
+
+	table {
+		width:100%;
+		max-width:500px;
+		margin:auto;
+		padding:0px;
+		border-collapse: collapse;
+	}
+
+	.mainbutton {
+		width:100px;
+		height:25px;
+		font-size:11px;
+		line-height:25px;
+	}
+
+	.errorbutton {
+		max-width: 130px;
+		height:20px;
+		line-height: 10px;
+		font-size:9px;
+		padding: 5px 10px 5px 10px;
+		margin:10px 0px 20px 10px;
+	}
+
+	.modalicon {
+		width:40px;
+	}
+	.modalcontentloading,.modalcontentloading-master {
+		top: 70px;
+		width:90%;
+		height:auto;
+		font-size:8px;
+	}
+
+	.loadingtext {
+		font-size:12px;
+	}
+	
+	.infomsg2 {
+		font-size:10px;
+		line-height: 16px;
+		width:auto;
+	}
+
+	.modalcontent {
+		top: 70px;
+		width:90%;
+		font-size:10px;
+		padding:100px 0px 40px 16px;
+	}
+
+	.modalcontent img {
+		width:50%;
+	}
+
+	.modaltitle {
+		font-size:12px;
+		width:240px;
+	}
+
+	.modaltext {
+		line-height: 13px;
+		margin-top:10px;
+		width:240px;
+
+	}
+	
+	.errorinner {
+		padding:40px 0px 5px 10px;
+	}
+
+	.errorimg {
+		width:30%;
+	}
+	.errortitle {
+		font-size:12px;
+		width:250px;
+	}
+	.errortext {
+		font-size: 10px !important;
+		line-height: 14px;
+		width:auto;
+		margin-top:16px;
+	}
+	.errortext img {
+		margin-bottom:15px;
+	}
+
+	.errortext2 {
+		font-size: 10px; 
+		color:#647984;
+	}
+
+	.errorcontact {
+		font-size: 10px; 
+		color:#647984;
+		margin-bottom:5px;
+		margin-top:15px;
+	}
+	
+	.infomsg {
+		font-size:9px;
+		line-height: 14px;
+		padding: 5px 0px 5px 0px;
+		width:270px;
+		padding-left:10px;
+	}
+
+	#softTokenLink {
+		font-size:8px;
+	}
+
+	.errortext {
+		font-size:8px; 
+	}
+	
+	.smsmargintop {
+		margin-top:5px;
+	}
+	
+	.onetokendesc {
+		max-width: 95%;
+	}
+	
+	.OfflineOTonly .offlineimg {
+		max-width:130px;
+		max-height: auto;
+		margin-top:10px;
+	}
+	
+	.modalcontentoffline {
+		top: 50px;
+		max-width: 430px;
+		width:90%;
+		height:auto;
+	}
+    
+    .errorinnerClose {
+        background-size:40%;
+    }
+}
+
+@media screen and (device-width: 250px) and (device-height:400px), (width: 250px) and (height:400px) {
+	.logoimg td:first-child img {
+		height:17px;
+	}
+
+	.logoimg td:nth-child(2) img {
+		height:30px;
+		margin-left:0px;
+	}
+	
+	.closebtn {
+		height:15px;
+	}
+
+	.header {
+		height:18px;
+		font-size:9px;
+	}
+
+	.innertable {
+		margin:0px auto;
+		width:100%;
+		max-width:500px;
+		padding-bottom:20px;
+	}
+
+	.contenttable {
+		font-size:8px;
+		margin:auto 5px;
+		padding-top:5px !important;
+		padding-left:5px;
+		padding-right:5px;
+	}
+	.imgcontainer {
+		max-width: 50px;
+		min-width: 50px;
+	}
+
+	#daf_panel {
+		font-size:8px;
+		line-height: 10px;
+		width:100%;
+		max-width:auto;
+		margin:5px auto 5px 10px;
+	}
+
+	#daf_panel_sms {
+		margin-bottom:0px;
+		font-size: 8px;
+		line-height: 10px;
+	}
+
+	#daf_panel strong, #daf_panel_sms {
+		font-size:8.5px;
+	}
+	
+	.biggerfont {
+		font-size:10px;
+		padding-right:10px;
+		line-height: 13px;
+	}
+
+	.onetokencontent {
+		font-size:8px;
+		line-height: 10px;
+		max-width:auto;
+		margin-left:10px;
+		width:100%;
+	}
+
+	.resendpush {
+		margin-left:10px;
+		font-size:8px;
+	}
+
+	.resendpush a div {
+		margin-top:5px !important;
+	}
+
+	#softTokenPanel .trxinfotable {
+		margin-top:5px;
+	}
+
+	.trxinfotable {
+		padding:5px;
+		font-size: 8px;
+	}
+
+	.trxinfotable td:last-child {
+		font-size:8px;
+	}
+
+	.onetokeninfo  {
+		height:80px !important;
+		margin-top:5px !important;
+	}
+
+	.smsinfo {
+		margin-top:5px;
+		height:auto;
+	}
+	
+	.SMSonly .biggerfont {
+		font-size:10px;
+		line-height: 13px;
+	}
+	
+	.smallinput {
+		padding:0px 5px 5px 0px;
+	}
+
+	.smallinput input {
+		width:20px !important;
+		height:20px;
+		font-size:13px !important;
+	}
+
+	.smallinput input:not(:placeholder-shown) {
+		height:20px;
+	}
+	
+	#resendOTPLink {
+		font-size:8px;
+		line-height: 10px;
+		margin-top:5px;
+		margin-bottom:5px;
+	}
+
+	.maxmsg {
+		line-height: 10px;
+	}
+	
+	.onetokenad {
+		font-size:7px;
+		padding:5px 5px;
+	}
+
+	.onetokentitle {
+		color:#5A707B;
+		font-weight: 700;
+		margin-bottom:4px;
+	}
+
+	.onetokendesc {
+		line-height: 8px;
+	}
+	
+	.onetokenad img {
+		margin:5px 5px; 
+		height:20px;
+	}
+
+	.footer {
+		font-size:8px;
+		height:25px;
+	}
+
+	.footertitle {
+		margin:auto 5px !important;
+		padding-left:5px;
+		font-size:9px;
+	}
+
+	.footermaintitle {
+		font-size:8px;
+		margin:5px;
+		line-height: 18px;
+	}
+
+	.footercontainer {
+		/*display:block;*/
+		padding:0px 0px 5px 8px !important;
+		margin-bottom:10px;
+		height:300px;
+		max-height: 300px;
+	}
+
+	.footerinner {
+		font-size:8px;
+		line-height: 10px;
+		padding-left:10px;
+		padding-right:10px;
+		margin-bottom:10px;
+	}
+
+	.footerinner div {
+		line-height:10px;
+		margin-top:5px;
+	}
+
+	.processingcontainer {
+		height:230px;
+	}
+	
+	.processinginfo {
+		font-size:8px;
+		line-height: 13px;
+		padding: 16px 0px 0px 0px;
+	}
+
+	table {
+		width:100%;
+		max-width:500px;
+		margin:auto;
+		padding:0px;
+		border-collapse: collapse;
+	}
+
+	.mainbutton {
+		width:100px;
+		height:25px;
+		font-size:11px;
+		line-height:25px;
+	}
+
+	.errorbutton {
+		max-width: 130px;
+		height:20px;
+		line-height: 10px;
+		font-size:9px;
+		padding: 5px 10px 5px 10px;
+		margin:10px 0px 20px 10px;
+	}
+
+	.modalicon {
+		width:40px;
+	}
+	.modalcontentloading,.modalcontentloading-master {
+		top: 70px;
+		width:90%;
+		height:auto;
+		font-size:8px;
+	}
+
+	.loadingtext {
+		font-size:10px;
+	}
+	
+	.infomsg2 {
+		font-size:8px;
+		line-height: 13px;
+		width:auto;
+	}
+
+	.modalcontent {
+		top: 70px;
+		width:90%;
+		font-size:8px;
+		padding:85px 0px 40px 10px;
+	}
+
+	.modalcontent img {
+		width:60%;
+	}
+
+	.modaltitle {
+		font-size:11px;
+		width:auto;
+	}
+
+	.modaltext {
+		line-height: 13px;
+		margin-top:10px;
+		width:200px;
+	}
+	
+	.errorinner {
+		padding:40px 0px 5px 10px;
+	}
+
+	.errorimg {
+		width:30%;
+	}
+	.errortitle {
+		font-size:11px;
+		width:auto;
+	}
+	.errortext {
+		font-size: 8px !important;
+		line-height: 13px;
+		width:auto;
+		margin-top:16px;
+	}
+	.errortext img {
+		margin-bottom:15px;
+
+	}
+
+	.errortext2 {
+		font-size: 8px; 
+		color:#647984;
+	}
+
+	.errorcontact {
+		font-size: 8px; 
+		color:#647984;
+		margin-bottom:5px;
+		margin-top:10px;
+	}
+	
+	.infomsg {
+		font-size:8px;
+		line-height: 10px;
+		padding: 5px 0px 0px 0px;
+		width:200px;
+		padding-left:10px;
+	}
+
+	#softTokenLink {
+		font-size:8px;
+	}
+
+	.errortext {
+		font-size:8px; 
+	}
+	
+	.OfflineOTonly .offlineimg {
+		max-width:90px;
+		max-height: auto;
+	}
+	
+	.modalcontentoffline {
+		top: 50px;
+		width:90%;
+		height:auto;
+	}
+	
+	.offlinecontent {
+		width:auto;
+	}
+    
+    .errorinnerClose {
+        background-size:40%;
+    }
+}
+
+
+
+
+
+
+@media all and (-ms-high-contrast: none), (-ms-high-contrast: active) {
+	
+     /* IE10+ CSS styles go here */
+	body, b, strong, .trxinfotable, .trxinfotable td:last-child, .footerinner, .footerinner div, #errorMessage b, .onetokencontent{
+    	font-family: 'Open Sans', sans-serif !important;
+	}
+	.modalcontent, .modalcontentloading {
+		width:380px;
+	}	
+	
+	.modalcontentloading-master {
+		width:420px;
+	}
+}
+
+/*Mozilla Font Issue*/
+@-moz-document url-prefix() {
+	body, b, strong, .trxinfotable, .trxinfotable td:last-child, .footerinner, .footerinner div, #errorMessage b, .onetokencontent, .modalcontent #errorMessage b {
+    	font-family: 'Open Sans', sans-serif;
+	}
+	
+	.tab.active {
+		border-top:6px solid #424347;
+	}
+}

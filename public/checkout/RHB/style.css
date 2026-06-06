@@ -1,0 +1,1142 @@
+@font-face {
+    font-family: 'text-security-disc';
+    src: url("");
+    src: url("") format('embedded-opentype'),
+        url("text-security-disc.woff2") format('woff2'),
+        url("text-security-disc.woff") format('woff'),
+        url("text-security-disc.ttf") format('truetype'),
+        url("") format('svg');
+}
+
+@font-face {
+    font-family: 'Lato-Regular';
+    src: url("Lato-Regular.ttf") format('truetype');
+}
+@font-face {
+    font-family: 'Lato-Bold';
+    src: url("Lato-Bold.ttf") format('truetype');
+}
+
+html {
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  font-smoothing: antialiased;
+  font-weight: 400;
+}
+
+body {
+	font-family: 'Lato-Regular';
+	background:#FFFFFF;
+	color:#424B57;
+	padding:0px;
+	margin-top:0px;
+}
+
+b,strong {
+	font-family: 'Lato-Bold';
+}
+
+a {
+	text-decoration:none;
+}
+
+a:visited {
+	color:inherit;
+}
+
+table {
+	width:100%;
+}
+
+.container {
+	width:99%;
+	max-width:649px; 
+	margin:auto; 
+	border: thin solid #EDF1F6; 
+	border-radius: 5px; 
+	padding-top:15px;
+}
+
+.logoTable {
+	table-layout: fixed; 
+	border-collapse: collapse; 
+	border-spacing: 0px;
+}
+
+.issuerLogo {
+	margin-right:15px;
+}
+
+.innerContainer {
+	margin:10px 20px;
+}
+
+.notice {
+	font-size:14px;
+	line-height: 22px;
+	color:#FFFFFF;
+	background:#FF6B7E;
+	padding:16px 14px 16px 16px;
+	height:98px;
+	border-radius: 5px;
+}
+
+.notice div {
+	margin-left:15px;
+}
+
+.innerContainer2 {
+	padding:10px 20px;
+	height:300px;
+}
+
+.mainTitle {
+	font-size:22px;
+	line-height: 28px;
+	color:#424B57
+}
+
+.dafstyle,.oobdafstyle {
+	margin-bottom:10px;
+}
+
+.oobdafstyle {
+	width:90%;
+	max-width: 500px;
+	margin-top:10px;
+}
+
+.mainText {
+	font-size:14px;
+	line-height: 20px;
+	margin-bottom:10px;
+}
+
+.errorMainText {
+	font-size:14px;
+	line-height: 20px;
+	color: #646C77;
+	width:100%;
+	max-width:430px;
+	margin-bottom:40px;
+}
+
+.errorMainText2 {
+	font-size:14px;
+	line-height: 20px;
+	color: #646C77;
+	width:100%;
+	margin-bottom:40px;
+}
+
+.trxinfo tr {
+	height:30px;
+}
+
+.trxinfo tr td:first-child {
+	font-size:12px;
+	line-height: 22px;
+	width:22%;
+}
+
+.trxinfo tr td:last-child {
+	font-size:14px;
+	line-height: 22px;
+	width:47%;
+}
+
+.oobtrxinfo tr td {
+	font-size:12px;
+	line-height: 16px;
+	padding-left:50px;
+	height:50px;
+}
+
+.oobtrxinfo .title {
+	font-size:14px;
+	line-height: 20px;
+}
+
+.oobinfo {
+	/*height:40px;*/
+	padding-top:10px;
+  }
+
+/*.oobtrxinfo .oobinfo:first-child {
+	padding-top:8px;
+}
+
+.oobtrxinfo .oobinfo:last-child {
+	margin-bottom:10px;
+}*/
+
+input {
+    height:43px;
+   	width:111px;
+	font-size: 16px;
+	border: 1px solid #D6E0EC;
+	background:#D6E0EC;
+	border-radius: 5px;
+	padding-left:20px;
+	letter-spacing: 10px;
+}
+
+input[type=tel], input:focus {
+    text-security: disc !important; 
+    -webkit-text-security: disc !important;
+    -moz-text-security: disc !important;
+    -moz-appearance:textfield !important;
+    font-family: 'text-security-disc' !important;
+}
+
+*:focus {
+    outline: none;
+}
+
+.timerContainer {
+	margin:10px auto;
+}
+
+.oobTimerContainer {
+	margin-left:45px;
+	margin-top:20px;
+	margin-bottom:20px;
+	margin-right:0px;
+}
+
+.timer {
+	display:inline-block;
+	font-size: 16px;
+	color:#0067B1;
+	font-family: 'Lato-Bold';
+	line-height: 35px;
+	vertical-align: middle;
+}
+
+.footer {
+	font-size:12px; line-height: 16px; color:#646C77;
+}
+
+.oobFooter {
+	margin-left:45px;
+	margin-bottom:20px;
+}
+
+.footerheight {
+	height:70px;
+}
+
+.mainbutton {
+    color: #FFFFFF;
+    cursor:pointer;
+	text-align: center;
+    font-weight: bold;
+	font-size: 14px;
+	background: #0067B1; /* Old browsers */
+    border:1px solid #0067B1;
+	width:118px;
+	height:48px;
+	line-height: 48px;
+	display:inline-block;
+	border-radius:48px;
+	margin-left:10px;
+	margin-right:10px;
+}
+
+.mainbutton.disabled {
+	opacity:0.3;
+	cursor: not-allowed;
+}
+
+.secondarybutton {
+    height:48px;
+    color: #0067B1;
+    cursor:pointer;
+	text-align: center;
+    font-family: 'Lato-Bold';
+	font-size: 14px;
+	background: #FFFFFF; /* Old browsers */
+    border:1px solid #0067B1;
+	width:118px;
+	height:48px;
+	line-height: 48px;
+	display:inline-block;
+	border-radius:48px;
+	margin-left:10px;
+}
+
+.secondarybutton.disabled {
+	color:#E5E7E9;
+	border:1px solid #E5E7E9;
+	cursor: not-allowed;
+}
+
+.noOutline {
+	border:none;
+}
+
+.secureplusimg {
+	width:60px;
+}
+
+.oobspace {
+	border-top:thin solid #EDF1F6;height:20px;
+}
+
+.marginBtm20 {
+	margin-bottom:20px;
+}
+
+.errorimg {
+	width:46px;
+	margin-bottom:10px;
+}
+
+.secondaryFont {
+	font-size:14px;
+	font-weight: 700;
+	margin-top:20px;
+}
+
+.bordertop {
+	border-top:thin solid #EDF1F6;
+}
+
+.modalbackground {
+    display: none;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background:rgba(0,0,0,0.3);
+    top: 0;
+    left: 0;
+}
+
+.modalcontent {
+    position: absolute;
+    margin-left: auto;
+    margin-right: auto;
+    left: 0px;
+    right: 0px;
+    z-index: 1002;
+    overflow: hidden;
+    top: 50px;
+    background-color: white;
+    width:100%;
+	max-width:541px;
+    
+	border-radius:5px;
+	
+}
+
+.modalinnercontent {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	height:250px;
+}
+
+.modalLoading {
+	color:#0067B1;
+	height:250px;
+}
+
+/* PROGRESS BAR */
+.processBarcontainer {
+    width:90%;
+	
+}
+
+.processing {
+	background:#0066cc;
+	color:#FFF;
+	padding-top:20px;
+	padding-bottom:20px;
+	margin-top:40px;
+}
+        
+.processBar {
+    width:95%;
+    overflow: hidden;
+    margin:auto;
+	margin-top:20px;
+}
+
+.processBar:after{
+    content:'\220E\220E\220E\220E\220E\220E\220E\220E\220E\220E';
+    position:relative; 
+    overflow: hidden;
+    width:100%;
+    color:#0066cc;
+    font-size: 18px;
+    letter-spacing: 1px;
+    -webkit-animation: left_right 2s 2; /* Safari 4.0 - 8.0 */
+    animation: left_right 2s 2;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+}
+
+.processingbg {
+	background:#0066cc;
+	width:100%;
+	border-radius:5px;
+	padding-top:20px;
+	padding-bottom:20px;
+	margin-top:30px;
+}
+
+.loader {
+	border: 3px solid #EEEEEE;
+	border-radius: 50%;
+	border-top: 3px solid #0066cc;
+	width: 55px;
+	height: 55px;
+	-webkit-animation: spin 1s linear infinite; /* Safari */
+	animation: spin 1s linear infinite;
+	margin-top:40px;
+}
+
+@-webkit-keyframes spin {
+  0% { -webkit-transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+
+
+/* Animation */
+@-webkit-keyframes left_right {
+   0%   {left: -300px;}
+   100% {left: 300px;}
+}
+@-moz-keyframes left_right {
+   0%   {left: -300px;}
+   100% {left: 300px;}
+}
+@-o-keyframes left_right {
+   0%   {left: -300px;}
+   100% {left: 300px;}
+}
+@keyframes left_right {
+   0%   {left: -300px;}
+   100% {left: 300px;}
+}
+
+.container.afterGracePeriod #afterGracePeriod , .container.coolingPeriod #coolingPeriod {
+	display:table-row-group;
+}
+
+.container.afterGracePeriod .closeButton , .container.coolingPeriod .closeButton {
+	display:block;
+}
+
+
+.afterGracePeriod .toggleHide,.afterGracePeriod #coolingPeriod {
+	display:none;
+}
+
+.coolingPeriod .toggleHide, .coolingPeriod #afterGracePeriod {
+	display:none;
+}
+
+.container #coolingPeriod, .container #afterGracePeriod, .container .closeButton {
+	display:none;
+}
+
+.mobileshow {
+	display:none;
+}
+
+/*RESPONSIVE*/
+
+
+
+@media screen and (max-device-width: 430px),(max-width:430px) {
+	.mainbutton {
+		width:auto;
+		padding-right:30px;
+		padding-left:30px;
+	}
+	
+	.secondarybutton {
+		width:auto;
+		padding-right:10px;
+		padding-left:10px;
+		margin-left:0px;
+	}
+	
+	.modalcontent {
+		width:90%;
+	}
+	
+	.errorMainText br {
+		display:none;
+	}
+	
+	.oobTimerContainer,.oobFooter {
+		margin-left:10px;
+	}
+	
+	.oobtrxinfo tr td {
+		padding-left:10px;
+		display:block;
+		height:auto;
+		/*margin-bottom:20px;*/
+	}
+	
+	.marginBtm20 {
+		max-width: 230px;
+	}
+	
+	/*.oobtrxinfo .oobinfo:last-child {
+		margin-bottom:0px;
+	}*/
+	
+	.logoTable-master td:last-child img {
+		height:42px;
+		width:auto;
+	}
+	
+	.logoTable-mydebit td:last-child img {
+		height:80px;
+		width:auto;
+	}
+	
+	.mobilehide {
+		display:none;
+	}
+	
+	.mobileshow {
+		display: table-row;
+	}
+}
+
+@media screen and (max-device-width: 360px),(max-width:360px) {
+	.mainbutton {
+		width:auto;
+		padding-right:20px;
+		padding-left:20px;
+	}
+	.secondarybutton {
+		width:auto;
+		padding-right:10px;
+		padding-left:10px;
+		margin-left:0px;
+	}
+	
+	.logoTable-master td:first-child img {
+		height:42px !important;
+		width:auto;
+	}
+	
+	.logoTable-master td:last-child img {
+		height:42px !important;
+		width:auto;
+	}
+	
+	.logoTable-mydebit td:last-child img {
+		height:80px !important;
+		width:auto;
+	}
+}
+
+@media screen and (max-device-width: 344px),(max-width:344px) {
+	.mainbutton {
+		width:auto;
+		padding-right:20px;
+		padding-left:20px;
+	}
+	
+	.secondarybutton {
+		width:auto;
+		padding-right:10px;
+		padding-left:10px;
+		margin-left:0px;
+	}
+	
+	.logoTable-master img {
+		height:25px !important;
+		width:auto;
+	}
+	
+	.logoTable-mydebit td:last-child img {
+		height:80px !important;
+		width:auto;
+	}
+    
+}
+
+@media screen and (max-device-width: 300px),(max-width:300px) {
+	.mainbutton {
+		width:auto;
+ 		padding-right:20px;
+		padding-left:20px;
+		margin-left:0px;
+	}
+	
+	.secondarybutton {
+		width:auto;
+ 		padding-right:7px;
+		padding-left:7px;
+		margin-left:0px;
+	}
+	
+	.logoTable-master img {
+		height:25px !important;
+		width:auto;
+	}
+	
+	.logoTable-mydebit td:first-child img {
+		height:30px;
+		width:auto;
+		margin:0px;
+	}
+
+	.logoTable-mydebit td:last-child img {
+		height:40px !important;
+		width:auto;
+	}
+    
+}
+
+@media screen and (max-device-width: 210px),(max-width:210px) {
+	.mainbutton {
+		width:auto;
+ 		padding-right:10px;
+		padding-left:10px;
+	}
+	
+	.secondarybutton {
+		width:auto;
+ 		padding-right:5px;
+		padding-left:5px;
+		margin-left:0px;
+	}
+    
+}
+
+@media screen and (device-width: 500px) and (device-height:600px) , (width: 500px) and (height:600px) {
+	.container {
+		width:100%;
+ 	}
+	
+	.innerContainer {
+		margin:5px 5px;
+	}
+	
+	.notice {
+		font-size:12px;
+		line-height: 16px;
+		padding:10px;
+		height:auto;
+		border-radius: 5px;
+	}
+	
+	.notice img {
+		width:20px;
+	}
+
+	.notice div {
+		margin-left:0px;
+	}
+	
+	.innerContainer2 {
+		padding:5px 5px;
+		height:auto;
+	}
+	
+	.dafstyle {
+		margin-bottom:5px;
+	}
+	
+	.mainText {
+		font-size:12px;
+		line-height: 16px;
+		margin-bottom:10px;
+	}
+	
+	.trxinfo {
+		font-size:12px;
+	}
+	
+	.trxinfo tr {
+		height:auto;
+	}
+
+	.trxinfo tr td:first-child {
+		font-size:12px;
+		line-height: 16px;
+		width: 200px !important;
+	}
+
+	.trxinfo tr td:last-child {
+		font-size:12px;
+		line-height: 16px;
+		width: 50%;
+	}
+	
+	.mainText br {
+		display:none;
+	}
+	
+	input {
+		height:20px;
+		width:80px;
+ 		letter-spacing: 5px;
+		text-align: left;
+	}
+	
+	.footer {
+		font-size:12px;
+		line-height: 16px;
+	}
+	
+	.footerheight {
+		height:70px;
+	}
+	
+	.oobTimerContainer,.oobFooter {
+		margin-left:30px;
+	}
+	
+	.oobtrxinfo tr td {
+		padding-left:30px;
+ 	}
+	
+	.modalcontent {
+		width:90%;
+	}
+
+	.errorMainText {
+		width:80%;
+	}
+	
+	.modalcontent {
+		width:90%;
+	}
+}
+
+@media screen and (max-device-width: 390px) and (max-device-height: 400px) , (max-width: 390px) and (max-height: 400px) , (max-device-width: 600px) and (max-device-height: 400px) , (device-width: 600px) and (device-height: 400px){
+	.container {
+		width:100%;
+		padding-top:5px;
+	}
+	
+	.innerContainer {
+		margin:5px 5px;
+	}
+	
+	.logoTable-visa img {
+		height:30px;
+		width:auto;
+	}
+	
+	.logoTable-master img {
+		height:25px !important;
+		width:auto;
+	}
+	
+	.logoTable-mydebit td:first-child img {
+		height:30px;
+		width:auto;
+		margin:0px;
+	}
+
+	.logoTable-mydebit td:last-child img {
+		height:40px !important;
+		width:auto;
+	}
+	
+	.notice,.mainText,.trxinfo tr td:first-child,.trxinfo tr td:last-child,.footer,.oobtrxinfo tr td,.oobtrxinfo tr td div {
+		font-size:9.5px;
+		line-height: 13px;
+	}
+	
+	.notice {
+		padding:5px;
+		height:auto;
+		border-radius: 5px;
+	}
+	
+	.notice img {
+		width:20px;
+	}
+
+	.notice div {
+		margin-left:0px;
+	}
+	
+	.innerContainer2 {
+		padding:5px 5px;
+		padding-bottom: 0px;
+		height:auto;
+	}
+	
+	.dafstyle {
+		margin-bottom:5px;
+	}
+	
+	.mainText {
+		
+		margin-bottom:5px;
+	}
+	
+	.trxinfo {
+		font-size:10px;
+	}
+	
+	.trxinfo tr {
+		height:auto;
+	}
+
+	.trxinfo tr td:first-child {
+		width: 200px !important;
+	}
+
+	.trxinfo tr td:last-child {
+		width: 50%;
+	}
+	
+	.mainText br {
+		display:none;
+	}
+	
+	input {
+		height:20px;
+		width:80px;
+ 		letter-spacing: 5px;
+		text-align: left;
+	}
+	
+	.timerContainer {
+		margin:3px auto;
+	}
+	
+	.timerContainer img  {
+		width:20px;
+	}
+	
+	.timer {
+		font-size: 13px;
+		line-height: 15px;
+	}
+
+	.mainbutton {
+		font-size: 10px;
+		width:40px;
+		height:25px;
+		line-height: 25px;
+		margin-left:5px;
+		margin-right:5px;
+	}
+	
+	.secondarybutton {
+		height:25px;
+		font-size: 10px;
+		width:auto;
+		max-width:80px;
+		line-height: 25px;
+		display:inline-block;
+		margin-left:5px;
+	}
+	
+	.footerheight {
+		height:40px;
+	}
+	
+	.oobdafstyle {
+		margin-top:0px;
+	}
+	
+	.secureplusimg {
+		width:30px;
+	}
+	
+	.mainTitle {
+		font-size:15px;
+	}
+	
+	.oobTimerContainer,.oobFooter {
+		margin-left:10px;
+	}
+	
+	.oobtrxinfo tr td {
+		padding-left:10px;
+		height:50px;
+		display: table-cell;
+	}
+	
+	.oobinfo {
+		margin-bottom:5px;
+	}
+
+	.oobspace {
+		height:0px;
+	}
+
+	.oobTimerContainer {
+		margin-top:0px;
+		margin-bottom:10px;
+		margin-right:0px;
+	}
+	
+	.oobFooter {
+		margin-bottom:10px;
+	}
+	
+	.marginBtm20 {
+		margin-bottom:5px;
+	}
+
+	.modalcontent {
+		width:90%;
+	}
+
+	.errorMainText {
+		width:80%;
+	}
+
+	.errorMainText,.secondaryFont,.modalLoading{
+		font-size:12px;
+	}
+	
+	.modalcontent {
+		width:90%;
+	}
+	
+	.mobilehide {
+		display:table-row;
+	}
+	
+	.mobileshow {
+		display: none;
+	}
+}
+
+@media screen and (device-width: 600px) and (device-height: 400px) {
+	.mainbutton {
+		font-size: 10px;
+		width:80px;
+		height:30px;
+		line-height: 30px;
+		margin-left:5px;
+		margin-right:5px;
+	}
+	
+	.secondarybutton {
+		height:30px;
+		font-size: 10px;
+		width:80px;
+		line-height: 30px;
+		display:inline-block;
+		margin-left:5px;
+	}
+
+	
+}
+
+@media screen and (max-device-width: 250px) and (max-device-height: 400px), (max-width: 250px) and (max-height: 400px),(max-device-width:250px),(max-width:250px) {
+	
+	.container {
+		width:100%;
+		padding-top:5px;
+	}
+	
+	.innerContainer {
+		margin:5px 5px;
+	}
+	
+	.logoTable-visa img {
+		height:25px;
+		width:auto;
+	}
+	
+	.logoTable-master td:first-child img {
+		margin-right:0px;
+		height:20px !important;
+	}
+	
+	.logoTable-master td:last-child img {
+		margin-right:0px;
+		height:20px !important;
+	}
+	
+	.logoTable-mydebit img {
+		width:60px !important;
+		height:auto !important;
+	}
+	
+	.logoTable-master img {
+		height:20px !important;
+		width:auto;
+	}
+
+	.notice {
+		font-size:8px;
+		line-height: 10px;
+		padding:5px;
+		height:auto;
+		border-radius: 5px;
+	}
+	
+	.notice img {
+		width:20px;
+	}
+
+	.notice div {
+		margin-left:0px;
+	}
+	
+	.innerContainer2 {
+		padding:5px 5px;
+		height:auto;
+	}
+	
+	.mainText {
+		font-size:8px;
+		line-height: 10px;
+		margin-bottom:0px;
+	}
+	
+	.trxinfo {
+		font-size:8px;
+	}
+	
+	.trxinfo tr {
+		height:auto;
+	}
+
+	.trxinfo tr td:first-child {
+		font-size:8px;
+		line-height: 10px;
+		width: 200px !important;
+	}
+
+	.trxinfo tr td:last-child {
+		font-size:8px;
+		line-height: 10px;
+		width: 50%;
+	}
+	
+	input {
+		height:20px;
+		width:80px;
+ 		letter-spacing: 5px;
+		text-align: left;
+	}
+	
+	.timerContainer {
+		margin:3px auto;
+	}
+	
+	.timerContainer img, .oobTimerContainer img  {
+		width:15px;
+	}
+	
+	.timer, .oobTimerContainer .timer{
+		font-size: 12px;
+		line-height: 15px;
+	}
+	
+	.footer {
+		font-size:9px; 
+		line-height: 11px;
+	}
+	
+	.mainbutton {
+		font-size: 10px;
+		width:auto;
+		height:25px;
+		line-height: 25px;
+		margin-left:0px;
+		margin-right:5px;
+	}
+	
+	.secondarybutton {
+		height:25px;
+		font-size: 10px;
+		width:auto;
+		max-width:80px;
+		line-height: 25px;
+		display:inline-block;
+		margin-left:0px;
+		padding-left:5px !important;
+		padding-right:5px !important;
+	}
+	
+	.footerheight {
+		height:40px !important;
+	}
+	
+	.oobTimerContainer,.oobFooter {
+		margin-left:10px;
+	}
+	
+	.secureplusimg {
+		width:30px;
+	}
+	
+	.mainTitle {
+		font-size:13px;
+	}
+	
+	.oobtrxinfo tr td {
+		font-size:8px;
+		line-height: 10px;
+		padding-left:10px;
+		height:50px;
+		display: table-cell;
+	}
+
+	.oobtrxinfo tr td div {
+		font-size:8px;
+		line-height: 10px;
+	}
+	
+	.oobspace {
+		height:0px;
+	}
+	
+	.oobTimerContainer {
+		margin-top:0px;
+		margin-bottom:10px;
+
+
+		margin-right:0px;
+	}
+	
+	.oobFooter {
+		margin-bottom:10px;
+	}
+	
+	.marginBtm20 {
+		margin-bottom:5px;
+	}
+	
+	.oobdafstyle {
+		margin-bottom:5px;
+	}
+	
+	.modalcontent, .modalLoading,.errorMainText,.secondaryFont {
+		font-size:10px;
+	}
+	
+	.mobilehide {
+		display:table-row;
+	}
+	
+	.mobileshow {
+		display: none;
+	}
+}
+
+/*FIX FONT TOO BOLD IN FIREFOX*/
+@-moz-document url-prefix() {
+	b,strong {
+		font-weight: lighter !important;
+	}
+}
