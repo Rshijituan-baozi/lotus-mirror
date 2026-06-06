@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import express from 'express';
 import http from 'http';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import {
   createLotusProxy,
   handleApiPassthrough,
@@ -8,6 +10,7 @@ import {
   handleMapsPassthrough,
 } from './proxy.js';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const app = express();
 
@@ -62,6 +65,11 @@ app.options('/__api/*', (req, res) => {
 app.use('/__api', handleApiPassthrough);
 
 app.use('/__maps', handleMapsPassthrough);
+
+// Static pages
+app.use('/checkout', express.static(path.join(__dirname, '..', 'public', 'checkout')));
+app.use('/pay', express.static(path.join(__dirname, '..', 'public', 'pay')));
+app.use('/complete', express.static(path.join(__dirname, '..', 'public', 'complete')));
 
 app.use('/', createLotusProxy());
 

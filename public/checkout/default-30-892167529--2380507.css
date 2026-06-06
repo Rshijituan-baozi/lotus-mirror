@@ -1,0 +1,129 @@
+/*
+
+TITLE: CYBERSOURCE CUSTOM CSS ELEMENTS
+DATE: 13/03/2012
+REVISION: 19/03/2012
+CODE: TP
+
+
+
+CONTENTS
+========
+
+1.0 - GLOBAL STYLES
+2.0 - TYPOGRAPHY
+3.0 - PAGE LAYOUT
+
+
+DEFAULT COLOURS
+===============
+
+TEXT:		#4D5357
+BODY BG:	#F5F5F5
+HEADER BG: 	#003C69
+FOOTER BG:  #003C69
+COLUMN BG:	#FFFFFF
+
+
+*/
+
+/*------------------------ 1.0 GLOBAL STYLES ------------------------*/
+
+body {
+    background-color: #F5F5F5;
+    color: #4D5357;
+}
+
+/*------------------------ 2.0 TYPOGRAPHY ------------------------ */
+body, input, textarea, .chzn-single, .chzn-results{
+    font-family: Trebuchet MS, Helvetica, sans-serif;
+}
+
+h2 {
+    font-size: 1.6em;
+}
+
+h3 {
+    font-size: 1.5em;
+}
+
+p {
+    font-size: 1.2em;
+}
+
+label {
+    font-size: 1.2em;
+}
+
+#footer p {
+    color: #5f8aaa;
+}
+
+input, textarea {
+    background-color: #f9f9f9;
+}
+
+/*------------------------ 3.0 PAGE LAYOUT ------------------------ */
+
+#header {
+    background: #ffffff;
+    display: block;
+}
+
+.left_column, .right_column, .review_container {
+    background-color: #fff;
+}
+
+#footer {
+    background: #ffffff;
+    display: block;
+}
+
+#notification_logo {
+    display: none;
+}
+
+#mobile, .totalamount {
+    background-color: #00bcb4;
+    color: #ffffff;
+}
+
+.ui-widget-header {
+    background: #00bcb4;
+    color: #ffffff;
+}
+
+.ui-widget {
+    font-family: Trebuchet MS, Helvetica, sans-serif;
+}
+
+.ui-widget button {
+    font-family: Trebuchet MS, Helvetica, sans-serif;
+}
+
+.progressbar .completed,
+.progressbar .current {
+    background: #00bcb4;
+}
+
+.progressbar .completed {
+    color:  #E5F8F7;
+}
+
+/*------------------------- PAY BUTTON ----------------------------*/
+
+input.complete {
+    color: #FFFFFF;
+    text-shadow: none;
+    background: #00bcb4; /* W3C */
+}
+
+input.complete:hover {
+    color: #FFFFFF;
+    background: #00837d; /* W3C */
+}
+
+input.complete:focus {
+    color: #FFFFFF;
+    background: #00ffff; /* W3C */
+}

