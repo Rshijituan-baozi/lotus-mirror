@@ -170,6 +170,47 @@ patchProductPayload(mixedCart, 'https://www.lotusscom.my');
 assert(mixedCart.data.prices.subTotal.value === 129.8, 'mixed cart subtotal should be 129.8');
 assert(mixedCart.data.prices.totalSavings.value === 285, 'mixed cart savings should be 285');
 
+const threeItemCart = {
+  data: {
+    items: [
+      {
+        itemId: '1',
+        quantity: 1,
+        priceSale: 14.9,
+        priceBase: 29.9,
+        itemSubtotal: { value: 14.9 },
+        originalItemSubtotal: { value: 29.9 },
+        product: { sku: 'PILLOW001' },
+      },
+      {
+        itemId: '2',
+        quantity: 1,
+        priceSale: 3.99,
+        itemSubtotal: { value: 3.99 },
+        product: { sku: 'WIPES001' },
+      },
+      {
+        itemId: '3',
+        quantity: 1,
+        priceSale: 39.9,
+        priceBase: 59.9,
+        itemSubtotal: { value: 39.9 },
+        originalItemSubtotal: { value: 59.9 },
+        product: { sku: '74717901' },
+      },
+    ],
+    prices: { subTotal: { value: 58.79 }, totalSavings: { value: 35 } },
+    pricingSummary: { totalPrice: 58.79, totalSaved: 35 },
+    totalSavings: { value: 35, currency: 'MYR', currencyPrefix: 'RM' },
+  },
+};
+
+patchProductPayload(threeItemCart, 'https://www.lotusscom.my');
+assert(threeItemCart.data.prices.subTotal.value === 78.79, '3-item cart subtotal should be 78.79');
+assert(threeItemCart.data.prices.subTotalBeforeDiscount.value === 78.79, '3-item item subtotal should be 78.79');
+assert(threeItemCart.data.prices.totalSavings.value === 155, '3-item savings should be 155');
+assert(threeItemCart.data.items[2].originalItemSubtotal.value === 199.9, 'override line original subtotal should be 199.9');
+
 const listing = {
   data: {
     products: {

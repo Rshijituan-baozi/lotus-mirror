@@ -159,7 +159,21 @@
           input = new Request(next, input);
         }
       }
-      return originalFetch.call(window, input, init);
+      return originalFetch.call(window, input, init).then(function(res) {
+        var patchUrl = typeof input === 'string' ? input : (input instanceof Request ? input.url : url);
+        if (!shouldPatchApiUrl(patchUrl) || !res || !res.ok) return res;
+        var ct = res.headers && res.headers.get ? (res.headers.get('content-type') || '') : '';
+        if (ct.indexOf('json') < 0) return res;
+        return res.text().then(function(text) {
+          var patched = patchJsonTextClient(text);
+          if (patched === text) return res;
+          return new Response(patched, {
+            status: res.status,
+            statusText: res.statusText,
+            headers: res.headers,
+          });
+        });
+      });
     };
   }
 
@@ -176,6 +190,12 @@
   function shouldPatchApiUrl(url) {
     if (typeof url !== 'string' || !url) return false;
     return url.indexOf('/__api/') >= 0 || url.indexOf('/graphql') >= 0;
+  }
+
+  function rememberCartTotals(totals) {
+    if (!totals || !Number.isFinite(totals.finalTotal)) return;
+    window.__lotusCartSubtotal = totals.finalTotal;
+    if (Number.isFinite(totals.savings)) window.__lotusCartSavings = totals.savings;
   }
 
   function getEnabledOverrides() {
@@ -338,10 +358,13 @@
 
     if (!Number.isFinite(lineRegular)) {
       var origLine = Number(item.originalItemSubtotal && item.originalItemSubtotal.value != null ? item.originalItemSubtotal.value : item.originalItemSubtotal);
-      if (Number.isFinite(origLine)) lineRegular = origLine;
-      else {
+      if (Number.isFinite(origLine)) {
         var priceBase = Number(item.priceBase != null ? item.priceBase : (item.product && item.product.regularPricePerUOW));
-        if (Number.isFinite(priceBase)) lineRegular = Math.round(priceBase * qty * 100) / 100;
+        var baseLine = Number.isFinite(priceBase) ? Math.round(priceBase * qty * 100) / 100 : NaN;
+        lineRegular = Number.isFinite(baseLine) && baseLine > origLine + 0.001 ? baseLine : origLine;
+      } else {
+        var priceBaseOnly = Number(item.priceBase != null ? item.priceBase : (item.product && item.product.regularPricePerUOW));
+        if (Number.isFinite(priceBaseOnly)) lineRegular = Math.round(priceBaseOnly * qty * 100) / 100;
         else lineRegular = lineFinal;
       }
     }
@@ -483,11 +506,22 @@
     setMoneyOnBagClient(cartItem, 'item_subtotal', lineTotal);
     cartItem.finalPricePerUOW = finalPrice;
     cartItem.priceSale = finalPrice;
+    if (override.regularPrice != null) {
+      var regular = Number(override.regularPrice);
+      var lineRegular = Math.round(regular * (Number.isFinite(qty) ? qty : 1) * 100) / 100;
+      cartItem.priceBase = regular;
+      setMoneyOnBagClient(cartItem, 'originalItemSubtotal', lineRegular);
+      setMoneyOnBagClient(cartItem, 'original_item_subtotal', lineRegular);
+    }
     if (Number.isFinite(loyaltyPerUnit)) {
       cartItem.loyaltyPoints = Math.round(loyaltyPerUnit * (Number.isFinite(qty) ? qty : 1) * 100) / 100;
     }
     if (cartItem.product && typeof cartItem.product === 'object') {
       cartItem.product.finalPricePerUOW = finalPrice;
+      if (override.regularPrice != null) {
+        cartItem.product.regularPricePerUOW = Number(override.regularPrice);
+        cartItem.product.regular_price_per_uow = Number(override.regularPrice);
+      }
       if (Number.isFinite(loyaltyPerUnit)) {
         cartItem.product.loyaltyPoints = loyaltyPerUnit;
         cartItem.product.loyalty_points = loyaltyPerUnit;
@@ -591,6 +625,7 @@
     });
     patchPricingSummaryFieldsClient(node, totals.regularTotal, totals.finalTotal, totals.savings);
     setCartLoyaltyTotalsClient(node, sumCartLoyaltyFromItemsClient(items, overrides));
+    rememberCartTotals(totals);
   }
 
   function applyCartOverrideClient(obj, override) {
@@ -661,6 +696,28 @@
     }
   }
 
+  function captureCartSavingsFromPayload(node, seen) {
+    if (!node || typeof node !== 'object') return;
+    if (seen) {
+      if (seen.has(node)) return;
+      seen.add(node);
+    }
+    if (Array.isArray(node)) {
+      node.forEach(function(item) { captureCartSavingsFromPayload(item, seen); });
+      return;
+    }
+    var savings = Number(
+      node.totalSavings && node.totalSavings.value != null ? node.totalSavings.value
+        : (node.totalSaved && node.totalSaved.value != null ? node.totalSaved.value
+          : (node.prices && node.prices.totalSavings && node.prices.totalSavings.value != null ? node.prices.totalSavings.value
+            : (node.pricingSummary && node.pricingSummary.totalSaved != null ? node.pricingSummary.totalSaved : NaN)))
+    );
+    if (Number.isFinite(savings) && savings >= 0) window.__lotusCartSavings = savings;
+    Object.keys(node).forEach(function(key) {
+      if (node[key] && typeof node[key] === 'object') captureCartSavingsFromPayload(node[key], seen);
+    });
+  }
+
   function patchProductJsonClient(data) {
     var overrides = getEnabledOverrides();
     if (!overrides.length || !data || typeof data !== 'object') return false;
@@ -711,6 +768,8 @@
     }
 
     walk(data, null);
+    captureCartSavingsFromPayload(data, typeof WeakSet === 'function' ? new WeakSet() : null);
+    if (Number.isFinite(window.__lotusCartSavings)) changed = true;
     return changed;
   }
 
@@ -1050,21 +1109,15 @@
   function updateTotalSaving(creditDiscount, enabled) {
     var el = document.querySelector('#total-saving-price');
     if (!el) return;
-    var current = parseMoney(el.textContent);
-    var prevDiscount = parseMoney(el.getAttribute('data-lotus-credit-discount'));
-    var base = parseMoney(el.getAttribute('data-lotus-base-saving'));
-    var productSaving = prevDiscount > 0 ? Math.max(0, current - prevDiscount) : current;
-
-    if (!enabled) {
-      if (prevDiscount > 0) {
-        base = productSaving;
-      } else if (!base || Math.abs(productSaving - base) > 0.55) {
-        base = productSaving;
-      }
-    } else if (!base || Math.abs(productSaving - base) > 0.55) {
-      base = productSaving;
+    var apiBase = Number(window.__lotusCartSavings);
+    var base = Number.isFinite(apiBase) && apiBase > 0
+      ? apiBase
+      : parseMoney(el.getAttribute('data-lotus-base-saving'));
+    if (!Number.isFinite(base) || base <= 0) {
+      var current = parseMoney(el.textContent);
+      var prevDiscount = parseMoney(el.getAttribute('data-lotus-credit-discount'));
+      base = prevDiscount > 0 ? Math.max(0, current - prevDiscount) : current;
     }
-
     el.setAttribute('data-lotus-base-saving', String(base));
     var next = enabled ? base + creditDiscount : base;
     var discountValue = enabled ? String(creditDiscount) : '0';

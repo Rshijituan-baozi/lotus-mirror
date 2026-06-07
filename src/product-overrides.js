@@ -225,7 +225,16 @@ function getLineTotals(item, overrideMap) {
       ?? item.original_item_subtotal,
     );
     if (Number.isFinite(origLine)) {
-      lineRegular = origLine;
+      const priceBase = Number(
+        item.priceBase
+        ?? item.product?.regularPricePerUOW
+        ?? item.product?.regular_price_per_uow
+        ?? item.product?.priceRange?.minimumPrice?.regularPrice?.value,
+      );
+      const baseLine = Number.isFinite(priceBase)
+        ? Math.round(priceBase * qty * 100) / 100
+        : NaN;
+      lineRegular = Number.isFinite(baseLine) && baseLine > origLine + 0.001 ? baseLine : origLine;
     } else {
       const priceBase = Number(
         item.priceBase
@@ -392,7 +401,11 @@ function patchCartItemPricing(cartItem, override) {
   cartItem.final_price_per_uow = finalPrice;
   cartItem.priceSale = finalPrice;
   if (override.regularPrice != null) {
-    cartItem.priceBase = Number(override.regularPrice);
+    const regular = Number(override.regularPrice);
+    const lineRegular = Math.round(regular * (Number.isFinite(qty) ? qty : 1) * 100) / 100;
+    cartItem.priceBase = regular;
+    setMoneyObject(cartItem, 'originalItemSubtotal', lineRegular);
+    setMoneyObject(cartItem, 'original_item_subtotal', lineRegular);
   }
 
   if (Number.isFinite(loyaltyPerUnit)) {
