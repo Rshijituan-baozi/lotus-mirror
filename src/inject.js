@@ -207,6 +207,18 @@
     if (!found) obj.tabs.unshift({ title: 'Product Information', content: html });
   }
 
+  function isDiscountBadgePromotionClient(p) {
+    if (!p || typeof p !== 'object') return false;
+    if (String(p.ruleType || '').toLowerCase() === 'discount') return true;
+    var img = String(p.image || p.imageUrl || '').toLowerCase();
+    return img.indexOf('discount-bage') >= 0 || /discount[\s%20]+\d/.test(img);
+  }
+
+  function patchPromotionsClient(obj) {
+    if (!Array.isArray(obj.promotions)) return;
+    obj.promotions = obj.promotions.filter(function(p) { return !isDiscountBadgePromotionClient(p); });
+  }
+
   function patchMinimumPriceClient(mp, finalPrice, regularPrice, discountPercent) {
     if (!mp || typeof mp !== 'object') return;
     function setMoney(key, value) {
@@ -249,6 +261,7 @@
       obj.loyalty_points = loyaltyPoints;
       obj.loyaltyPoints = loyaltyPoints;
     }
+    if (Number.isFinite(discountPercent)) patchPromotionsClient(obj);
   }
 
   function applyOverrideClient(obj, override) {

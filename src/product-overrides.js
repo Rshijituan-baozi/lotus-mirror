@@ -137,6 +137,18 @@ function ensureMoney(obj, key, value, currency = 'MYR') {
   obj[key] = { value, currency };
 }
 
+function isDiscountBadgePromotion(p) {
+  if (!p || typeof p !== 'object') return false;
+  if (String(p.ruleType || '').toLowerCase() === 'discount') return true;
+  const img = String(p.image || p.imageUrl || '').toLowerCase();
+  return img.includes('discount-bage') || /discount[\s%20]+\d/.test(img);
+}
+
+function patchPromotionsDiscountBadges(obj) {
+  if (!Array.isArray(obj.promotions)) return;
+  obj.promotions = obj.promotions.filter(p => !isDiscountBadgePromotion(p));
+}
+
 function patchMinimumPriceBlock(mp, finalPrice, regularPrice, discountPercent) {
   if (!mp || typeof mp !== 'object') return;
   ensureMoney(mp, 'final_price', finalPrice);
@@ -181,6 +193,10 @@ function patchPricingFields(obj, override) {
   if (Number.isFinite(loyaltyPoints)) {
     obj.loyalty_points = loyaltyPoints;
     obj.loyaltyPoints = loyaltyPoints;
+  }
+
+  if (Number.isFinite(discountPercent)) {
+    patchPromotionsDiscountBadges(obj);
   }
 }
 
