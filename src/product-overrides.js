@@ -139,12 +139,62 @@ function ensureMoney(obj, key, value, currency = 'MYR') {
 
 function setMoneyObject(obj, key, value, currency = 'MYR') {
   if (!obj || typeof obj !== 'object' || !Number.isFinite(value)) return;
+  const text = formatMoneyText(currency, value);
   if (obj[key] && typeof obj[key] === 'object') {
     obj[key].value = value;
     if (!obj[key].currency) obj[key].currency = currency;
+    if (text) obj[key].text = text;
     return;
   }
-  obj[key] = { value, currency };
+  obj[key] = text ? { value, currency, text } : { value, currency };
+}
+
+function formatMoneyText(currency, value) {
+  if (!Number.isFinite(value)) return null;
+  const cur = currency || 'MYR';
+  const prefix = cur === 'MYR' ? 'RM' : `${cur} `;
+  return `${prefix}${value.toFixed(2)}`;
+}
+
+function applyCartMoneyTotals(bag, subtotal, delta) {
+  if (!bag || typeof bag !== 'object') return;
+  setMoneyObject(bag, 'subTotal', subtotal);
+  setMoneyObject(bag, 'sub_total', subtotal);
+  setMoneyObject(bag, 'subTotalBeforeDiscount', subtotal);
+  setMoneyObject(bag, 'sub_total_before_discount', subtotal);
+  if (typeof bag.totalItemPrice === 'number') bag.totalItemPrice = subtotal;
+  setMoneyObject(bag, 'totalItemPrice', subtotal);
+
+  if (Math.abs(delta) > 0.001) {
+    for (const key of ['grandTotal', 'grand_total']) {
+      if (bag[key] && Number.isFinite(Number(bag[key].value))) {
+        const newGrand = Math.round((Number(bag[key].value) + delta) * 100) / 100;
+        setMoneyObject(bag, key, newGrand);
+      }
+    }
+    return;
+  }
+
+  for (const key of ['grandTotal', 'grand_total']) {
+    const gVal = Number(bag[key]?.value);
+    if (Number.isFinite(gVal) && Math.abs(gVal - (subtotal - delta)) < 0.02) {
+      setMoneyObject(bag, key, subtotal);
+    }
+  }
+}
+
+function getCartTotalTargets(node) {
+  if (!node || typeof node !== 'object') return [];
+  const targets = [];
+  if (node.prices && typeof node.prices === 'object') targets.push(node.prices);
+  if (node.cart?.prices && typeof node.cart.prices === 'object') targets.push(node.cart.prices);
+  if (node.subTotal != null || node.sub_total != null || node.grandTotal != null || node.subTotalBeforeDiscount != null) {
+    targets.push(node);
+  }
+  if (node.cart && (node.cart.subTotal != null || node.cart.grandTotal != null || node.cart.prices)) {
+    if (!targets.includes(node.cart)) targets.push(node.cart);
+  }
+  return targets;
 }
 
 function patchCartItemPricing(cartItem, override) {
@@ -183,6 +233,7 @@ function getCartItemsList(node) {
   if (Array.isArray(node.cart_items)) return node.cart_items;
   if (node.cart && Array.isArray(node.cart.cartItems)) return node.cart.cartItems;
   if (node.cart && Array.isArray(node.cart.cart_items)) return node.cart.cart_items;
+  if (Array.isArray(node.items) && node.items.length && node.items.some(isCartLineItem)) return node.items;
   return null;
 }
 
@@ -229,24 +280,59 @@ function patchCartContainerTotals(node, overrideMap) {
 
   if (!patchedAny) return;
 
-  const prices = node.prices || node.cart?.prices;
-  if (!prices) return;
-
   subtotal = Math.round(subtotal * 100) / 100;
-  const oldSubtotal = Number(prices.subTotal?.value ?? prices.sub_total?.value ?? subtotal);
+  const oldSubtotal = Number(
+    node.prices?.subTotal?.value
+    ?? node.prices?.sub_total?.value
+    ?? node.subTotal?.value
+    ?? node.sub_total?.value
+    ?? node.cart?.prices?.subTotal?.value
+    ?? subtotal,
+  );
   const delta = subtotal - oldSubtotal;
 
-  setMoneyObject(prices, 'subTotal', subtotal);
-  setMoneyObject(prices, 'sub_total', subtotal);
-
-  if (Math.abs(delta) > 0.001) {
-    if (prices.grandTotal && Number.isFinite(Number(prices.grandTotal.value))) {
-      prices.grandTotal.value = Math.round((Number(prices.grandTotal.value) + delta) * 100) / 100;
-    }
-    if (prices.grand_total && Number.isFinite(Number(prices.grand_total.value))) {
-      prices.grand_total.value = Math.round((Number(prices.grand_total.value) + delta) * 100) / 100;
-    }
+  for (const target of getCartTotalTargets(node)) {
+    applyCartMoneyTotals(target, subtotal, delta);
   }
+}
+
+function isCartSummaryNode(node) {
+  if (!node || typeof node !== 'object') return false;
+  if (getCartItemsList(node)) return false;
+  return (node.subTotal != null || node.sub_total != null)
+    && (node.grandTotal != null || node.grand_total != null || node.itemsCount != null || node.itemCount != null);
+}
+
+function patchStandaloneCartSummary(node, overrideMap) {
+  if (!isCartSummaryNode(node)) return false;
+  const subVal = Number(node.subTotal?.value ?? node.sub_total?.value);
+  if (!Number.isFinite(subVal)) return false;
+
+  const itemCount = Number(node.itemsCount ?? node.itemCount ?? 1);
+  let newSub = subVal;
+  let changed = false;
+
+  for (const entry of overrideMap.values()) {
+    const upstream = entry.upstreamPrice != null ? Number(entry.upstreamPrice) : null;
+    const override = entry.price != null ? Number(entry.price) : null;
+    if (!Number.isFinite(upstream) || !Number.isFinite(override)) continue;
+    const delta = override - upstream;
+    for (let q = 1; q <= Math.max(itemCount, 1); q++) {
+      if (Math.abs(subVal - upstream * q) < 0.02) {
+        newSub = Math.round((subVal + delta * q) * 100) / 100;
+        changed = true;
+        break;
+      }
+    }
+    if (changed) break;
+  }
+
+  if (!changed) return false;
+  const delta = newSub - subVal;
+  for (const target of getCartTotalTargets(node)) {
+    applyCartMoneyTotals(target, newSub, delta);
+  }
+  return true;
 }
 
 function isDiscountBadgePromotion(p) {
@@ -455,6 +541,7 @@ function walkAndPatch(node, overrideMap, origin, seen = new WeakSet(), parent = 
   }
 
   patchCartContainerTotals(node, overrideMap);
+  patchStandaloneCartSummary(node, overrideMap);
 
   for (const value of Object.values(node)) {
     if (value && typeof value === 'object') walkAndPatch(value, overrideMap, origin, seen, node);

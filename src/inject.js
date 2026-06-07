@@ -264,20 +264,62 @@
     if (Number.isFinite(discountPercent)) patchPromotionsClient(obj);
   }
 
+  function formatMoneyTextClient(currency, value) {
+    if (!Number.isFinite(value)) return null;
+    var cur = currency || 'MYR';
+    var prefix = cur === 'MYR' ? 'RM' : cur + ' ';
+    return prefix + value.toFixed(2);
+  }
+
+  function setMoneyOnBagClient(bag, key, value, currency) {
+    if (!bag || typeof bag !== 'object' || !Number.isFinite(value)) return;
+    currency = currency || 'MYR';
+    var text = formatMoneyTextClient(currency, value);
+    if (bag[key] && typeof bag[key] === 'object') {
+      bag[key].value = value;
+      if (!bag[key].currency) bag[key].currency = currency;
+      if (text) bag[key].text = text;
+    } else {
+      bag[key] = text ? { value: value, currency: currency, text: text } : { value: value, currency: currency };
+    }
+  }
+
+  function applyCartMoneyTotalsClient(bag, subtotal, delta) {
+    if (!bag || typeof bag !== 'object') return;
+    setMoneyOnBagClient(bag, 'subTotal', subtotal);
+    setMoneyOnBagClient(bag, 'sub_total', subtotal);
+    setMoneyOnBagClient(bag, 'subTotalBeforeDiscount', subtotal);
+    setMoneyOnBagClient(bag, 'sub_total_before_discount', subtotal);
+    if (typeof bag.totalItemPrice === 'number') bag.totalItemPrice = subtotal;
+    setMoneyOnBagClient(bag, 'totalItemPrice', subtotal);
+    if (Math.abs(delta) > 0.001) {
+      if (bag.grandTotal && bag.grandTotal.value != null) {
+        setMoneyOnBagClient(bag, 'grandTotal', Math.round((Number(bag.grandTotal.value) + delta) * 100) / 100);
+      }
+      if (bag.grand_total && bag.grand_total.value != null) {
+        setMoneyOnBagClient(bag, 'grand_total', Math.round((Number(bag.grand_total.value) + delta) * 100) / 100);
+      }
+    }
+  }
+
+  function getCartTotalTargetsClient(node) {
+    if (!node || typeof node !== 'object') return [];
+    var targets = [];
+    if (node.prices && typeof node.prices === 'object') targets.push(node.prices);
+    if (node.cart && node.cart.prices && typeof node.cart.prices === 'object') targets.push(node.cart.prices);
+    if (node.subTotal != null || node.sub_total != null || node.grandTotal != null || node.subTotalBeforeDiscount != null) targets.push(node);
+    if (node.cart && (node.cart.subTotal != null || node.cart.grandTotal != null || node.cart.prices)) targets.push(node.cart);
+    return targets;
+  }
+
   function patchCartItemPricingClient(cartItem, override) {
     var finalPrice = override.price != null ? Number(override.price) : NaN;
     if (!Number.isFinite(finalPrice)) return;
     var qty = Number(cartItem.quantity != null ? cartItem.quantity : (cartItem.qty != null ? cartItem.qty : 1));
     var lineTotal = Math.round(finalPrice * (Number.isFinite(qty) ? qty : 1) * 100) / 100;
 
-    function setMoney(key, value) {
-      if (!Number.isFinite(value)) return;
-      if (cartItem[key] && typeof cartItem[key] === 'object') cartItem[key].value = value;
-      else cartItem[key] = { value: value, currency: 'MYR' };
-    }
-
-    setMoney('itemSubtotal', lineTotal);
-    setMoney('item_subtotal', lineTotal);
+    setMoneyOnBagClient(cartItem, 'itemSubtotal', lineTotal);
+    setMoneyOnBagClient(cartItem, 'item_subtotal', lineTotal);
     cartItem.finalPricePerUOW = finalPrice;
     if (cartItem.product && typeof cartItem.product === 'object') {
       cartItem.product.finalPricePerUOW = finalPrice;
@@ -290,6 +332,7 @@
     if (Array.isArray(node.cart_items)) return node.cart_items;
     if (node.cart && Array.isArray(node.cart.cartItems)) return node.cart.cartItems;
     if (node.cart && Array.isArray(node.cart.cart_items)) return node.cart.cart_items;
+    if (Array.isArray(node.items) && node.items.length && node.items.some(isCartLineItemClient)) return node.items;
     return null;
   }
 
@@ -300,6 +343,42 @@
     if (item.cartItemId != null || item.cart_item_id != null) return true;
     var typename = item.__typename != null ? String(item.__typename) : '';
     return /cartitem/i.test(typename);
+  }
+
+  function isCartSummaryNodeClient(node) {
+    if (!node || typeof node !== 'object') return false;
+    if (getCartItemsListClient(node)) return false;
+    return (node.subTotal != null || node.sub_total != null)
+      && (node.grandTotal != null || node.grand_total != null || node.itemsCount != null || node.itemCount != null);
+  }
+
+  function patchStandaloneCartSummaryClient(node, overrides) {
+    if (!isCartSummaryNodeClient(node)) return false;
+    var subVal = Number(node.subTotal && node.subTotal.value != null ? node.subTotal.value : (node.sub_total && node.sub_total.value));
+    if (!Number.isFinite(subVal)) return false;
+    var itemCount = Number(node.itemsCount != null ? node.itemsCount : (node.itemCount != null ? node.itemCount : 1));
+    var newSub = subVal;
+    var changed = false;
+    overrides.forEach(function(entry) {
+      if (changed) return;
+      var upstream = entry.upstreamPrice != null ? Number(entry.upstreamPrice) : NaN;
+      var override = entry.price != null ? Number(entry.price) : NaN;
+      if (!Number.isFinite(upstream) || !Number.isFinite(override)) return;
+      var delta = override - upstream;
+      for (var q = 1; q <= Math.max(itemCount, 1); q++) {
+        if (Math.abs(subVal - upstream * q) < 0.02) {
+          newSub = Math.round((subVal + delta * q) * 100) / 100;
+          changed = true;
+          break;
+        }
+      }
+    });
+    if (!changed) return false;
+    var totalDelta = newSub - subVal;
+    getCartTotalTargetsClient(node).forEach(function(target) {
+      applyCartMoneyTotalsClient(target, newSub, totalDelta);
+    });
+    return true;
   }
 
   function patchCartContainersClient(node, overrides) {
@@ -321,16 +400,17 @@
     });
     if (!patchedAny) return;
 
-    var prices = node.prices || (node.cart && node.cart.prices);
-    if (!prices) return;
     subtotal = Math.round(subtotal * 100) / 100;
-    var oldSubtotal = Number(prices.subTotal && prices.subTotal.value != null ? prices.subTotal.value : (prices.sub_total && prices.sub_total.value));
+    var oldSubtotal = Number(
+      node.prices && node.prices.subTotal && node.prices.subTotal.value != null ? node.prices.subTotal.value
+        : (node.subTotal && node.subTotal.value != null ? node.subTotal.value
+          : (node.cart && node.cart.prices && node.cart.prices.subTotal && node.cart.prices.subTotal.value))
+    );
+    if (!Number.isFinite(oldSubtotal)) oldSubtotal = subtotal;
     var delta = subtotal - oldSubtotal;
-    if (prices.subTotal && typeof prices.subTotal === 'object') prices.subTotal.value = subtotal;
-    else prices.subTotal = { value: subtotal, currency: 'MYR' };
-    if (Math.abs(delta) > 0.001 && prices.grandTotal && prices.grandTotal.value != null) {
-      prices.grandTotal.value = Math.round((Number(prices.grandTotal.value) + delta) * 100) / 100;
-    }
+    getCartTotalTargetsClient(node).forEach(function(target) {
+      applyCartMoneyTotalsClient(target, subtotal, delta);
+    });
   }
 
   function applyCartOverrideClient(obj, override) {
@@ -438,6 +518,7 @@
         }
       }
       patchCartContainersClient(node, overrides);
+      patchStandaloneCartSummaryClient(node, overrides);
       Object.keys(node).forEach(function(key) {
         if (node[key] && typeof node[key] === 'object') walk(node[key], node);
       });

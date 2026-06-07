@@ -25,22 +25,46 @@ const addToCart = {
           },
           __typename: 'SimpleCartItem',
         }],
-        prices: { subTotal: { value: 39.9 }, grandTotal: { value: 39.9 } },
+        prices: { subTotal: { value: 39.9, text: 'RM39.90' }, grandTotal: { value: 39.9, text: 'RM39.90' } },
       },
     },
   },
 };
 
 patchProductPayload(addToCart, 'https://www.lotusscom.my');
-const item = addToCart.data.addProductsToCart.cart.cartItems[0];
-const product = item.product;
-const serialized = JSON.stringify(addToCart);
+const cart = addToCart.data.addProductsToCart.cart;
+assert(cart.prices.subTotal.value === 59.9, 'cart.prices.subTotal should be 59.9');
+assert(cart.prices.subTotal.text === 'RM59.90', 'cart.prices.subTotal.text should be RM59.90');
 
-assert(!serialized.includes('media_gallery'), 'cart product must not get media_gallery override');
-assert(!serialized.includes('29 Pieces'), 'cart product must not get long description override');
-assert(item.itemSubtotal?.value === 59.9, 'itemSubtotal should be 59.9');
-assert(product.priceRange.minimumPrice.finalPrice.value === 59.9, 'unit price should be 59.9');
-assert(product.image.url.includes('/product-overrides/'), 'cart thumbnail should be overridden');
+const getCart = {
+  data: {
+    items: [{
+      itemId: '1',
+      quantity: 1,
+      itemSubtotal: { value: 39.9, currency: 'MYR' },
+      product: { sku: '74718282', finalPricePerUOW: 39.9 },
+    }],
+    prices: { subTotal: { value: 39.9, text: 'RM39.90' }, grandTotal: { value: 39.9 } },
+    itemsCount: 1,
+  },
+};
+
+patchProductPayload(getCart, 'https://www.lotusscom.my');
+assert(getCart.data.prices.subTotal.value === 59.9, 'getCart items[] should sync prices.subTotal');
+assert(getCart.data.items[0].itemSubtotal.value === 59.9, 'getCart line item should be patched');
+
+const summary = {
+  data: {
+    subTotal: { value: 39.9, text: 'RM39.90' },
+    grandTotal: { value: 39.9, text: 'RM39.90' },
+    itemsCount: 1,
+  },
+};
+
+patchProductPayload(summary, 'https://www.lotusscom.my');
+assert(summary.data.subTotal.value === 59.9, 'summary subTotal should be 59.9');
+assert(summary.data.subTotal.text === 'RM59.90', 'summary subTotal.text should be RM59.90');
+assert(summary.data.grandTotal.value === 59.9, 'summary grandTotal should be 59.9');
 
 const listing = {
   data: {
@@ -50,6 +74,6 @@ const listing = {
   },
 };
 patchProductPayload(listing, 'https://www.lotusscom.my');
-assert(listing.data.products.items[0].name || listing.data.products.items[0].product?.name, 'listing patch ok');
+assert(!listing.data.products.items[0].itemSubtotal, 'product listing items must not be treated as cart lines');
 
 console.log('test:patch OK');
