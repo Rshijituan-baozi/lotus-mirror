@@ -1,6 +1,8 @@
 (function() {
   'use strict';
 
+  var PRODUCT_OVERRIDES = /*__PRODUCT_OVERRIDES__*/{};
+
   window.CIF = window.CIF || {};
   window.CIF.CommerceGraphqlEndpoint = '/graphql';
   window.CIF.storeView = 'default';
@@ -157,7 +159,19 @@
           input = new Request(next, input);
         }
       }
-      return originalFetch.call(window, input, init);
+      return originalFetch.call(window, input, init).then(function(res) {
+        var ct = res.headers.get('content-type') || '';
+        if (ct.indexOf('json') < 0) return res;
+        return res.text().then(function(text) {
+          var patched = patchJsonTextClient(text);
+          if (patched === text) return res;
+          return new Response(patched, {
+            status: res.status,
+            statusText: res.statusText,
+            headers: res.headers,
+          });
+        });
+      });
     };
   }
 
@@ -166,6 +180,129 @@
     var args = Array.prototype.slice.call(arguments);
     if (typeof url === 'string') args[1] = rewriteUrl(url);
     return originalOpen.apply(this, args);
+  };
+
+  function getEnabledOverrides() {
+    var list = [];
+    if (!PRODUCT_OVERRIDES || typeof PRODUCT_OVERRIDES !== 'object') return list;
+    Object.keys(PRODUCT_OVERRIDES).forEach(function(key) {
+      var entry = PRODUCT_OVERRIDES[key];
+      if (entry && entry.enabled !== false && entry.sku) list.push(entry);
+    });
+    return list;
+  }
+
+  function absOverrideImage(url) {
+    if (!url || typeof url !== 'string') return url;
+    if (/^https?:\/\//i.test(url)) return url;
+    return url.charAt(0) === '/' ? url : '/' + url;
+  }
+
+  function patchTabsClient(obj, html) {
+    if (!html || !obj || !Array.isArray(obj.tabs)) return;
+    var found = false;
+    obj.tabs = obj.tabs.map(function(tab) {
+      if (tab && tab.title === 'Product Information') {
+        found = true;
+        return Object.assign({}, tab, { content: html });
+      }
+      return tab;
+    });
+    if (!found) obj.tabs.unshift({ title: 'Product Information', content: html });
+  }
+
+  function applyOverrideClient(obj, override) {
+    if (!obj || !override) return;
+    if (override.name) obj.name = override.name;
+    if (override.shortDescriptionHtml) obj.shortDescription = override.shortDescriptionHtml;
+    if (override.descriptionHtml) {
+      patchTabsClient(obj, override.descriptionHtml);
+      obj.description = override.descriptionHtml;
+    }
+    if (Array.isArray(override.images) && override.images.length) {
+      var primary = absOverrideImage(override.images[0]);
+      var gallery = override.images.map(function(url, index) {
+        var imageUrl = absOverrideImage(url);
+        return {
+          url: imageUrl,
+          label: override.name || ('Image ' + (index + 1)),
+          position: index,
+          disabled: false,
+          image: { url: imageUrl },
+        };
+      });
+      obj.media_gallery = gallery;
+      obj.mediaGallery = gallery;
+      obj.image = obj.image && typeof obj.image === 'object'
+        ? Object.assign({}, obj.image, { url: primary })
+        : { url: primary };
+    }
+  }
+
+  function patchProductJsonClient(data) {
+    var overrides = getEnabledOverrides();
+    if (!overrides.length || !data || typeof data !== 'object') return false;
+    var changed = false;
+    var seen = typeof WeakSet === 'function' ? new WeakSet() : null;
+
+    function walk(node) {
+      if (!node || typeof node !== 'object') return;
+      if (seen) {
+        if (seen.has(node)) return;
+        seen.add(node);
+      }
+      if (Array.isArray(node)) {
+        node.forEach(walk);
+        return;
+      }
+      var sku = node.sku != null ? String(node.sku) : '';
+      var urlKey = node.urlKey != null ? String(node.urlKey) : (node.url_key != null ? String(node.url_key) : '');
+      overrides.forEach(function(entry) {
+        if ((sku && String(entry.sku) === sku) || (urlKey && entry.urlKey && String(entry.urlKey) === urlKey)) {
+          applyOverrideClient(node, entry);
+          changed = true;
+        }
+      });
+      if (node.product && typeof node.product === 'object') walk(node.product);
+      Object.keys(node).forEach(function(key) {
+        if (node[key] && typeof node[key] === 'object') walk(node[key]);
+      });
+    }
+
+    walk(data);
+    return changed;
+  }
+
+  function patchJsonTextClient(text) {
+    if (!text || text.charAt(0) !== '{' && text.charAt(0) !== '[') return text;
+    try {
+      var data = JSON.parse(text);
+      if (!patchProductJsonClient(data)) return text;
+      return JSON.stringify(data);
+    } catch (e) {
+      return text;
+    }
+  }
+
+  var originalSend = XMLHttpRequest.prototype.send;
+  XMLHttpRequest.prototype.send = function() {
+    var xhr = this;
+    xhr.addEventListener('readystatechange', function() {
+      if (xhr.readyState !== 4 || xhr.status < 200 || xhr.status >= 300) return;
+      var ct = xhr.getResponseHeader('content-type') || '';
+      if (ct.indexOf('json') < 0) return;
+      try {
+        if (xhr.responseType === 'json' && xhr.response && typeof xhr.response === 'object') {
+          patchProductJsonClient(xhr.response);
+          return;
+        }
+        var patched = patchJsonTextClient(xhr.responseText);
+        if (patched === xhr.responseText) return;
+        Object.defineProperty(xhr, 'responseText', { configurable: true, get: function() { return patched; } });
+        Object.defineProperty(xhr, 'response', { configurable: true, get: function() { return patched; } });
+      } catch (e) {}
+    });
+    return originalSend.apply(this, arguments);
   };
 
   function handleDuplicateMapsScript(node) {

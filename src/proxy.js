@@ -2,7 +2,7 @@ import { createProxyMiddleware } from 'http-proxy-middleware';
 import fs from 'fs';
 import https from 'https';
 import zlib from 'zlib';
-import { patchProductPayload } from './product-overrides.js';
+import { patchProductPayload, getProductOverrides } from './product-overrides.js';
 
 const TARGET = 'https://www.lotuss.com.my';
 const TARGET_ORIGIN = 'https://www.lotuss.com.my';
@@ -38,8 +38,16 @@ const DEFAULT_BFF_KEY = process.env.LOTUS_BFF_KEY ||
   'SeiRQmEDnaZXOlpfKhCjV4Bo2y6vAcW99QKmzifsgP2uCMN7wF3ahRXex84kH6qUVIWoY5Dp0GEljdAvS1JytOZcLbnBTr';
 const GOOGLE_MAPS_KEY = 'AIzaSyBj-tpUeRdZ8ym70gWGr6mPEEtluVMbtQc';
 
-const CLIENT_INJECT = fs.readFileSync(new URL('./inject.js', import.meta.url), 'utf8')
+const CLIENT_INJECT_TEMPLATE = fs.readFileSync(new URL('./inject.js', import.meta.url), 'utf8')
   .replace(/<\/script/gi, '<\\/script');
+
+function buildClientInjectScript() {
+  let overrides = '{}';
+  try {
+    overrides = JSON.stringify(getProductOverrides()).replace(/<\//g, '\\u003c/');
+  } catch {}
+  return CLIENT_INJECT_TEMPLATE.replace('/*__PRODUCT_OVERRIDES__*/{}', overrides);
+}
 
 const HOP_BY_HOP = new Set([
   'connection',
@@ -246,7 +254,7 @@ function patchHtml(html) {
   html = html.replace(/<script[^>]*(googletagmanager|helix-rum-js|facebook|dtm-drcn|dynatrace)[^>]*>[\s\S]*?<\/script>/gi, '');
   html = html.replace(/<link[^>]*manifest["'][^>]*>/gi, '');
 
-  const headPatch = `<base href="/"><script>${CLIENT_INJECT}</script>`;
+  const headPatch = `<base href="/"><script>${buildClientInjectScript()}</script>`;
   if (/<head[^>]*>/i.test(html)) {
     html = html.replace(/<head([^>]*)>/i, (m) => `${m}${headPatch}`);
   } else {

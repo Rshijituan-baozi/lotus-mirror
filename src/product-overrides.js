@@ -68,6 +68,36 @@ function ensureImageField(obj, key, url) {
   obj[key] = { __typename: 'ProductImage', url };
 }
 
+function patchTabsDescription(obj, html) {
+  if (!html) return;
+  if (Array.isArray(obj.tabs)) {
+    let found = false;
+    obj.tabs = obj.tabs.map(tab => {
+      if (tab && tab.title === 'Product Information') {
+        found = true;
+        return { ...tab, content: html };
+      }
+      return tab;
+    });
+    if (!found) {
+      obj.tabs.unshift({ title: 'Product Information', content: html });
+    }
+  }
+}
+
+function buildGalleryItem(existing, imageUrl, override, index) {
+  const base = existing && typeof existing === 'object' ? { ...existing } : {};
+  base.__typename = base.__typename || 'ProductImage';
+  base.url = imageUrl;
+  base.label = base.label ?? override.name ?? `Image ${index + 1}`;
+  base.position = index;
+  base.disabled = base.disabled ?? false;
+  base.image = base.image && typeof base.image === 'object'
+    ? { ...base.image, url: imageUrl }
+    : { url: imageUrl };
+  return base;
+}
+
 function patchPriceOnObject(obj, price) {
   if (!obj || typeof obj !== 'object' || price == null) return;
   const value = Number(price);
@@ -113,6 +143,7 @@ function applyProductOverride(obj, override, origin) {
     }
   }
   if (override.descriptionHtml) {
+    patchTabsDescription(obj, override.descriptionHtml);
     if (obj.description && typeof obj.description === 'object') {
       setHtmlField(obj, 'description', override.descriptionHtml);
     } else {
@@ -123,35 +154,24 @@ function applyProductOverride(obj, override, origin) {
   if (Array.isArray(override.images) && override.images.length) {
     const primary = absImageUrl(override.images[0]);
     const existingGallery = Array.isArray(obj.media_gallery) ? obj.media_gallery : [];
-    const gallery = override.images.map((url, index) => {
-      const base = existingGallery[index] && typeof existingGallery[index] === 'object'
-        ? { ...existingGallery[index] }
-        : {};
-      base.__typename = base.__typename || 'ProductImage';
-      base.url = absImageUrl(url);
-      base.label = base.label ?? override.name ?? `Image ${index + 1}`;
-      base.position = index;
-      base.disabled = base.disabled ?? false;
-      return base;
-    });
-
     const existingBffGallery = Array.isArray(obj.mediaGallery) ? obj.mediaGallery : [];
-    const bffGallery = override.images.map((url, index) => {
-      const base = existingBffGallery[index] && typeof existingBffGallery[index] === 'object'
-        ? { ...existingBffGallery[index] }
-        : {};
-      const imageUrl = absImageUrl(url);
-      base.image = base.image && typeof base.image === 'object'
-        ? { ...base.image, url: imageUrl }
-        : { url: imageUrl };
-      return base;
-    });
+    const gallery = override.images.map((url, index) => buildGalleryItem(
+      existingGallery[index] || existingBffGallery[index],
+      absImageUrl(url),
+      override,
+      index,
+    ));
 
     ensureImageField(obj, 'image', primary);
     ensureImageField(obj, 'thumbnail', primary);
     ensureImageField(obj, 'small_image', primary);
     obj.media_gallery = gallery;
-    obj.mediaGallery = bffGallery;
+    obj.mediaGallery = gallery.map(item => ({
+      ...item,
+      image: item.image && typeof item.image === 'object'
+        ? { ...item.image, url: item.image.url || item.url }
+        : { url: item.url },
+    }));
   }
 
   if (override.price != null) {
@@ -170,8 +190,16 @@ function walkAndPatch(node, overrideMap, origin, seen = new WeakSet()) {
   }
 
   const sku = node.sku != null ? String(node.sku) : '';
+  const urlKey = node.urlKey != null ? String(node.urlKey) : (node.url_key != null ? String(node.url_key) : '');
   if (sku && overrideMap.has(sku)) {
     applyProductOverride(node, overrideMap.get(sku), origin);
+  } else if (urlKey) {
+    for (const entry of overrideMap.values()) {
+      if (entry.urlKey && String(entry.urlKey) === urlKey) {
+        applyProductOverride(node, entry, origin);
+        break;
+      }
+    }
   }
 
   if (node.product && typeof node.product === 'object') {
