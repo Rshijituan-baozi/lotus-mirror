@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Overrides Admin</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 24px; background: #f5f7fa; color: #1a1a2e; }
+    h1 { margin: 0 0 8px; font-size: 24px; }
+    .sub { color: #666; margin-bottom: 24px; }
+    .card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+    label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 6px; }
+    input, textarea, select { width: 100%; padding: 10px 12px; border: 1px solid #d8dee9; border-radius: 8px; font: inherit; }
+    textarea { min-height: 120px; resize: vertical; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    button { padding: 10px 16px; border: 0; border-radius: 8px; cursor: pointer; font-weight: 600; }
+    .primary { background: #00a19c; color: #fff; }
+    .danger { background: #e1221c; color: #fff; }
+    .ghost { background: #eef2f7; color: #1a1a2e; }
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+    .sku-list { display: flex; flex-direction: column; gap: 8px; }
+    .sku-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border: 1px solid #e5e9f0; border-radius: 8px; cursor: pointer; }
+    .sku-item.active { border-color: #00a19c; background: #eefaf9; }
+    .images { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .images img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd; }
+    .status { margin-top: 12px; font-size: 13px; color: #666; }
+  </style>
+</head>
+<body>
+  <h1>Product Overrides</h1>
+  <p class="sub">管理 GraphQL 拦截替换：名称、介绍、图片、价格。修改后产品页与购物车自动同步。</p>
+
+  <div class="card">
+    <label for="token">Admin Token</label>
+    <input id="token" type="password" placeholder="默认 lotus-admin，可用 ADMIN_TOKEN 环境变量修改">
+    <div class="toolbar">
+      <button class="ghost" id="loadBtn">加载列表</button>
+      <button class="ghost" id="newBtn">新建 SKU</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="card">
+      <h3>SKU 列表</h3>
+      <div id="skuList" class="sku-list"></div>
+    </div>
+    <div class="card">
+      <h3>编辑</h3>
+      <label for="sku">SKU</label>
+      <input id="sku">
+      <label for="urlKey">URL Key（可选）</label>
+      <input id="urlKey">
+      <label for="name">名称</label>
+      <input id="name">
+      <label for="shortDescriptionHtml">短介绍 HTML</label>
+      <textarea id="shortDescriptionHtml"></textarea>
+      <label for="descriptionHtml">详细介绍 HTML</label>
+      <textarea id="descriptionHtml"></textarea>
+      <label for="price">价格（留空保持上游原价）</label>
+      <input id="price" type="number" step="0.01">
+      <label for="enabled">启用</label>
+      <select id="enabled">
+        <option value="true">是</option>
+        <option value="false">否</option>
+      </select>
+      <label>图片 URLs（每行一个）</label>
+      <textarea id="images"></textarea>
+      <label>上传图片</label>
+      <input id="fileInput" type="file" accept="image/*" multiple>
+      <div id="preview" class="images"></div>
+      <div class="toolbar">
+        <button class="primary" id="saveBtn">保存</button>
+        <button class="danger" id="deleteBtn">删除</button>
+      </div>
+      <div class="status" id="status"></div>
+    </div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let currentSku = '';
+
+    function token() {
+      const value = $('token').value.trim();
+      if (value) localStorage.setItem('lotus_admin_token', value);
+      return value || localStorage.getItem('lotus_admin_token') || '';
+    }
+
+    $('token').value = localStorage.getItem('lotus_admin_token') || '';
+
+    async function api(path, options = {}) {
+      const headers = Object.assign({ 'x-admin-token': token() }, options.headers || {});
+      const res = await fetch(path, Object.assign({}, options, { headers }));
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    }
+
+    function setStatus(msg) { $('status').textContent = msg; }
+
+    function renderList(data) {
+      const list = $('skuList');
+      list.innerHTML = '';
+      Object.keys(data).forEach((sku) => {
+        const item = document.createElement('div');
+        item.className = 'sku-item' + (sku === currentSku ? ' active' : '');
+        item.innerHTML = '<strong>' + sku + '</strong><span>' + (data[sku].name || '') + '</span>';
+        item.onclick = () => loadForm(sku, data[sku]);
+        list.appendChild(item);
+      });
+    }
+
+    function loadForm(sku, item) {
+      currentSku = sku;
+      $('sku').value = item.sku || sku;
+      $('urlKey').value = item.urlKey || '';
+      $('name').value = item.name || '';
+      $('shortDescriptionHtml').value = item.shortDescriptionHtml || '';
+      $('descriptionHtml').value = item.descriptionHtml || '';
+      $('price').value = item.price == null ? '' : item.price;
+      $('enabled').value = item.enabled === false ? 'false' : 'true';
+      $('images').value = (item.images || []).join('\n');
+      renderPreview(item.images || []);
+      document.querySelectorAll('.sku-item').forEach((el) => el.classList.remove('active'));
+    }
+
+    function renderPreview(images) {
+      $('preview').innerHTML = images.map((url) => '<img src="' + url + '" alt="">').join('');
+    }
+
+    async function loadAll() {
+      const data = await api('/admin/api/product-overrides');
+      renderList(data);
+      const first = Object.keys(data)[0];
+      if (first) loadForm(first, data[first]);
+      setStatus('已加载 ' + Object.keys(data).length + ' 个 SKU');
+    }
+
+    $('loadBtn').onclick = () => loadAll().catch((e) => setStatus(e.message));
+    $('newBtn').onclick = () => {
+      currentSku = '';
+      $('sku').value = '';
+      $('urlKey').value = '';
+      $('name').value = '';
+      $('shortDescriptionHtml').value = '';
+      $('descriptionHtml').value = '';
+      $('price').value = '';
+      $('enabled').value = 'true';
+      $('images').value = '';
+      renderPreview([]);
+      setStatus('新建模式');
+    };
+
+    $('saveBtn').onclick = async () => {
+      try {
+        const sku = $('sku').value.trim();
+        if (!sku) throw new Error('SKU 不能为空');
+        const images = $('images').value.split('\n').map((s) => s.trim()).filter(Boolean);
+        const payload = {
+          enabled: $('enabled').value === 'true',
+          urlKey: $('urlKey').value.trim(),
+          name: $('name').value.trim(),
+          shortDescriptionHtml: $('shortDescriptionHtml').value.trim(),
+          descriptionHtml: $('descriptionHtml').value.trim(),
+          price: $('price').value === '' ? null : Number($('price').value),
+          images,
+        };
+        await api('/admin/api/product-overrides/' + encodeURIComponent(sku), {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        currentSku = sku;
+        await loadAll();
+        setStatus('保存成功：' + sku);
+      } catch (e) {
+        setStatus(e.message);
+      }
+    };
+
+    $('deleteBtn').onclick = async () => {
+      try {
+        const sku = $('sku').value.trim();
+        if (!sku || !confirm('确认删除 ' + sku + ' ?')) return;
+        await api('/admin/api/product-overrides/' + encodeURIComponent(sku), { method: 'DELETE' });
+        currentSku = '';
+        await loadAll();
+        setStatus('已删除：' + sku);
+      } catch (e) {
+        setStatus(e.message);
+      }
+    };
+
+    $('fileInput').onchange = async (ev) => {
+      const sku = $('sku').value.trim();
+      if (!sku) { setStatus('请先填写 SKU'); return; }
+      const files = Array.from(ev.target.files || []);
+      const urls = $('images').value.split('\n').map((s) => s.trim()).filter(Boolean);
+      for (const file of files) {
+        const dataBase64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        const result = await api('/admin/api/product-overrides/' + encodeURIComponent(sku) + '/images', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ filename: file.name, dataBase64 }),
+        });
+        urls.push(result.url);
+      }
+      $('images').value = urls.join('\n');
+      renderPreview(urls);
+      ev.target.value = '';
+      setStatus('图片已上传');
+    };
+
+    loadAll().catch(() => setStatus('请先输入 Admin Token 后点击加载'));
+  </script>
+</body>
+</html>

@@ -9,6 +9,7 @@ import {
   handleGraphql,
   handleMapsPassthrough,
 } from './proxy.js';
+import { createAdminProductOverridesRouter } from './admin-product-overrides.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || '3000', 10);
@@ -65,6 +66,9 @@ app.options('/__api/*', (req, res) => {
 app.use('/__api', handleApiPassthrough);
 
 app.use('/__maps', handleMapsPassthrough);
+
+app.use('/product-overrides', express.static(path.join(__dirname, '..', 'public', 'product-overrides')));
+app.use(createAdminProductOverridesRouter());
 
 // Static pages
 app.use('/checkout', express.static(path.join(__dirname, '..', 'public', 'checkout')));

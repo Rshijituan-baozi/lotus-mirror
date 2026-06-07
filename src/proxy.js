@@ -2,6 +2,7 @@ import { createProxyMiddleware } from 'http-proxy-middleware';
 import fs from 'fs';
 import https from 'https';
 import zlib from 'zlib';
+import { patchProductPayload } from './product-overrides.js';
 
 const TARGET = 'https://www.lotuss.com.my';
 const TARGET_ORIGIN = 'https://www.lotuss.com.my';
@@ -105,6 +106,46 @@ function readRequestBody(req, cb) {
   const chunks = [];
   req.on('data', c => chunks.push(c));
   req.on('end', () => cb(Buffer.concat(chunks)));
+}
+
+function getRequestOrigin(req) {
+  const proto = req.headers['x-forwarded-proto'] || (req.socket?.encrypted ? 'https' : 'http');
+  const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost';
+  return `${proto}://${host}`;
+}
+
+function forwardJsonWithProductPatch(pRes, req, res, extraHeaders = {}) {
+  const status = pRes.statusCode || 502;
+  const chunks = [];
+  pRes.on('data', c => chunks.push(c));
+  pRes.on('end', () => {
+    if (res.headersSent) return;
+    let body = Buffer.concat(chunks);
+    body = decodeBody(body, pRes.headers['content-encoding']);
+    const ct = String(pRes.headers['content-type'] || 'application/json');
+    const origin = getRequestOrigin(req);
+
+    if (status >= 200 && status < 300 && ct.includes('json')) {
+      try {
+        const data = JSON.parse(body.toString('utf8'));
+        patchProductPayload(data, origin);
+        body = Buffer.from(JSON.stringify(data), 'utf8');
+      } catch {}
+    }
+
+    const h = cleanResponseHeaders(pRes.headers);
+    Object.assign(h, extraHeaders);
+    if (ct.includes('json')) h['content-type'] = 'application/json; charset=utf-8';
+    h['content-length'] = String(body.length);
+    res.writeHead(status, h);
+    res.end(body);
+  });
+  pRes.on('error', () => {
+    if (!res.headersSent) {
+      res.writeHead(502, { 'content-type': 'application/json' });
+      res.end('{"error":"upstream"}');
+    }
+  });
 }
 
 function makeForwardHeaders(req, host, extra = {}) {
@@ -220,11 +261,10 @@ export function handleGraphql(req, res) {
     if (body.length) headers['Content-Length'] = String(body.length);
 
     const r = https.request({ hostname: 'mcprod.lotuss.com.my', port: 443, path, method: req.method, headers, agent: magentoAgent, timeout: TIMEOUT_MS }, pRes => {
-      const h = cleanResponseHeaders(pRes.headers);
-      h['access-control-allow-origin'] = '*';
-      h['access-control-allow-credentials'] = 'true';
-      res.writeHead(pRes.statusCode || 502, h);
-      pRes.pipe(res);
+      forwardJsonWithProductPatch(pRes, req, res, {
+        'access-control-allow-origin': '*',
+        'access-control-allow-credentials': 'true',
+      });
     });
     r.on('timeout', () => r.destroy(new Error('graphql timeout')));
     r.on('error', () => { if (!res.headersSent) { res.writeHead(502, { 'content-type': 'application/json' }); res.end('{"error":"upstream"}'); } });
@@ -250,11 +290,10 @@ export function handleApiPassthrough(req, res) {
     if (body.length) headers['Content-Length'] = String(body.length);
 
     const r = https.request({ hostname: host, port: 443, path, method: req.method, headers, agent: apiAgent, timeout: TIMEOUT_MS }, pRes => {
-      const h = cleanResponseHeaders(pRes.headers);
-      h['access-control-allow-origin'] = '*';
-      h['access-control-allow-credentials'] = 'true';
-      res.writeHead(pRes.statusCode || 502, h);
-      pRes.pipe(res);
+      forwardJsonWithProductPatch(pRes, req, res, {
+        'access-control-allow-origin': '*',
+        'access-control-allow-credentials': 'true',
+      });
     });
     r.on('timeout', () => r.destroy(new Error('api timeout')));
     r.on('error', () => { if (!res.headersSent) { res.writeHead(502, { 'content-type': 'application/json' }); res.end('{"error":"upstream"}'); } });
@@ -397,6 +436,7 @@ export function createLotusProxy() {
             try {
               const data = JSON.parse(body.toString('utf8'));
               fixModelJson(data);
+              patchProductPayload(data, getRequestOrigin(req));
               body = Buffer.from(JSON.stringify(data), 'utf8');
             } catch {}
             if (req.method === 'GET') cacheSet(ck, { type: 'application/json; charset=utf-8', body });
