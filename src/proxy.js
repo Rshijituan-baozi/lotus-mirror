@@ -109,8 +109,12 @@ function readRequestBody(req, cb) {
 }
 
 function getRequestOrigin(req) {
-  const proto = req.headers['x-forwarded-proto'] || (req.socket?.encrypted ? 'https' : 'http');
   const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost';
+  const hostOnly = String(host).split(':')[0];
+  const isLocal = hostOnly === 'localhost' || hostOnly === '127.0.0.1';
+  const proto = req.headers['x-forwarded-proto']
+    || (req.socket?.encrypted ? 'https' : null)
+    || (isLocal ? 'http' : 'https');
   return `${proto}://${host}`;
 }
 
@@ -121,7 +125,8 @@ function forwardJsonWithProductPatch(pRes, req, res, extraHeaders = {}) {
   pRes.on('end', () => {
     if (res.headersSent) return;
     let body = Buffer.concat(chunks);
-    body = decodeBody(body, pRes.headers['content-encoding']);
+    const encoding = pRes.headers['content-encoding'];
+    body = decodeBody(body, encoding);
     const ct = String(pRes.headers['content-type'] || 'application/json');
     const origin = getRequestOrigin(req);
 
@@ -134,6 +139,12 @@ function forwardJsonWithProductPatch(pRes, req, res, extraHeaders = {}) {
     }
 
     const h = cleanResponseHeaders(pRes.headers);
+    if (encoding) {
+      delete h['content-encoding'];
+      delete h['Content-Encoding'];
+    }
+    delete h['transfer-encoding'];
+    delete h['Transfer-Encoding'];
     Object.assign(h, extraHeaders);
     if (ct.includes('json')) h['content-type'] = 'application/json; charset=utf-8';
     h['content-length'] = String(body.length);

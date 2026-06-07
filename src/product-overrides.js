@@ -59,12 +59,14 @@ function setHtmlField(obj, key, html) {
   obj[key] = { html };
 }
 
-function setImageUrl(field, url) {
+function ensureImageField(obj, key, url) {
   if (!url) return;
-  if (field && typeof field === 'object') {
-    field.url = url;
+  if (obj[key] && typeof obj[key] === 'object') {
+    obj[key].url = url;
+    if (!obj[key].__typename) obj[key].__typename = 'ProductImage';
     return;
   }
+  obj[key] = { __typename: 'ProductImage', url };
 }
 
 function patchPriceOnObject(obj, price) {
@@ -108,16 +110,22 @@ function applyProductOverride(obj, override, origin) {
 
   if (Array.isArray(override.images) && override.images.length) {
     const primary = absImageUrl(override.images[0], origin);
-    const gallery = override.images.map((url, index) => ({
-      url: absImageUrl(url, origin),
-      label: override.name || `Image ${index + 1}`,
-      position: index,
-      disabled: false,
-    }));
+    const existingGallery = Array.isArray(obj.media_gallery) ? obj.media_gallery : [];
+    const gallery = override.images.map((url, index) => {
+      const base = existingGallery[index] && typeof existingGallery[index] === 'object'
+        ? { ...existingGallery[index] }
+        : {};
+      base.__typename = base.__typename || 'ProductImage';
+      base.url = absImageUrl(url, origin);
+      base.label = base.label ?? override.name ?? `Image ${index + 1}`;
+      base.position = index;
+      base.disabled = base.disabled ?? false;
+      return base;
+    });
 
-    setImageUrl(obj.image, primary);
-    setImageUrl(obj.thumbnail, primary);
-    setImageUrl(obj.small_image, primary);
+    ensureImageField(obj, 'image', primary);
+    ensureImageField(obj, 'thumbnail', primary);
+    ensureImageField(obj, 'small_image', primary);
     obj.media_gallery = gallery;
   }
 
