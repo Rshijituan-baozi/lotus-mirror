@@ -264,9 +264,6 @@
     if (Number.isFinite(discountPercent)) patchPromotionsClient(obj);
   }
 
-    if (Number.isFinite(discountPercent)) patchPromotionsClient(obj);
-  }
-
   function patchCartItemPricingClient(cartItem, override) {
     var finalPrice = override.price != null ? Number(override.price) : NaN;
     if (!Number.isFinite(finalPrice)) return;
@@ -298,19 +295,16 @@
 
   function isCartLineItemClient(item) {
     if (!item || typeof item !== 'object') return false;
-    return item.itemSubtotal != null
-      || item.item_subtotal != null
-      || item.itemId != null
-      || item.item_id != null
-      || item.cartItemId != null
-      || item.cart_item_id != null
-      || (item.product && typeof item.product === 'object' && item.quantity != null);
+    if (item.itemSubtotal != null || item.item_subtotal != null) return true;
+    if (item.itemId != null || item.item_id != null) return true;
+    if (item.cartItemId != null || item.cart_item_id != null) return true;
+    var typename = item.__typename != null ? String(item.__typename) : '';
+    return /cartitem/i.test(typename);
   }
 
   function patchCartContainersClient(node, overrides) {
     var items = getCartItemsListClient(node);
     if (!items || !items.length) return;
-    if (!items.some(isCartLineItemClient)) return;
 
     var subtotal = 0;
     var patchedAny = false;
@@ -336,6 +330,33 @@
     else prices.subTotal = { value: subtotal, currency: 'MYR' };
     if (Math.abs(delta) > 0.001 && prices.grandTotal && prices.grandTotal.value != null) {
       prices.grandTotal.value = Math.round((Number(prices.grandTotal.value) + delta) * 100) / 100;
+    }
+  }
+
+  function applyCartOverrideClient(obj, override) {
+    if (!obj || !override) return;
+    if (override.name) obj.name = override.name;
+    if (override.brand) {
+      if (!obj.links || typeof obj.links !== 'object') obj.links = {};
+      if (!obj.links.brand || typeof obj.links.brand !== 'object') obj.links.brand = {};
+      obj.links.brand.name = override.brand;
+    }
+    if (override.price != null || override.regularPrice != null || override.discountPercent != null) {
+      var finalPrice = override.price != null ? Number(override.price) : NaN;
+      if (Number.isFinite(finalPrice)) {
+        obj.finalPricePerUOW = finalPrice;
+        if (obj.priceRange && obj.priceRange.minimumPrice) {
+          patchPricingClient(obj, override);
+        } else if (obj.price_range && obj.price_range.minimum_price) {
+          patchPricingClient(obj, override);
+        }
+      }
+    }
+    if (Array.isArray(override.images) && override.images.length) {
+      var primary = absOverrideImage(override.images[0]);
+      obj.image = obj.image && typeof obj.image === 'object'
+        ? Object.assign({}, obj.image, { url: primary })
+        : { url: primary };
     }
   }
 
@@ -381,30 +402,35 @@
     var changed = false;
     var seen = typeof WeakSet === 'function' ? new WeakSet() : null;
 
-    function walk(node) {
+    function walk(node, parent) {
       if (!node || typeof node !== 'object') return;
       if (seen) {
         if (seen.has(node)) return;
         seen.add(node);
       }
       if (Array.isArray(node)) {
-        node.forEach(walk);
+        node.forEach(function(item) { walk(item, parent); });
         return;
       }
+      var inCartProduct = parent && isCartLineItemClient(parent) && parent.product === node;
       var sku = node.sku != null ? String(node.sku) : '';
       var urlKey = node.urlKey != null ? String(node.urlKey) : (node.url_key != null ? String(node.url_key) : '');
       overrides.forEach(function(entry) {
-        if ((sku && String(entry.sku) === sku) || (urlKey && entry.urlKey && String(entry.urlKey) === urlKey)) {
+        if (sku && String(entry.sku) === sku) {
+          if (inCartProduct) applyCartOverrideClient(node, entry);
+          else applyOverrideClient(node, entry);
+          changed = true;
+        } else if (!inCartProduct && urlKey && entry.urlKey && String(entry.urlKey) === urlKey) {
           applyOverrideClient(node, entry);
           changed = true;
         }
       });
-      if (node.product && typeof node.product === 'object') {
+      if (node.product && typeof node.product === 'object' && isCartLineItemClient(node)) {
         var productSku = node.product.sku != null ? String(node.product.sku) : '';
-        if (productSku && isCartLineItemClient(node)) {
+        if (productSku) {
           overrides.forEach(function(entry) {
             if (String(entry.sku) === productSku) {
-              applyOverrideClient(node.product, entry);
+              applyCartOverrideClient(node.product, entry);
               patchCartItemPricingClient(node, entry);
               changed = true;
             }
@@ -413,11 +439,11 @@
       }
       patchCartContainersClient(node, overrides);
       Object.keys(node).forEach(function(key) {
-        if (node[key] && typeof node[key] === 'object') walk(node[key]);
+        if (node[key] && typeof node[key] === 'object') walk(node[key], node);
       });
     }
 
-    walk(data);
+    walk(data, null);
     return changed;
   }
 

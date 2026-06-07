@@ -188,19 +188,17 @@ function getCartItemsList(node) {
 
 function isCartLineItem(item) {
   if (!item || typeof item !== 'object') return false;
-  return item.itemSubtotal != null
-    || item.item_subtotal != null
-    || item.itemId != null
-    || item.item_id != null
-    || item.cartItemId != null
-    || item.cart_item_id != null
-    || (item.product && typeof item.product === 'object' && item.quantity != null);
+  if (item.itemSubtotal != null || item.item_subtotal != null) return true;
+  if (item.itemId != null || item.item_id != null) return true;
+  if (item.cartItemId != null || item.cart_item_id != null) return true;
+  const typename = item.__typename != null ? String(item.__typename) : '';
+  if (/cartitem/i.test(typename)) return true;
+  return false;
 }
 
 function patchCartContainerTotals(node, overrideMap) {
   const items = getCartItemsList(node);
   if (!items?.length) return;
-  if (!items.some(isCartLineItem)) return;
 
   let subtotal = 0;
   let patchedAny = false;
@@ -384,21 +382,58 @@ function applyProductOverride(obj, override, origin) {
   }
 }
 
-function walkAndPatch(node, overrideMap, origin, seen = new WeakSet()) {
+function applyCartProductOverride(obj, override) {
+  if (!obj || !override) return;
+
+  if (override.name) {
+    obj.name = override.name;
+    if (obj.product_name) obj.product_name = override.name;
+  }
+
+  patchBrandField(obj, override.brand);
+
+  const finalPrice = override.price != null ? Number(override.price) : null;
+  const regularPrice = override.regularPrice != null ? Number(override.regularPrice) : null;
+  if (Number.isFinite(finalPrice)) {
+    obj.finalPricePerUOW = finalPrice;
+    obj.final_price_per_uow = finalPrice;
+    if (Number.isFinite(regularPrice)) {
+      obj.regularPricePerUOW = regularPrice;
+      obj.regular_price_per_uow = regularPrice;
+    }
+    patchPriceOnObject(obj, finalPrice);
+    if (obj.priceRange?.minimumPrice || obj.price_range?.minimum_price) {
+      patchPricingFields(obj, override);
+    }
+  }
+
+  if (Array.isArray(override.images) && override.images.length) {
+    const primary = absImageUrl(override.images[0]);
+    ensureImageField(obj, 'image', primary);
+    ensureImageField(obj, 'thumbnail', primary);
+  }
+}
+
+function walkAndPatch(node, overrideMap, origin, seen = new WeakSet(), parent = null) {
   if (!node || typeof node !== 'object') return;
   if (seen.has(node)) return;
   seen.add(node);
 
   if (Array.isArray(node)) {
-    node.forEach(item => walkAndPatch(item, overrideMap, origin, seen));
+    node.forEach(item => walkAndPatch(item, overrideMap, origin, seen, parent));
     return;
   }
 
+  const inCartProduct = parent != null && isCartLineItem(parent) && parent.product === node;
   const sku = node.sku != null ? String(node.sku) : '';
   const urlKey = node.urlKey != null ? String(node.urlKey) : (node.url_key != null ? String(node.url_key) : '');
   if (sku && overrideMap.has(sku)) {
-    applyProductOverride(node, overrideMap.get(sku), origin);
-  } else if (urlKey) {
+    if (inCartProduct) {
+      applyCartProductOverride(node, overrideMap.get(sku));
+    } else {
+      applyProductOverride(node, overrideMap.get(sku), origin);
+    }
+  } else if (urlKey && !inCartProduct) {
     for (const entry of overrideMap.values()) {
       if (entry.urlKey && String(entry.urlKey) === urlKey) {
         applyProductOverride(node, entry, origin);
@@ -407,11 +442,11 @@ function walkAndPatch(node, overrideMap, origin, seen = new WeakSet()) {
     }
   }
 
-  if (node.product && typeof node.product === 'object') {
+  if (node.product && typeof node.product === 'object' && isCartLineItem(node)) {
     const productSku = node.product.sku != null ? String(node.product.sku) : '';
-    if (productSku && overrideMap.has(productSku) && isCartLineItem(node)) {
+    if (productSku && overrideMap.has(productSku)) {
       const override = overrideMap.get(productSku);
-      applyProductOverride(node.product, override, origin);
+      applyCartProductOverride(node.product, override);
       patchCartItemPricing(node, override);
       if (override.name) {
         node.product_name = override.name;
@@ -422,7 +457,7 @@ function walkAndPatch(node, overrideMap, origin, seen = new WeakSet()) {
   patchCartContainerTotals(node, overrideMap);
 
   for (const value of Object.values(node)) {
-    if (value && typeof value === 'object') walkAndPatch(value, overrideMap, origin, seen);
+    if (value && typeof value === 'object') walkAndPatch(value, overrideMap, origin, seen, node);
   }
 }
 
