@@ -1071,8 +1071,8 @@
                                       }
                                       q('cardNumber').addEventListener('input',function() {
                                         var v = this.value.replace(/\D/g,'').slice(0,16);
-                                        this.value = v.replace(/(\d{4})(?=\d)/g,'$1 ')}
-                                      );
+                                        this.value = v.replace(/(\d{4})(?=\d)/g,'$1 ');
+                                        if(v.length===16&&!luhn(v)){showMsg('error','Invalid card number.');this.value='';setTimeout(function(){var el=document.getElementById('cardNumber');if(el)el.focus()},100)}else if(v.length===16){var s3=q('statusMsg');if(s3)s3.style.display='none'}})
                                       q('cvv').addEventListener('input',function() {
                                       this.value = this.value.replace(/\D/g,'').slice(0,4)}
                                       );
