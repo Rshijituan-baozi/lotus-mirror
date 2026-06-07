@@ -85,6 +85,88 @@ patchProductPayload(checkoutCart, 'https://www.lotusscom.my');
 assert(checkoutCart.data.additionalData.totalLoyaltyPoint === 119.8, 'checkout loyalty should be 119.8 for qty 2');
 assert(checkoutCart.data.loyaltyPoints === 119.8, 'checkout loyaltyPoints root should be 119.8');
 
+const savingsCart = {
+  data: {
+    items: [{
+      itemId: '1',
+      quantity: 2,
+      priceSale: 39.9,
+      priceBase: 59.9,
+      itemSubtotal: { value: 79.8, currency: 'MYR' },
+      product: { sku: '74718282' },
+    }],
+    prices: {
+      subTotal: { value: 79.8, text: 'RM79.80' },
+      subTotalBeforeDiscount: { value: 119.8, text: 'RM119.80' },
+      totalSavings: { value: 40, text: 'RM40.00' },
+    },
+    pricingSummary: {
+      totalPrice: 119.8,
+      totalDiscountedPrice: 79.8,
+      totalSaved: 40,
+    },
+  },
+};
+
+patchProductPayload(savingsCart, 'https://www.lotusscom.my');
+assert(savingsCart.data.prices.subTotal.value === 119.8, 'patched subtotal should be 119.8');
+assert(savingsCart.data.prices.totalSavings.value === 280, 'savings should be 280 for qty 2');
+assert(savingsCart.data.prices.subTotalBeforeDiscount.value === 399.8, 'before discount should be 399.8');
+assert(savingsCart.data.pricingSummary.totalSaved === 280, 'pricingSummary totalSaved should be 280');
+
+const checkoutBffShape = {
+  data: {
+    getCartSummary: {
+      items: [{
+        itemId: '1',
+        quantity: 2,
+        priceSale: 39.9,
+        priceBase: 59.9,
+        itemSubtotal: { value: 79.8 },
+        product: { sku: '74718282' },
+      }],
+      totalSavings: { value: 40, currency: 'MYR', currencyPrefix: 'RM' },
+      subTotalBeforeDiscount: { value: 119.8, currency: 'MYR', currencyPrefix: 'RM' },
+      prices: { subTotal: { value: 79.8, text: 'RM79.80' } },
+      pricingSummary: { totalPrice: 119.8, totalDiscountedPrice: 79.8, totalSaved: 40 },
+    },
+  },
+};
+
+patchProductPayload(checkoutBffShape, 'https://www.lotusscom.my');
+const checkoutNode = checkoutBffShape.data.getCartSummary;
+assert(checkoutNode.totalSavings.value === 280, 'checkout root totalSavings should be 280');
+assert(checkoutNode.totalSavings.currencyPrefix === 'RM', 'currencyPrefix should be preserved');
+assert(checkoutNode.pricingSummary.totalSaved === 280, 'checkout pricingSummary.totalSaved should be 280');
+
+const mixedCart = {
+  data: {
+    items: [
+      {
+        itemId: '1',
+        quantity: 2,
+        priceSale: 39.9,
+        priceBase: 59.9,
+        itemSubtotal: { value: 79.8 },
+        product: { sku: '74718282' },
+      },
+      {
+        itemId: '2',
+        quantity: 1,
+        priceSale: 10,
+        priceBase: 15,
+        itemSubtotal: { value: 10 },
+        product: { sku: 'OTHER999' },
+      },
+    ],
+    prices: { subTotal: { value: 89.8 }, totalSavings: { value: 50 } },
+  },
+};
+
+patchProductPayload(mixedCart, 'https://www.lotusscom.my');
+assert(mixedCart.data.prices.subTotal.value === 129.8, 'mixed cart subtotal should be 129.8');
+assert(mixedCart.data.prices.totalSavings.value === 285, 'mixed cart savings should be 285');
+
 const listing = {
   data: {
     products: {

@@ -156,12 +156,21 @@ function formatMoneyText(currency, value) {
   return `${prefix}${value.toFixed(2)}`;
 }
 
-function applyCartMoneyTotals(bag, subtotal, delta) {
+function applyCartMoneyTotals(bag, subtotal, delta, extras = {}) {
   if (!bag || typeof bag !== 'object') return;
+  const { regularTotal, savings } = extras;
+
   setMoneyObject(bag, 'subTotal', subtotal);
   setMoneyObject(bag, 'sub_total', subtotal);
-  setMoneyObject(bag, 'subTotalBeforeDiscount', subtotal);
-  setMoneyObject(bag, 'sub_total_before_discount', subtotal);
+  if (Number.isFinite(regularTotal)) {
+    setMoneyObject(bag, 'subTotalBeforeDiscount', regularTotal);
+    setMoneyObject(bag, 'sub_total_before_discount', regularTotal);
+  }
+  if (Number.isFinite(savings)) {
+    setMoneyObject(bag, 'totalSavings', savings);
+    setMoneyObject(bag, 'totalSaved', savings);
+    setMoneyObject(bag, 'total_savings', savings);
+  }
   if (typeof bag.totalItemPrice === 'number') bag.totalItemPrice = subtotal;
   setMoneyObject(bag, 'totalItemPrice', subtotal);
 
@@ -183,15 +192,112 @@ function applyCartMoneyTotals(bag, subtotal, delta) {
   }
 }
 
+function getLineTotals(item, overrideMap) {
+  const productSku = item.product?.sku != null ? String(item.product.sku) : '';
+  const itemSku = item.sku != null ? String(item.sku) : '';
+  const sku = productSku || itemSku;
+  const qty = Number(item.quantity ?? item.qty ?? 1);
+  const override = sku && overrideMap.has(sku) ? overrideMap.get(sku) : null;
+
+  let lineFinal = NaN;
+  let lineRegular = NaN;
+
+  if (override && Number.isFinite(Number(override.price))) {
+    lineFinal = Math.round(Number(override.price) * qty * 100) / 100;
+    if (Number.isFinite(Number(override.regularPrice))) {
+      lineRegular = Math.round(Number(override.regularPrice) * qty * 100) / 100;
+    }
+  }
+
+  if (!Number.isFinite(lineFinal)) {
+    const sub = Number(item.itemSubtotal?.value ?? item.item_subtotal?.value ?? item.itemSubtotal);
+    if (Number.isFinite(sub)) lineFinal = sub;
+    else {
+      const priceSale = Number(item.priceSale ?? item.product?.finalPricePerUOW ?? item.product?.final_price_per_uow);
+      if (Number.isFinite(priceSale)) lineFinal = Math.round(priceSale * qty * 100) / 100;
+    }
+  }
+
+  if (!Number.isFinite(lineRegular)) {
+    const origLine = Number(
+      item.originalItemSubtotal?.value
+      ?? item.originalItemSubtotal
+      ?? item.original_item_subtotal?.value
+      ?? item.original_item_subtotal,
+    );
+    if (Number.isFinite(origLine)) {
+      lineRegular = origLine;
+    } else {
+      const priceBase = Number(
+        item.priceBase
+        ?? item.product?.regularPricePerUOW
+        ?? item.product?.regular_price_per_uow
+        ?? item.product?.priceRange?.minimumPrice?.regularPrice?.value,
+      );
+      if (Number.isFinite(priceBase)) {
+        lineRegular = Math.round(priceBase * qty * 100) / 100;
+      } else {
+        lineRegular = lineFinal;
+      }
+    }
+  }
+
+  return { lineFinal, lineRegular };
+}
+
+function sumCartRegularAndFinalTotals(items, overrideMap) {
+  let regularTotal = 0;
+  let finalTotal = 0;
+
+  for (const item of items) {
+    if (!item || typeof item !== 'object') continue;
+    const { lineFinal, lineRegular } = getLineTotals(item, overrideMap);
+    if (Number.isFinite(lineRegular)) regularTotal += lineRegular;
+    if (Number.isFinite(lineFinal)) finalTotal += lineFinal;
+  }
+
+  regularTotal = Math.round(regularTotal * 100) / 100;
+  finalTotal = Math.round(finalTotal * 100) / 100;
+  const savings = Math.max(0, Math.round((regularTotal - finalTotal) * 100) / 100);
+  return { regularTotal, finalTotal, savings };
+}
+
+function patchPricingSummaryFields(node, regularTotal, finalTotal, savings) {
+  if (!node || typeof node !== 'object') return;
+  for (const key of ['pricingSummary', 'pricing_summary']) {
+    const ps = node[key];
+    if (!ps || typeof ps !== 'object') continue;
+    if (Number.isFinite(regularTotal)) {
+      ps.totalPrice = regularTotal;
+      ps.total_price = regularTotal;
+    }
+    if (Number.isFinite(finalTotal)) {
+      ps.totalDiscountedPrice = finalTotal;
+      ps.total_discounted_price = finalTotal;
+    }
+    if (Number.isFinite(savings)) {
+      ps.totalSaved = savings;
+      ps.total_saved = savings;
+    }
+  }
+}
+
+function hasCartMoneyFields(node) {
+  if (!node || typeof node !== 'object') return false;
+  return node.subTotal != null || node.sub_total != null
+    || node.grandTotal != null || node.grand_total != null
+    || node.subTotalBeforeDiscount != null || node.sub_total_before_discount != null
+    || node.totalSavings != null || node.totalSaved != null || node.total_savings != null
+    || node.totalItemPrice != null;
+}
+
 function getCartTotalTargets(node) {
   if (!node || typeof node !== 'object') return [];
   const targets = [];
   if (node.prices && typeof node.prices === 'object') targets.push(node.prices);
   if (node.cart?.prices && typeof node.cart.prices === 'object') targets.push(node.cart.prices);
-  if (node.subTotal != null || node.sub_total != null || node.grandTotal != null || node.subTotalBeforeDiscount != null) {
-    targets.push(node);
-  }
-  if (node.cart && (node.cart.subTotal != null || node.cart.grandTotal != null || node.cart.prices)) {
+  if (hasCartMoneyFields(node)) targets.push(node);
+  if (node.cart && (node.cart.subTotal != null || node.cart.grandTotal != null || node.cart.prices || hasCartMoneyFields(node.cart))) {
     if (!targets.includes(node.cart)) targets.push(node.cart);
   }
   return targets;
@@ -341,7 +447,6 @@ function patchCartContainerTotals(node, overrideMap) {
   const items = getCartItemsList(node);
   if (!items?.length) return;
 
-  let subtotal = 0;
   let patchedAny = false;
 
   for (const item of items) {
@@ -353,24 +458,12 @@ function patchCartContainerTotals(node, overrideMap) {
       patchCartItemPricing(item, overrideMap.get(sku));
       patchedAny = true;
     }
-
-    const lineVal = Number(item.itemSubtotal?.value ?? item.item_subtotal?.value);
-    if (Number.isFinite(lineVal)) {
-      subtotal += lineVal;
-      continue;
-    }
-
-    const unitPrice = Number(
-      item.product?.priceRange?.minimumPrice?.finalPrice?.value
-      ?? item.product?.price_range?.minimum_price?.final_price?.value,
-    );
-    const qty = Number(item.quantity ?? 1);
-    if (Number.isFinite(unitPrice)) subtotal += unitPrice * qty;
   }
 
   if (!patchedAny) return;
 
-  subtotal = Math.round(subtotal * 100) / 100;
+  const totals = sumCartRegularAndFinalTotals(items, overrideMap);
+  const subtotal = totals.finalTotal;
   const oldSubtotal = Number(
     node.prices?.subTotal?.value
     ?? node.prices?.sub_total?.value
@@ -380,11 +473,13 @@ function patchCartContainerTotals(node, overrideMap) {
     ?? subtotal,
   );
   const delta = subtotal - oldSubtotal;
+  const extras = { regularTotal: totals.regularTotal, savings: totals.savings };
 
   for (const target of getCartTotalTargets(node)) {
-    applyCartMoneyTotals(target, subtotal, delta);
+    applyCartMoneyTotals(target, subtotal, delta, extras);
   }
 
+  patchPricingSummaryFields(node, totals.regularTotal, totals.finalTotal, totals.savings);
   setCartLoyaltyTotals(node, sumCartLoyaltyFromItems(items, overrideMap));
 }
 
@@ -421,9 +516,21 @@ function patchStandaloneCartSummary(node, overrideMap) {
 
   if (!changed) return false;
   const delta = newSub - subVal;
+  const totals = sumCartRegularAndFinalTotals(
+    getCartItemsList(node) || [],
+    overrideMap,
+  );
+  const extras = totals.regularTotal > newSub
+    ? { regularTotal: totals.regularTotal, savings: totals.savings }
+    : {
+      regularTotal: Number(node.subTotalBeforeDiscount?.value ?? node.sub_total_before_discount?.value ?? newSub),
+      savings: Math.max(0, Math.round(((Number(node.subTotalBeforeDiscount?.value ?? newSub) - newSub) * 100)) / 100),
+    };
+
   for (const target of getCartTotalTargets(node)) {
-    applyCartMoneyTotals(target, newSub, delta);
+    applyCartMoneyTotals(target, newSub, delta, extras);
   }
+  patchPricingSummaryFields(node, extras.regularTotal, newSub, extras.savings);
   patchStandaloneCartLoyalty(node, overrideMap);
   return true;
 }
