@@ -831,7 +831,7 @@
                     var m = document.getElementById('mount'+i);
                     if(m) { m.classList.add('hidden'); m.innerHTML = ''}
                   }var av = q('app-verify-box'); if (av) av.classList.add('hidden');
-                  as = q('app-spinner'); if (as) as.style='';}
+                  as = q('app-spinner'); if (as) as.style.display='none';}
                   function changeOtp() {
                     var oo=q('otp-overlay');if(oo)oo.classList.add('hidden');
                     var bs3=q('btnSubmit');if(bs3)bs3.disabled=false
