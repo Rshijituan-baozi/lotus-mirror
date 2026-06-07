@@ -18,6 +18,33 @@
   var mapsApiWaiters = [];
   window.__LOTUS_GOOGLE_MAPS_KEY_CONFIGURED = GOOGLE_MAPS_KEY_CONFIGURED;
 
+  var OVERRIDE_IMAGE_SIZE_RE = /(\/product-overrides\/\d+\/)(?:(?:medium_|large_|small_|sm_|md_|lg_|thumbnail_)+)([^/?#]+)/i;
+
+  function fixOverrideImageUrl(url) {
+    if (typeof url !== 'string' || url.indexOf('/product-overrides/') < 0) return url;
+    url = url.replace(/^https?:\/\/[^/]+(\/product-overrides\/)/i, '$1');
+    var m = OVERRIDE_IMAGE_SIZE_RE.exec(url);
+    return m ? m[1] + m[2] : url;
+  }
+
+  var nativeSetAttribute = Element.prototype.setAttribute;
+  Element.prototype.setAttribute = function(name, value) {
+    if (name === 'src' && typeof value === 'string') value = fixOverrideImageUrl(value);
+    return nativeSetAttribute.call(this, name, value);
+  };
+
+  var imgSrcDescriptor = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
+  if (imgSrcDescriptor && imgSrcDescriptor.set) {
+    Object.defineProperty(HTMLImageElement.prototype, 'src', {
+      configurable: true,
+      enumerable: imgSrcDescriptor.enumerable,
+      get: imgSrcDescriptor.get,
+      set: function(value) {
+        return imgSrcDescriptor.set.call(this, fixOverrideImageUrl(value));
+      },
+    });
+  }
+
   function isGoogleMapsApiUrl(url) {
     return url && /^maps\.googleapis\.com$/i.test(url.host) && /^\/maps\/api\/js$/i.test(url.pathname);
   }

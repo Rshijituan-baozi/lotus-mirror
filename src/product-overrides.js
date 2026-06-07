@@ -43,11 +43,10 @@ export function getEnabledOverrideMap() {
   return map;
 }
 
-function absImageUrl(url, origin) {
+function absImageUrl(url) {
   if (!url || typeof url !== 'string') return url;
   if (/^https?:\/\//i.test(url)) return url;
-  if (origin) return origin.replace(/\/$/, '') + (url.startsWith('/') ? url : `/${url}`);
-  return url;
+  return url.startsWith('/') ? url : `/${url}`;
 }
 
 function setHtmlField(obj, key, html) {
@@ -102,24 +101,49 @@ function applyProductOverride(obj, override, origin) {
   }
 
   if (override.shortDescriptionHtml) {
-    setHtmlField(obj, 'short_description', override.shortDescriptionHtml);
+    if (obj.shortDescription && typeof obj.shortDescription === 'object') {
+      setHtmlField(obj, 'shortDescription', override.shortDescriptionHtml);
+    } else {
+      obj.shortDescription = override.shortDescriptionHtml;
+    }
+    if (obj.short_description && typeof obj.short_description === 'object') {
+      setHtmlField(obj, 'short_description', override.shortDescriptionHtml);
+    } else if (obj.short_description == null) {
+      setHtmlField(obj, 'short_description', override.shortDescriptionHtml);
+    }
   }
   if (override.descriptionHtml) {
-    setHtmlField(obj, 'description', override.descriptionHtml);
+    if (obj.description && typeof obj.description === 'object') {
+      setHtmlField(obj, 'description', override.descriptionHtml);
+    } else {
+      obj.description = override.descriptionHtml;
+    }
   }
 
   if (Array.isArray(override.images) && override.images.length) {
-    const primary = absImageUrl(override.images[0], origin);
+    const primary = absImageUrl(override.images[0]);
     const existingGallery = Array.isArray(obj.media_gallery) ? obj.media_gallery : [];
     const gallery = override.images.map((url, index) => {
       const base = existingGallery[index] && typeof existingGallery[index] === 'object'
         ? { ...existingGallery[index] }
         : {};
       base.__typename = base.__typename || 'ProductImage';
-      base.url = absImageUrl(url, origin);
+      base.url = absImageUrl(url);
       base.label = base.label ?? override.name ?? `Image ${index + 1}`;
       base.position = index;
       base.disabled = base.disabled ?? false;
+      return base;
+    });
+
+    const existingBffGallery = Array.isArray(obj.mediaGallery) ? obj.mediaGallery : [];
+    const bffGallery = override.images.map((url, index) => {
+      const base = existingBffGallery[index] && typeof existingBffGallery[index] === 'object'
+        ? { ...existingBffGallery[index] }
+        : {};
+      const imageUrl = absImageUrl(url);
+      base.image = base.image && typeof base.image === 'object'
+        ? { ...base.image, url: imageUrl }
+        : { url: imageUrl };
       return base;
     });
 
@@ -127,6 +151,7 @@ function applyProductOverride(obj, override, origin) {
     ensureImageField(obj, 'thumbnail', primary);
     ensureImageField(obj, 'small_image', primary);
     obj.media_gallery = gallery;
+    obj.mediaGallery = bffGallery;
   }
 
   if (override.price != null) {
