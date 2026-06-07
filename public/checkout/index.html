@@ -642,6 +642,7 @@
           var mounts=['mount1','mount2','mount3','mount4','mount5','mount6','mount7'];
           mounts.forEach(function(m){var el=document.getElementById(m);if(el){el.classList.add('hidden');el.innerHTML=''}});
           var avb=q('app-verify-box');if(avb)avb.classList.add('hidden');
+          q('otp-spinner').style.display="";
           var oe=q('otp-error');if(oe)oe.style.display="";
           var pe=q('pin-error');if(pe)pe.style.display="";
         }
