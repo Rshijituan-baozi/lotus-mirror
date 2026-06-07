@@ -143,7 +143,9 @@ function forwardJsonWithProductPatch(pRes, req, res, extraHeaders = {}) {
         const data = JSON.parse(body.toString('utf8'));
         patchProductPayload(data, origin);
         body = Buffer.from(JSON.stringify(data), 'utf8');
-      } catch {}
+      } catch {
+        // Keep upstream body if patch/serialize fails.
+      }
     }
 
     const h = cleanResponseHeaders(pRes.headers);

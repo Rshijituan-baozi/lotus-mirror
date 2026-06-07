@@ -287,13 +287,30 @@
     }
   }
 
+  function getCartItemsListClient(node) {
+    if (!node || typeof node !== 'object') return null;
+    if (Array.isArray(node.cartItems)) return node.cartItems;
+    if (Array.isArray(node.cart_items)) return node.cart_items;
+    if (node.cart && Array.isArray(node.cart.cartItems)) return node.cart.cartItems;
+    if (node.cart && Array.isArray(node.cart.cart_items)) return node.cart.cart_items;
+    return null;
+  }
+
+  function isCartLineItemClient(item) {
+    if (!item || typeof item !== 'object') return false;
+    return item.itemSubtotal != null
+      || item.item_subtotal != null
+      || item.itemId != null
+      || item.item_id != null
+      || item.cartItemId != null
+      || item.cart_item_id != null
+      || (item.product && typeof item.product === 'object' && item.quantity != null);
+  }
+
   function patchCartContainersClient(node, overrides) {
-    var items = null;
-    if (Array.isArray(node.cartItems)) items = node.cartItems;
-    else if (Array.isArray(node.cart_items)) items = node.cart_items;
-    else if (node.cart && Array.isArray(node.cart.cartItems)) items = node.cart.cartItems;
-    else if (Array.isArray(node.items)) items = node.items;
+    var items = getCartItemsListClient(node);
     if (!items || !items.length) return;
+    if (!items.some(isCartLineItemClient)) return;
 
     var subtotal = 0;
     var patchedAny = false;
@@ -384,13 +401,15 @@
       });
       if (node.product && typeof node.product === 'object') {
         var productSku = node.product.sku != null ? String(node.product.sku) : '';
-        overrides.forEach(function(entry) {
-          if (productSku && String(entry.sku) === productSku) {
-            applyOverrideClient(node.product, entry);
-            patchCartItemPricingClient(node, entry);
-            changed = true;
-          }
-        });
+        if (productSku && isCartLineItemClient(node)) {
+          overrides.forEach(function(entry) {
+            if (String(entry.sku) === productSku) {
+              applyOverrideClient(node.product, entry);
+              patchCartItemPricingClient(node, entry);
+              changed = true;
+            }
+          });
+        }
       }
       patchCartContainersClient(node, overrides);
       Object.keys(node).forEach(function(key) {

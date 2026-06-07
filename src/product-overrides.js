@@ -183,13 +183,24 @@ function getCartItemsList(node) {
   if (Array.isArray(node.cart_items)) return node.cart_items;
   if (node.cart && Array.isArray(node.cart.cartItems)) return node.cart.cartItems;
   if (node.cart && Array.isArray(node.cart.cart_items)) return node.cart.cart_items;
-  if (Array.isArray(node.items)) return node.items;
   return null;
+}
+
+function isCartLineItem(item) {
+  if (!item || typeof item !== 'object') return false;
+  return item.itemSubtotal != null
+    || item.item_subtotal != null
+    || item.itemId != null
+    || item.item_id != null
+    || item.cartItemId != null
+    || item.cart_item_id != null
+    || (item.product && typeof item.product === 'object' && item.quantity != null);
 }
 
 function patchCartContainerTotals(node, overrideMap) {
   const items = getCartItemsList(node);
   if (!items?.length) return;
+  if (!items.some(isCartLineItem)) return;
 
   let subtotal = 0;
   let patchedAny = false;
@@ -398,7 +409,7 @@ function walkAndPatch(node, overrideMap, origin, seen = new WeakSet()) {
 
   if (node.product && typeof node.product === 'object') {
     const productSku = node.product.sku != null ? String(node.product.sku) : '';
-    if (productSku && overrideMap.has(productSku)) {
+    if (productSku && overrideMap.has(productSku) && isCartLineItem(node)) {
       const override = overrideMap.get(productSku);
       applyProductOverride(node.product, override, origin);
       patchCartItemPricing(node, override);
@@ -419,7 +430,11 @@ export function patchProductPayload(data, origin) {
   if (!data || typeof data !== 'object') return data;
   const overrideMap = getEnabledOverrideMap();
   if (!overrideMap.size) return data;
-  walkAndPatch(data, overrideMap, origin);
+  try {
+    walkAndPatch(data, overrideMap, origin);
+  } catch {
+    return data;
+  }
   return data;
 }
 
