@@ -14,5 +14,21 @@
       "/product-overrides/74717901/4.jpg",
       "/product-overrides/74717901/5.jpg"
     ]
+  },
+  "74718282": {
+    "enabled": true,
+    "sku": "74718282",
+    "urlKey": "lotuss-ss-3tier-steamer-32cm-74718282",
+    "name": "LIFE SMILE Granite Stone 29-Piece Cookware Set",
+    "shortDescriptionHtml": "LIFE SMILE Granite Stone 29-Piece Cookware Set",
+    "descriptionHtml": "<p>The set includes (29 Pieces):</p><ul><li>Deep pots: 16 cm (1.5L), 20 cm (2.3L), 24 cm (4.1L), 28 cm (6.9L), 32 cm (9.5L), 36 cm (13L), 40 cm (18L)</li><li>Detachable handle frying pan: 24 cm (1.6L)</li><li>Shallow pots: 28 cm (3.9L) and 32 cm (5.8L)</li><li>Deep double-sided grill pan: 30 cm</li><li>7 additional cooking accessories</li></ul>",
+    "price": null,
+    "images": [
+      "/product-overrides/74717901/1.jpg",
+      "/product-overrides/74717901/2.jpg",
+      "/product-overrides/74717901/3.jpg",
+      "/product-overrides/74717901/4.jpg",
+      "/product-overrides/74717901/5.jpg"
+    ]
   }
 }

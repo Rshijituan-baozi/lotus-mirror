@@ -13,9 +13,10 @@ const PUBLIC_OVERRIDES = path.join(__dirname, '..', 'public', 'product-overrides
 const ADMIN_HTML = path.join(__dirname, '..', 'public', 'admin', 'product-overrides', 'index.html');
 
 function authAdmin(req, res, next) {
-  const token = req.headers['x-admin-token'] || req.query.token;
+  const bearer = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  const token = req.headers['x-admin-token'] || req.query.token || bearer;
   if (token !== ADMIN_TOKEN) {
-    res.status(401).json({ error: 'unauthorized' });
+    res.status(401).json({ error: 'unauthorized', hint: 'Use header x-admin-token or query ?token=' });
     return;
   }
   next();

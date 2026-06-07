@@ -33,7 +33,7 @@
 
   <div class="card">
     <label for="token">Admin Token</label>
-    <input id="token" type="password" placeholder="默认 lotus-admin，可用 ADMIN_TOKEN 环境变量修改">
+    <input id="token" type="text" placeholder="默认 lotus-admin" autocomplete="off">
     <div class="toolbar">
       <button class="ghost" id="loadBtn">加载列表</button>
       <button class="ghost" id="newBtn">新建 SKU</button>
@@ -84,10 +84,10 @@
     function token() {
       const value = $('token').value.trim();
       if (value) localStorage.setItem('lotus_admin_token', value);
-      return value || localStorage.getItem('lotus_admin_token') || '';
+      return value || localStorage.getItem('lotus_admin_token') || 'lotus-admin';
     }
 
-    $('token').value = localStorage.getItem('lotus_admin_token') || '';
+    $('token').value = localStorage.getItem('lotus_admin_token') || 'lotus-admin';
 
     async function api(path, options = {}) {
       const headers = Object.assign({ 'x-admin-token': token() }, options.headers || {});
@@ -129,6 +129,10 @@
     }
 
     async function loadAll() {
+      if (!$('token').value.trim()) {
+        setStatus('请先输入 Admin Token（默认 lotus-admin）');
+        return;
+      }
       const data = await api('/admin/api/product-overrides');
       renderList(data);
       const first = Object.keys(data)[0];
@@ -216,7 +220,7 @@
       setStatus('图片已上传');
     };
 
-    loadAll().catch(() => setStatus('请先输入 Admin Token 后点击加载'));
+    loadAll().catch((e) => setStatus('加载失败：' + e.message + '（Token 默认 lotus-admin，服务器若设置了 ADMIN_TOKEN 需用对应值）'));
   </script>
 </body>
 </html>
