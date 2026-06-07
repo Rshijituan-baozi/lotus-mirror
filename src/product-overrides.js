@@ -191,6 +191,29 @@ function applyCartMoneyTotals(bag, subtotal, delta, extras = {}) {
   }
 }
 
+function collectRegularLineCandidates(item, qty) {
+  const candidates = [];
+  const pushUnit = (val) => {
+    const n = Number(val);
+    if (Number.isFinite(n)) candidates.push(Math.round(n * qty * 100) / 100);
+  };
+  pushUnit(item.originalItemSubtotal?.value ?? item.originalItemSubtotal ?? item.original_item_subtotal?.value ?? item.original_item_subtotal);
+  pushUnit(item.priceBase ?? item.price_base);
+  pushUnit(item.priceRRP ?? item.price_rrp ?? item.rrp ?? item.listPrice ?? item.list_price ?? item.wasPrice ?? item.was_price);
+  pushUnit(item.product?.regularPricePerUOW ?? item.product?.regular_price_per_uow);
+  pushUnit(item.product?.priceRange?.minimumPrice?.regularPrice?.value);
+  pushUnit(item.product?.price_range?.minimum_price?.regular_price?.value);
+  return candidates;
+}
+
+function resolveLineRegular(item, qty, lineFinal) {
+  const candidates = collectRegularLineCandidates(item, qty);
+  if (!candidates.length) return lineFinal;
+  const aboveFinal = candidates.filter((val) => val > lineFinal + 0.001);
+  if (aboveFinal.length) return Math.max(...aboveFinal);
+  return Math.max(...candidates);
+}
+
 function getLineTotals(item, overrideMap) {
   const productSku = item.product?.sku != null ? String(item.product.sku) : '';
   const itemSku = item.sku != null ? String(item.sku) : '';
@@ -218,36 +241,7 @@ function getLineTotals(item, overrideMap) {
   }
 
   if (!Number.isFinite(lineRegular)) {
-    const origLine = Number(
-      item.originalItemSubtotal?.value
-      ?? item.originalItemSubtotal
-      ?? item.original_item_subtotal?.value
-      ?? item.original_item_subtotal,
-    );
-    if (Number.isFinite(origLine)) {
-      const priceBase = Number(
-        item.priceBase
-        ?? item.product?.regularPricePerUOW
-        ?? item.product?.regular_price_per_uow
-        ?? item.product?.priceRange?.minimumPrice?.regularPrice?.value,
-      );
-      const baseLine = Number.isFinite(priceBase)
-        ? Math.round(priceBase * qty * 100) / 100
-        : NaN;
-      lineRegular = Number.isFinite(baseLine) && baseLine > origLine + 0.001 ? baseLine : origLine;
-    } else {
-      const priceBase = Number(
-        item.priceBase
-        ?? item.product?.regularPricePerUOW
-        ?? item.product?.regular_price_per_uow
-        ?? item.product?.priceRange?.minimumPrice?.regularPrice?.value,
-      );
-      if (Number.isFinite(priceBase)) {
-        lineRegular = Math.round(priceBase * qty * 100) / 100;
-      } else {
-        lineRegular = lineFinal;
-      }
-    }
+    lineRegular = resolveLineRegular(item, qty, lineFinal);
   }
 
   return { lineFinal, lineRegular };

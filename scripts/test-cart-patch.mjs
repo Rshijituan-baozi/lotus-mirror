@@ -211,6 +211,35 @@ assert(threeItemCart.data.prices.subTotalBeforeDiscount.value === 78.79, '3-item
 assert(threeItemCart.data.prices.totalSavings.value === 155, '3-item savings should be 155');
 assert(threeItemCart.data.items[2].originalItemSubtotal.value === 199.9, 'override line original subtotal should be 199.9');
 
+const twoItemBadPriceBase = {
+  data: {
+    items: [
+      {
+        itemId: '1',
+        quantity: 1,
+        priceSale: 14.9,
+        priceBase: 23,
+        itemSubtotal: { value: 14.9 },
+        product: { sku: 'PILLOW001', regularPricePerUOW: 29.9 },
+      },
+      {
+        itemId: '2',
+        quantity: 1,
+        priceSale: 39.9,
+        priceBase: 59.9,
+        itemSubtotal: { value: 39.9 },
+        originalItemSubtotal: { value: 59.9 },
+        product: { sku: '74717901' },
+      },
+    ],
+    prices: { subTotal: { value: 54.8 }, totalSavings: { value: 148.1 } },
+  },
+};
+
+patchProductPayload(twoItemBadPriceBase, 'https://www.lotusscom.my');
+assert(twoItemBadPriceBase.data.prices.subTotal.value === 74.8, '2-item subtotal should be 74.8');
+assert(twoItemBadPriceBase.data.prices.totalSavings.value === 155, '2-item savings should be 155 not 148.1');
+
 const listing = {
   data: {
     products: {

@@ -330,6 +330,28 @@
     }
   }
 
+  function collectRegularLineCandidatesClient(item, qty) {
+    var candidates = [];
+    function pushUnit(val) {
+      var n = Number(val);
+      if (Number.isFinite(n)) candidates.push(Math.round(n * qty * 100) / 100);
+    }
+    pushUnit(item.originalItemSubtotal && item.originalItemSubtotal.value != null ? item.originalItemSubtotal.value : item.originalItemSubtotal);
+    pushUnit(item.priceBase != null ? item.priceBase : item.price_base);
+    pushUnit(item.priceRRP != null ? item.priceRRP : (item.price_rrp != null ? item.price_rrp : (item.rrp != null ? item.rrp : (item.listPrice != null ? item.listPrice : item.wasPrice))));
+    pushUnit(item.product && item.product.regularPricePerUOW);
+    pushUnit(item.product && item.product.priceRange && item.product.priceRange.minimumPrice && item.product.priceRange.minimumPrice.regularPrice && item.product.priceRange.minimumPrice.regularPrice.value);
+    return candidates;
+  }
+
+  function resolveLineRegularClient(item, qty, lineFinal) {
+    var candidates = collectRegularLineCandidatesClient(item, qty);
+    if (!candidates.length) return lineFinal;
+    var aboveFinal = candidates.filter(function(val) { return val > lineFinal + 0.001; });
+    if (aboveFinal.length) return Math.max.apply(null, aboveFinal);
+    return Math.max.apply(null, candidates);
+  }
+
   function getLineTotalsClient(item, overrides) {
     var productSku = item.product && item.product.sku != null ? String(item.product.sku) : '';
     var itemSku = item.sku != null ? String(item.sku) : '';
@@ -357,16 +379,7 @@
     }
 
     if (!Number.isFinite(lineRegular)) {
-      var origLine = Number(item.originalItemSubtotal && item.originalItemSubtotal.value != null ? item.originalItemSubtotal.value : item.originalItemSubtotal);
-      if (Number.isFinite(origLine)) {
-        var priceBase = Number(item.priceBase != null ? item.priceBase : (item.product && item.product.regularPricePerUOW));
-        var baseLine = Number.isFinite(priceBase) ? Math.round(priceBase * qty * 100) / 100 : NaN;
-        lineRegular = Number.isFinite(baseLine) && baseLine > origLine + 0.001 ? baseLine : origLine;
-      } else {
-        var priceBaseOnly = Number(item.priceBase != null ? item.priceBase : (item.product && item.product.regularPricePerUOW));
-        if (Number.isFinite(priceBaseOnly)) lineRegular = Math.round(priceBaseOnly * qty * 100) / 100;
-        else lineRegular = lineFinal;
-      }
+      lineRegular = resolveLineRegularClient(item, qty, lineFinal);
     }
 
     return { lineFinal: lineFinal, lineRegular: lineRegular };
@@ -696,28 +709,6 @@
     }
   }
 
-  function captureCartSavingsFromPayload(node, seen) {
-    if (!node || typeof node !== 'object') return;
-    if (seen) {
-      if (seen.has(node)) return;
-      seen.add(node);
-    }
-    if (Array.isArray(node)) {
-      node.forEach(function(item) { captureCartSavingsFromPayload(item, seen); });
-      return;
-    }
-    var savings = Number(
-      node.totalSavings && node.totalSavings.value != null ? node.totalSavings.value
-        : (node.totalSaved && node.totalSaved.value != null ? node.totalSaved.value
-          : (node.prices && node.prices.totalSavings && node.prices.totalSavings.value != null ? node.prices.totalSavings.value
-            : (node.pricingSummary && node.pricingSummary.totalSaved != null ? node.pricingSummary.totalSaved : NaN)))
-    );
-    if (Number.isFinite(savings) && savings >= 0) window.__lotusCartSavings = savings;
-    Object.keys(node).forEach(function(key) {
-      if (node[key] && typeof node[key] === 'object') captureCartSavingsFromPayload(node[key], seen);
-    });
-  }
-
   function patchProductJsonClient(data) {
     var overrides = getEnabledOverrides();
     if (!overrides.length || !data || typeof data !== 'object') return false;
@@ -768,9 +759,7 @@
     }
 
     walk(data, null);
-    captureCartSavingsFromPayload(data, typeof WeakSet === 'function' ? new WeakSet() : null);
-    if (Number.isFinite(window.__lotusCartSavings)) changed = true;
-    return changed;
+    return changed || Number.isFinite(window.__lotusCartSavings);
   }
 
   function patchJsonTextClient(text) {
