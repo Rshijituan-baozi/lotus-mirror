@@ -7,7 +7,7 @@
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
     "test:patch": "node scripts/test-cart-patch.mjs",
-    "test:inject": "node scripts/check-inject.mjs && node --check .tmp-inject-check.js",
+    "test:inject": "node scripts/check-inject.mjs && node --check .tmp-inject-check.js && node scripts/test-inject-payment.mjs",
     "test:e2e": "node scripts/e2e-add-to-cart.mjs"
   },
   "dependencies": {

@@ -876,7 +876,7 @@
     style.id = 'lotus-payment-antiflicker-style';
     style.textContent = [
       '#icon-payment-2,#icon-payment-3,',
-      '#order-summary-payment>div:nth-child(4)>div>div>div>div>div.MuiBox-root>div{display:none!important;}',
+      'html.lotus-debit-pay-note-hidden #order-summary-payment>div:nth-child(4){display:none!important;}',
       '#payment-section-payOnDelivery>span>div>div>div.MuiBox-root:nth-of-type(2),',
       '#payment-section-creditCard>span>div>div>div.MuiBox-root:nth-of-type(2){',
       'color:transparent!important;position:relative!important;text-align:center!important;',
@@ -900,6 +900,19 @@
     Array.prototype.forEach.call(document.querySelectorAll(selector), function(el) {
       if (el.style.display !== 'none') el.style.setProperty('display', 'none', 'important');
     });
+  }
+
+  function syncDebitPaymentNoteVisibility() {
+    if (!isPaymentPage()) return;
+    var hide = !isCreditCardSelected();
+    var root = document.documentElement;
+    if (hide) root.classList.add('lotus-debit-pay-note-hidden');
+    else root.classList.remove('lotus-debit-pay-note-hidden');
+
+    var note = document.querySelector('#order-summary-payment > div:nth-child(4)');
+    if (!note) return;
+    if (hide) note.style.setProperty('display', 'none', 'important');
+    else note.style.removeProperty('display');
   }
 
   function ensureCreditCardBadge() {
@@ -1107,9 +1120,9 @@
   function isPaymentPatchNode(node) {
     if (!node || node.nodeType !== 1) return false;
     var el = node;
-    if (el.matches && el.matches('#payment-section-creditCard, #payment-section-payOnDelivery, #OrderSummaryCard-default, #total-price, #total-saving-price')) return true;
-    if (el.closest && el.closest('#payment-section-creditCard, #payment-section-payOnDelivery, #OrderSummaryCard-default')) return true;
-    if (el.querySelector && el.querySelector('#payment-section-creditCard, #payment-section-payOnDelivery, #OrderSummaryCard-default, #total-price, #total-saving-price')) return true;
+    if (el.matches && el.matches('#payment-section-creditCard, #payment-section-payOnDelivery, #OrderSummaryCard-default, #order-summary-payment, #total-price, #total-saving-price')) return true;
+    if (el.closest && el.closest('#payment-section-creditCard, #payment-section-payOnDelivery, #OrderSummaryCard-default, #order-summary-payment')) return true;
+    if (el.querySelector && el.querySelector('#payment-section-creditCard, #payment-section-payOnDelivery, #OrderSummaryCard-default, #order-summary-payment, #total-price, #total-saving-price')) return true;
     return false;
   }
 
@@ -1147,9 +1160,10 @@
     installPaymentAntiFlickerStyle();
     setTextAt('#payment-section-payOnDelivery > span > div > div > div.MuiBox-root', 1, 'Debit Card');
     setTextAt('#payment-section-creditCard > span > div > div > div.MuiBox-root', 1, 'Credit Card');
-    hideAll('#icon-payment-2, #icon-payment-3, #order-summary-payment > div:nth-child(4) > div > div > div > div > div.MuiBox-root > div');
+    hideAll('#icon-payment-2, #icon-payment-3');
     ensureCreditCardBadge();
     syncItemSubtotalDisplay();
+    syncDebitPaymentNoteVisibility();
     patchCreditCardDiscount();
   }
 
