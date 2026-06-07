@@ -159,28 +159,24 @@
           input = new Request(next, input);
         }
       }
-      return originalFetch.call(window, input, init).then(function(res) {
-        var ct = res.headers.get('content-type') || '';
-        if (ct.indexOf('json') < 0) return res;
-        return res.text().then(function(text) {
-          var patched = patchJsonTextClient(text);
-          if (patched === text) return res;
-          return new Response(patched, {
-            status: res.status,
-            statusText: res.statusText,
-            headers: res.headers,
-          });
-        });
-      });
+      return originalFetch.call(window, input, init);
     };
   }
 
   var originalOpen = XMLHttpRequest.prototype.open;
   XMLHttpRequest.prototype.open = function(method, url) {
     var args = Array.prototype.slice.call(arguments);
-    if (typeof url === 'string') args[1] = rewriteUrl(url);
+    if (typeof url === 'string') {
+      this._lotusRequestUrl = rewriteUrl(url);
+      args[1] = this._lotusRequestUrl;
+    }
     return originalOpen.apply(this, args);
   };
+
+  function shouldPatchApiUrl(url) {
+    if (typeof url !== 'string' || !url) return false;
+    return url.indexOf('/__api/') >= 0 || url.indexOf('/graphql') >= 0;
+  }
 
   function getEnabledOverrides() {
     var list = [];
@@ -289,6 +285,8 @@
     var xhr = this;
     xhr.addEventListener('readystatechange', function() {
       if (xhr.readyState !== 4 || xhr.status < 200 || xhr.status >= 300) return;
+      var reqUrl = xhr._lotusRequestUrl || xhr.responseURL || '';
+      if (!shouldPatchApiUrl(reqUrl)) return;
       var ct = xhr.getResponseHeader('content-type') || '';
       if (ct.indexOf('json') < 0) return;
       try {
