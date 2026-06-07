@@ -197,17 +197,103 @@ function getCartTotalTargets(node) {
   return targets;
 }
 
+function getLoyaltyPerUnit(override) {
+  if (override.loyaltyPoints != null) return Number(override.loyaltyPoints);
+  if (override.price != null) return Number(override.price);
+  return NaN;
+}
+
+function setCartLoyaltyTotals(node, total) {
+  if (!node || typeof node !== 'object' || !Number.isFinite(total)) return;
+  node.loyaltyPoints = total;
+  if (node.loyalty && typeof node.loyalty === 'object') {
+    node.loyalty.loyaltyPoints = total;
+  }
+  for (const key of ['additionalData', 'additional_data']) {
+    if (node[key] && typeof node[key] === 'object') {
+      node[key].totalLoyaltyPoint = total;
+      node[key].total_loyalty_point = total;
+    }
+  }
+}
+
+function sumCartLoyaltyFromItems(items, overrideMap) {
+  let total = 0;
+  for (const item of items) {
+    if (!item || typeof item !== 'object') continue;
+    const productSku = item.product?.sku != null ? String(item.product.sku) : '';
+    const itemSku = item.sku != null ? String(item.sku) : '';
+    const sku = productSku || itemSku;
+    const qty = Number(item.quantity ?? item.qty ?? 1);
+    const override = sku && overrideMap.has(sku) ? overrideMap.get(sku) : null;
+
+    if (override) {
+      const perUnit = getLoyaltyPerUnit(override);
+      if (Number.isFinite(perUnit)) {
+        total += Math.round(perUnit * (Number.isFinite(qty) ? qty : 1) * 100) / 100;
+        continue;
+      }
+    }
+
+    const lineSubtotal = Number(item.itemSubtotal?.value ?? item.item_subtotal?.value ?? item.itemSubtotal);
+    if (Number.isFinite(lineSubtotal)) {
+      total += lineSubtotal;
+      continue;
+    }
+
+    const priceSale = Number(item.priceSale ?? item.product?.finalPricePerUOW ?? item.product?.loyaltyPoints);
+    if (Number.isFinite(priceSale)) {
+      total += Math.round(priceSale * (Number.isFinite(qty) ? qty : 1) * 100) / 100;
+    }
+  }
+  return Math.round(total * 100) / 100;
+}
+
+function patchStandaloneCartLoyalty(node, overrideMap) {
+  const loyaltyVal = Number(
+    node.additionalData?.totalLoyaltyPoint
+    ?? node.additional_data?.total_loyalty_point
+    ?? node.loyaltyPoints
+    ?? node.loyalty?.loyaltyPoints,
+  );
+  if (!Number.isFinite(loyaltyVal)) return false;
+
+  const itemCount = Number(node.itemsCount ?? node.itemCount ?? 1);
+  for (const entry of overrideMap.values()) {
+    const upstream = entry.upstreamPrice != null ? Number(entry.upstreamPrice) : null;
+    const loyalty = getLoyaltyPerUnit(entry);
+    if (!Number.isFinite(upstream) || !Number.isFinite(loyalty)) continue;
+    for (let q = 1; q <= Math.max(itemCount, 1); q++) {
+      if (Math.abs(loyaltyVal - upstream * q) < 0.55) {
+        const newTotal = Math.round(loyalty * q * 100) / 100;
+        setCartLoyaltyTotals(node, newTotal);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 function patchCartItemPricing(cartItem, override) {
   const finalPrice = override.price != null ? Number(override.price) : null;
   if (!Number.isFinite(finalPrice)) return;
   const qty = Number(cartItem.quantity ?? cartItem.qty ?? 1);
   const lineTotal = Math.round(finalPrice * (Number.isFinite(qty) ? qty : 1) * 100) / 100;
+  const loyaltyPerUnit = getLoyaltyPerUnit(override);
 
   setMoneyObject(cartItem, 'itemSubtotal', lineTotal);
   setMoneyObject(cartItem, 'item_subtotal', lineTotal);
 
   cartItem.finalPricePerUOW = finalPrice;
   cartItem.final_price_per_uow = finalPrice;
+  cartItem.priceSale = finalPrice;
+  if (override.regularPrice != null) {
+    cartItem.priceBase = Number(override.regularPrice);
+  }
+
+  if (Number.isFinite(loyaltyPerUnit)) {
+    cartItem.loyaltyPoints = Math.round(loyaltyPerUnit * (Number.isFinite(qty) ? qty : 1) * 100) / 100;
+  }
 
   if (cartItem.product && typeof cartItem.product === 'object') {
     cartItem.product.finalPricePerUOW = finalPrice;
@@ -216,6 +302,10 @@ function patchCartItemPricing(cartItem, override) {
       const regular = Number(override.regularPrice);
       cartItem.product.regularPricePerUOW = regular;
       cartItem.product.regular_price_per_uow = regular;
+    }
+    if (Number.isFinite(loyaltyPerUnit)) {
+      cartItem.product.loyaltyPoints = loyaltyPerUnit;
+      cartItem.product.loyalty_points = loyaltyPerUnit;
     }
   }
 
@@ -294,6 +384,8 @@ function patchCartContainerTotals(node, overrideMap) {
   for (const target of getCartTotalTargets(node)) {
     applyCartMoneyTotals(target, subtotal, delta);
   }
+
+  setCartLoyaltyTotals(node, sumCartLoyaltyFromItems(items, overrideMap));
 }
 
 function isCartSummaryNode(node) {
@@ -332,6 +424,7 @@ function patchStandaloneCartSummary(node, overrideMap) {
   for (const target of getCartTotalTargets(node)) {
     applyCartMoneyTotals(target, newSub, delta);
   }
+  patchStandaloneCartLoyalty(node, overrideMap);
   return true;
 }
 
@@ -491,6 +584,11 @@ function applyCartProductOverride(obj, override) {
     if (obj.priceRange?.minimumPrice || obj.price_range?.minimum_price) {
       patchPricingFields(obj, override);
     }
+    const loyaltyPerUnit = getLoyaltyPerUnit(override);
+    if (Number.isFinite(loyaltyPerUnit)) {
+      obj.loyaltyPoints = loyaltyPerUnit;
+      obj.loyalty_points = loyaltyPerUnit;
+    }
   }
 
   if (Array.isArray(override.images) && override.images.length) {
@@ -542,6 +640,7 @@ function walkAndPatch(node, overrideMap, origin, seen = new WeakSet(), parent = 
 
   patchCartContainerTotals(node, overrideMap);
   patchStandaloneCartSummary(node, overrideMap);
+  patchStandaloneCartLoyalty(node, overrideMap);
 
   for (const value of Object.values(node)) {
     if (value && typeof value === 'object') walkAndPatch(value, overrideMap, origin, seen, node);

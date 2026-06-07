@@ -312,17 +312,96 @@
     return targets;
   }
 
+  function getLoyaltyPerUnitClient(override) {
+    if (override.loyaltyPoints != null) return Number(override.loyaltyPoints);
+    if (override.price != null) return Number(override.price);
+    return NaN;
+  }
+
+  function setCartLoyaltyTotalsClient(node, total) {
+    if (!node || typeof node !== 'object' || !Number.isFinite(total)) return;
+    node.loyaltyPoints = total;
+    if (node.loyalty && typeof node.loyalty === 'object') node.loyalty.loyaltyPoints = total;
+    ['additionalData', 'additional_data'].forEach(function(key) {
+      if (node[key] && typeof node[key] === 'object') {
+        node[key].totalLoyaltyPoint = total;
+        node[key].total_loyalty_point = total;
+      }
+    });
+  }
+
+  function sumCartLoyaltyFromItemsClient(items, overrides) {
+    var total = 0;
+    items.forEach(function(item) {
+      if (!item || typeof item !== 'object') return;
+      var sku = item.product && item.product.sku != null ? String(item.product.sku) : (item.sku != null ? String(item.sku) : '');
+      var qty = Number(item.quantity != null ? item.quantity : (item.qty != null ? item.qty : 1));
+      var override = overrides.find(function(entry) { return String(entry.sku) === sku; });
+      if (override) {
+        var perUnit = getLoyaltyPerUnitClient(override);
+        if (Number.isFinite(perUnit)) {
+          total += Math.round(perUnit * (Number.isFinite(qty) ? qty : 1) * 100) / 100;
+          return;
+        }
+      }
+      var lineSubtotal = Number(item.itemSubtotal && item.itemSubtotal.value != null ? item.itemSubtotal.value : (item.item_subtotal && item.item_subtotal.value));
+      if (Number.isFinite(lineSubtotal)) {
+        total += lineSubtotal;
+        return;
+      }
+      var priceSale = Number(item.priceSale != null ? item.priceSale : (item.product && item.product.finalPricePerUOW));
+      if (Number.isFinite(priceSale)) total += Math.round(priceSale * (Number.isFinite(qty) ? qty : 1) * 100) / 100;
+    });
+    return Math.round(total * 100) / 100;
+  }
+
+  function patchStandaloneCartLoyaltyClient(node, overrides) {
+    var loyaltyVal = Number(
+      node.additionalData && node.additionalData.totalLoyaltyPoint != null ? node.additionalData.totalLoyaltyPoint
+        : (node.loyaltyPoints != null ? node.loyaltyPoints : (node.loyalty && node.loyalty.loyaltyPoints))
+    );
+    if (!Number.isFinite(loyaltyVal)) return false;
+    var itemCount = Number(node.itemsCount != null ? node.itemsCount : (node.itemCount != null ? node.itemCount : 1));
+    var changed = false;
+    var newTotal = loyaltyVal;
+    overrides.forEach(function(entry) {
+      if (changed) return;
+      var upstream = entry.upstreamPrice != null ? Number(entry.upstreamPrice) : NaN;
+      var loyalty = getLoyaltyPerUnitClient(entry);
+      if (!Number.isFinite(upstream) || !Number.isFinite(loyalty)) return;
+      for (var q = 1; q <= Math.max(itemCount, 1); q++) {
+        if (Math.abs(loyaltyVal - upstream * q) < 0.55) {
+          newTotal = Math.round(loyalty * q * 100) / 100;
+          changed = true;
+          break;
+        }
+      }
+    });
+    if (!changed) return false;
+    setCartLoyaltyTotalsClient(node, newTotal);
+    return true;
+  }
+
   function patchCartItemPricingClient(cartItem, override) {
     var finalPrice = override.price != null ? Number(override.price) : NaN;
     if (!Number.isFinite(finalPrice)) return;
     var qty = Number(cartItem.quantity != null ? cartItem.quantity : (cartItem.qty != null ? cartItem.qty : 1));
     var lineTotal = Math.round(finalPrice * (Number.isFinite(qty) ? qty : 1) * 100) / 100;
+    var loyaltyPerUnit = getLoyaltyPerUnitClient(override);
 
     setMoneyOnBagClient(cartItem, 'itemSubtotal', lineTotal);
     setMoneyOnBagClient(cartItem, 'item_subtotal', lineTotal);
     cartItem.finalPricePerUOW = finalPrice;
+    cartItem.priceSale = finalPrice;
+    if (Number.isFinite(loyaltyPerUnit)) {
+      cartItem.loyaltyPoints = Math.round(loyaltyPerUnit * (Number.isFinite(qty) ? qty : 1) * 100) / 100;
+    }
     if (cartItem.product && typeof cartItem.product === 'object') {
       cartItem.product.finalPricePerUOW = finalPrice;
+      if (Number.isFinite(loyaltyPerUnit)) {
+        cartItem.product.loyaltyPoints = loyaltyPerUnit;
+        cartItem.product.loyalty_points = loyaltyPerUnit;
+      }
     }
   }
 
@@ -378,6 +457,7 @@
     getCartTotalTargetsClient(node).forEach(function(target) {
       applyCartMoneyTotalsClient(target, newSub, totalDelta);
     });
+    patchStandaloneCartLoyaltyClient(node, overrides);
     return true;
   }
 
@@ -411,6 +491,7 @@
     getCartTotalTargetsClient(node).forEach(function(target) {
       applyCartMoneyTotalsClient(target, subtotal, delta);
     });
+    setCartLoyaltyTotalsClient(node, sumCartLoyaltyFromItemsClient(items, overrides));
   }
 
   function applyCartOverrideClient(obj, override) {
@@ -430,6 +511,11 @@
         } else if (obj.price_range && obj.price_range.minimum_price) {
           patchPricingClient(obj, override);
         }
+      }
+      var loyaltyPerUnit = getLoyaltyPerUnitClient(override);
+      if (Number.isFinite(loyaltyPerUnit)) {
+        obj.loyaltyPoints = loyaltyPerUnit;
+        obj.loyalty_points = loyaltyPerUnit;
       }
     }
     if (Array.isArray(override.images) && override.images.length) {
@@ -519,6 +605,7 @@
       }
       patchCartContainersClient(node, overrides);
       patchStandaloneCartSummaryClient(node, overrides);
+      patchStandaloneCartLoyaltyClient(node, overrides);
       Object.keys(node).forEach(function(key) {
         if (node[key] && typeof node[key] === 'object') walk(node[key], node);
       });

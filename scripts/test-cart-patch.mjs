@@ -66,6 +66,25 @@ assert(summary.data.subTotal.value === 59.9, 'summary subTotal should be 59.9');
 assert(summary.data.subTotal.text === 'RM59.90', 'summary subTotal.text should be RM59.90');
 assert(summary.data.grandTotal.value === 59.9, 'summary grandTotal should be 59.9');
 
+const checkoutCart = {
+  data: {
+    items: [{
+      itemId: '1',
+      quantity: 2,
+      priceSale: 39.5,
+      itemSubtotal: { value: 79, currency: 'MYR' },
+      product: { sku: '74718282' },
+    }],
+    additionalData: { totalLoyaltyPoint: 79 },
+    loyaltyPoints: 79,
+    itemsCount: 1,
+  },
+};
+
+patchProductPayload(checkoutCart, 'https://www.lotusscom.my');
+assert(checkoutCart.data.additionalData.totalLoyaltyPoint === 119.8, 'checkout loyalty should be 119.8 for qty 2');
+assert(checkoutCart.data.loyaltyPoints === 119.8, 'checkout loyaltyPoints root should be 119.8');
+
 const listing = {
   data: {
     products: {
