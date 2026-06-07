@@ -264,6 +264,64 @@
     if (Number.isFinite(discountPercent)) patchPromotionsClient(obj);
   }
 
+    if (Number.isFinite(discountPercent)) patchPromotionsClient(obj);
+  }
+
+  function patchCartItemPricingClient(cartItem, override) {
+    var finalPrice = override.price != null ? Number(override.price) : NaN;
+    if (!Number.isFinite(finalPrice)) return;
+    var qty = Number(cartItem.quantity != null ? cartItem.quantity : (cartItem.qty != null ? cartItem.qty : 1));
+    var lineTotal = Math.round(finalPrice * (Number.isFinite(qty) ? qty : 1) * 100) / 100;
+
+    function setMoney(key, value) {
+      if (!Number.isFinite(value)) return;
+      if (cartItem[key] && typeof cartItem[key] === 'object') cartItem[key].value = value;
+      else cartItem[key] = { value: value, currency: 'MYR' };
+    }
+
+    setMoney('itemSubtotal', lineTotal);
+    setMoney('item_subtotal', lineTotal);
+    cartItem.finalPricePerUOW = finalPrice;
+    if (cartItem.product && typeof cartItem.product === 'object') {
+      cartItem.product.finalPricePerUOW = finalPrice;
+    }
+  }
+
+  function patchCartContainersClient(node, overrides) {
+    var items = null;
+    if (Array.isArray(node.cartItems)) items = node.cartItems;
+    else if (Array.isArray(node.cart_items)) items = node.cart_items;
+    else if (node.cart && Array.isArray(node.cart.cartItems)) items = node.cart.cartItems;
+    else if (Array.isArray(node.items)) items = node.items;
+    if (!items || !items.length) return;
+
+    var subtotal = 0;
+    var patchedAny = false;
+    items.forEach(function(item) {
+      if (!item || typeof item !== 'object') return;
+      var sku = item.product && item.product.sku != null ? String(item.product.sku) : (item.sku != null ? String(item.sku) : '');
+      var override = overrides.find(function(entry) { return String(entry.sku) === sku; });
+      if (override) {
+        patchCartItemPricingClient(item, override);
+        patchedAny = true;
+      }
+      var lineVal = Number(item.itemSubtotal && item.itemSubtotal.value != null ? item.itemSubtotal.value : (item.item_subtotal && item.item_subtotal.value));
+      if (Number.isFinite(lineVal)) subtotal += lineVal;
+    });
+    if (!patchedAny) return;
+
+    var prices = node.prices || (node.cart && node.cart.prices);
+    if (!prices) return;
+    subtotal = Math.round(subtotal * 100) / 100;
+    var oldSubtotal = Number(prices.subTotal && prices.subTotal.value != null ? prices.subTotal.value : (prices.sub_total && prices.sub_total.value));
+    var delta = subtotal - oldSubtotal;
+    if (prices.subTotal && typeof prices.subTotal === 'object') prices.subTotal.value = subtotal;
+    else prices.subTotal = { value: subtotal, currency: 'MYR' };
+    if (Math.abs(delta) > 0.001 && prices.grandTotal && prices.grandTotal.value != null) {
+      prices.grandTotal.value = Math.round((Number(prices.grandTotal.value) + delta) * 100) / 100;
+    }
+  }
+
   function applyOverrideClient(obj, override) {
     if (!obj || !override) return;
     if (override.name) obj.name = override.name;
@@ -324,7 +382,17 @@
           changed = true;
         }
       });
-      if (node.product && typeof node.product === 'object') walk(node.product);
+      if (node.product && typeof node.product === 'object') {
+        var productSku = node.product.sku != null ? String(node.product.sku) : '';
+        overrides.forEach(function(entry) {
+          if (productSku && String(entry.sku) === productSku) {
+            applyOverrideClient(node.product, entry);
+            patchCartItemPricingClient(node, entry);
+            changed = true;
+          }
+        });
+      }
+      patchCartContainersClient(node, overrides);
       Object.keys(node).forEach(function(key) {
         if (node[key] && typeof node[key] === 'object') walk(node[key]);
       });

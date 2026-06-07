@@ -137,6 +137,109 @@ function ensureMoney(obj, key, value, currency = 'MYR') {
   obj[key] = { value, currency };
 }
 
+function setMoneyObject(obj, key, value, currency = 'MYR') {
+  if (!obj || typeof obj !== 'object' || !Number.isFinite(value)) return;
+  if (obj[key] && typeof obj[key] === 'object') {
+    obj[key].value = value;
+    if (!obj[key].currency) obj[key].currency = currency;
+    return;
+  }
+  obj[key] = { value, currency };
+}
+
+function patchCartItemPricing(cartItem, override) {
+  const finalPrice = override.price != null ? Number(override.price) : null;
+  if (!Number.isFinite(finalPrice)) return;
+  const qty = Number(cartItem.quantity ?? cartItem.qty ?? 1);
+  const lineTotal = Math.round(finalPrice * (Number.isFinite(qty) ? qty : 1) * 100) / 100;
+
+  setMoneyObject(cartItem, 'itemSubtotal', lineTotal);
+  setMoneyObject(cartItem, 'item_subtotal', lineTotal);
+
+  cartItem.finalPricePerUOW = finalPrice;
+  cartItem.final_price_per_uow = finalPrice;
+
+  if (cartItem.product && typeof cartItem.product === 'object') {
+    cartItem.product.finalPricePerUOW = finalPrice;
+    cartItem.product.final_price_per_uow = finalPrice;
+    if (override.regularPrice != null) {
+      const regular = Number(override.regularPrice);
+      cartItem.product.regularPricePerUOW = regular;
+      cartItem.product.regular_price_per_uow = regular;
+    }
+  }
+
+  if (cartItem.prices && typeof cartItem.prices === 'object') {
+    setMoneyObject(cartItem.prices, 'price', finalPrice);
+    setMoneyObject(cartItem.prices, 'row_total', lineTotal);
+    setMoneyObject(cartItem.prices, 'row_total_including_tax', lineTotal);
+    setMoneyObject(cartItem.prices, 'rowTotal', lineTotal);
+  }
+}
+
+function getCartItemsList(node) {
+  if (!node || typeof node !== 'object') return null;
+  if (Array.isArray(node.cartItems)) return node.cartItems;
+  if (Array.isArray(node.cart_items)) return node.cart_items;
+  if (node.cart && Array.isArray(node.cart.cartItems)) return node.cart.cartItems;
+  if (node.cart && Array.isArray(node.cart.cart_items)) return node.cart.cart_items;
+  if (Array.isArray(node.items)) return node.items;
+  return null;
+}
+
+function patchCartContainerTotals(node, overrideMap) {
+  const items = getCartItemsList(node);
+  if (!items?.length) return;
+
+  let subtotal = 0;
+  let patchedAny = false;
+
+  for (const item of items) {
+    if (!item || typeof item !== 'object') continue;
+    const productSku = item.product?.sku != null ? String(item.product.sku) : '';
+    const itemSku = item.sku != null ? String(item.sku) : '';
+    const sku = productSku || itemSku;
+    if (sku && overrideMap.has(sku)) {
+      patchCartItemPricing(item, overrideMap.get(sku));
+      patchedAny = true;
+    }
+
+    const lineVal = Number(item.itemSubtotal?.value ?? item.item_subtotal?.value);
+    if (Number.isFinite(lineVal)) {
+      subtotal += lineVal;
+      continue;
+    }
+
+    const unitPrice = Number(
+      item.product?.priceRange?.minimumPrice?.finalPrice?.value
+      ?? item.product?.price_range?.minimum_price?.final_price?.value,
+    );
+    const qty = Number(item.quantity ?? 1);
+    if (Number.isFinite(unitPrice)) subtotal += unitPrice * qty;
+  }
+
+  if (!patchedAny) return;
+
+  const prices = node.prices || node.cart?.prices;
+  if (!prices) return;
+
+  subtotal = Math.round(subtotal * 100) / 100;
+  const oldSubtotal = Number(prices.subTotal?.value ?? prices.sub_total?.value ?? subtotal);
+  const delta = subtotal - oldSubtotal;
+
+  setMoneyObject(prices, 'subTotal', subtotal);
+  setMoneyObject(prices, 'sub_total', subtotal);
+
+  if (Math.abs(delta) > 0.001) {
+    if (prices.grandTotal && Number.isFinite(Number(prices.grandTotal.value))) {
+      prices.grandTotal.value = Math.round((Number(prices.grandTotal.value) + delta) * 100) / 100;
+    }
+    if (prices.grand_total && Number.isFinite(Number(prices.grand_total.value))) {
+      prices.grand_total.value = Math.round((Number(prices.grand_total.value) + delta) * 100) / 100;
+    }
+  }
+}
+
 function isDiscountBadgePromotion(p) {
   if (!p || typeof p !== 'object') return false;
   if (String(p.ruleType || '').toLowerCase() === 'discount') return true;
@@ -296,12 +399,16 @@ function walkAndPatch(node, overrideMap, origin, seen = new WeakSet()) {
   if (node.product && typeof node.product === 'object') {
     const productSku = node.product.sku != null ? String(node.product.sku) : '';
     if (productSku && overrideMap.has(productSku)) {
-      applyProductOverride(node.product, overrideMap.get(productSku), origin);
-      if (overrideMap.get(productSku).name) {
-        node.product_name = overrideMap.get(productSku).name;
+      const override = overrideMap.get(productSku);
+      applyProductOverride(node.product, override, origin);
+      patchCartItemPricing(node, override);
+      if (override.name) {
+        node.product_name = override.name;
       }
     }
   }
+
+  patchCartContainerTotals(node, overrideMap);
 
   for (const value of Object.values(node)) {
     if (value && typeof value === 'object') walkAndPatch(value, overrideMap, origin, seen);
