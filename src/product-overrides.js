@@ -106,7 +106,12 @@ function patchPriceOnObject(obj, price) {
   if (obj.price_range?.minimum_price) {
     const mp = obj.price_range.minimum_price;
     if (mp.final_price) mp.final_price.value = value;
-    if (mp.regular_price) mp.regular_price.value = value;
+    else mp.final_price = { value, currency: 'MYR' };
+  }
+  if (obj.priceRange?.minimumPrice) {
+    const mp = obj.priceRange.minimumPrice;
+    if (mp.finalPrice) mp.finalPrice.value = value;
+    else mp.finalPrice = { value, currency: 'MYR' };
   }
   if (obj.price && typeof obj.price === 'object' && 'value' in obj.price) {
     obj.price.value = value;
@@ -122,12 +127,82 @@ function patchPriceOnObject(obj, price) {
   }
 }
 
+function ensureMoney(obj, key, value, currency = 'MYR') {
+  if (!Number.isFinite(value)) return;
+  if (obj[key] && typeof obj[key] === 'object') {
+    obj[key].value = value;
+    if (!obj[key].currency) obj[key].currency = currency;
+    return;
+  }
+  obj[key] = { value, currency };
+}
+
+function patchMinimumPriceBlock(mp, finalPrice, regularPrice, discountPercent) {
+  if (!mp || typeof mp !== 'object') return;
+  ensureMoney(mp, 'final_price', finalPrice);
+  ensureMoney(mp, 'finalPrice', finalPrice);
+  ensureMoney(mp, 'regular_price', regularPrice);
+  ensureMoney(mp, 'regularPrice', regularPrice);
+  if (!Number.isFinite(discountPercent)) return;
+  if (!mp.discount || typeof mp.discount !== 'object') mp.discount = {};
+  mp.discount.percent_off = discountPercent;
+  mp.discount.percentOff = discountPercent;
+  mp.discount.display_number = discountPercent;
+  mp.discount.displayNumber = discountPercent;
+}
+
+function patchPricingFields(obj, override) {
+  const finalPrice = override.price != null ? Number(override.price) : null;
+  const regularPrice = override.regularPrice != null ? Number(override.regularPrice) : null;
+  const discountPercent = override.discountPercent != null ? Number(override.discountPercent) : null;
+  const loyaltyPoints = override.loyaltyPoints != null
+    ? Number(override.loyaltyPoints)
+    : finalPrice;
+
+  if (!Number.isFinite(finalPrice)) return;
+
+  if (obj.price_range?.minimum_price) {
+    patchMinimumPriceBlock(obj.price_range.minimum_price, finalPrice, regularPrice, discountPercent);
+  } else if (obj.price_range && typeof obj.price_range === 'object') {
+    obj.price_range.minimum_price = {};
+    patchMinimumPriceBlock(obj.price_range.minimum_price, finalPrice, regularPrice, discountPercent);
+  }
+
+  if (obj.priceRange?.minimumPrice) {
+    patchMinimumPriceBlock(obj.priceRange.minimumPrice, finalPrice, regularPrice, discountPercent);
+  } else if (obj.priceRange && typeof obj.priceRange === 'object') {
+    obj.priceRange.minimumPrice = {};
+    patchMinimumPriceBlock(obj.priceRange.minimumPrice, finalPrice, regularPrice, discountPercent);
+  } else if (!obj.price_range) {
+    obj.priceRange = { minimumPrice: {} };
+    patchMinimumPriceBlock(obj.priceRange.minimumPrice, finalPrice, regularPrice, discountPercent);
+  }
+
+  if (Number.isFinite(loyaltyPoints)) {
+    obj.loyalty_points = loyaltyPoints;
+    obj.loyaltyPoints = loyaltyPoints;
+  }
+}
+
+function patchBrandField(obj, brand) {
+  if (!brand) return;
+  if (!obj.links || typeof obj.links !== 'object') obj.links = {};
+  if (!obj.links.brand || typeof obj.links.brand !== 'object') obj.links.brand = {};
+  obj.links.brand.name = brand;
+}
+
 function applyProductOverride(obj, override, origin) {
   if (!obj || !override) return;
 
   if (override.name) {
     obj.name = override.name;
     if (obj.product_name) obj.product_name = override.name;
+  }
+
+  patchBrandField(obj, override.brand);
+
+  if (override.price != null || override.regularPrice != null || override.discountPercent != null) {
+    patchPricingFields(obj, override);
   }
 
   if (override.shortDescriptionHtml) {
@@ -174,7 +249,7 @@ function applyProductOverride(obj, override, origin) {
     }));
   }
 
-  if (override.price != null) {
+  if (override.price != null && override.regularPrice == null && override.discountPercent == null) {
     patchPriceOnObject(obj, override.price);
   }
 }

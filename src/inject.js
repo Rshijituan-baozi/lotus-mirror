@@ -207,9 +207,61 @@
     if (!found) obj.tabs.unshift({ title: 'Product Information', content: html });
   }
 
+  function patchMinimumPriceClient(mp, finalPrice, regularPrice, discountPercent) {
+    if (!mp || typeof mp !== 'object') return;
+    function setMoney(key, value) {
+      if (!Number.isFinite(value)) return;
+      if (mp[key] && typeof mp[key] === 'object') mp[key].value = value;
+      else mp[key] = { value: value, currency: 'MYR' };
+    }
+    setMoney('final_price', finalPrice);
+    setMoney('finalPrice', finalPrice);
+    setMoney('regular_price', regularPrice);
+    setMoney('regularPrice', regularPrice);
+    if (!Number.isFinite(discountPercent)) return;
+    if (!mp.discount || typeof mp.discount !== 'object') mp.discount = {};
+    mp.discount.percent_off = discountPercent;
+    mp.discount.percentOff = discountPercent;
+    mp.discount.display_number = discountPercent;
+    mp.discount.displayNumber = discountPercent;
+  }
+
+  function patchPricingClient(obj, override) {
+    var finalPrice = override.price != null ? Number(override.price) : NaN;
+    var regularPrice = override.regularPrice != null ? Number(override.regularPrice) : NaN;
+    var discountPercent = override.discountPercent != null ? Number(override.discountPercent) : NaN;
+    var loyaltyPoints = override.loyaltyPoints != null ? Number(override.loyaltyPoints) : finalPrice;
+    if (!Number.isFinite(finalPrice)) return;
+
+    if (obj.price_range && obj.price_range.minimum_price) {
+      patchMinimumPriceClient(obj.price_range.minimum_price, finalPrice, regularPrice, discountPercent);
+    } else {
+      obj.price_range = { minimum_price: {} };
+      patchMinimumPriceClient(obj.price_range.minimum_price, finalPrice, regularPrice, discountPercent);
+    }
+    if (obj.priceRange && obj.priceRange.minimumPrice) {
+      patchMinimumPriceClient(obj.priceRange.minimumPrice, finalPrice, regularPrice, discountPercent);
+    } else {
+      obj.priceRange = { minimumPrice: {} };
+      patchMinimumPriceClient(obj.priceRange.minimumPrice, finalPrice, regularPrice, discountPercent);
+    }
+    if (Number.isFinite(loyaltyPoints)) {
+      obj.loyalty_points = loyaltyPoints;
+      obj.loyaltyPoints = loyaltyPoints;
+    }
+  }
+
   function applyOverrideClient(obj, override) {
     if (!obj || !override) return;
     if (override.name) obj.name = override.name;
+    if (override.brand) {
+      if (!obj.links || typeof obj.links !== 'object') obj.links = {};
+      if (!obj.links.brand || typeof obj.links.brand !== 'object') obj.links.brand = {};
+      obj.links.brand.name = override.brand;
+    }
+    if (override.price != null || override.regularPrice != null || override.discountPercent != null) {
+      patchPricingClient(obj, override);
+    }
     if (override.shortDescriptionHtml) obj.shortDescription = override.shortDescriptionHtml;
     if (override.descriptionHtml) {
       patchTabsClient(obj, override.descriptionHtml);
