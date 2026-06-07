@@ -111,7 +111,8 @@ const savingsCart = {
 patchProductPayload(savingsCart, 'https://www.lotusscom.my');
 assert(savingsCart.data.prices.subTotal.value === 119.8, 'patched subtotal should be 119.8');
 assert(savingsCart.data.prices.totalSavings.value === 280, 'savings should be 280 for qty 2');
-assert(savingsCart.data.prices.subTotalBeforeDiscount.value === 399.8, 'before discount should be 399.8');
+assert(savingsCart.data.prices.subTotalBeforeDiscount.value === 119.8, 'item subtotal should be 119.8');
+assert(savingsCart.data.pricingSummary.totalPrice === 119.8, 'pricingSummary totalPrice should be 119.8');
 assert(savingsCart.data.pricingSummary.totalSaved === 280, 'pricingSummary totalSaved should be 280');
 
 const checkoutBffShape = {
@@ -137,6 +138,8 @@ patchProductPayload(checkoutBffShape, 'https://www.lotusscom.my');
 const checkoutNode = checkoutBffShape.data.getCartSummary;
 assert(checkoutNode.totalSavings.value === 280, 'checkout root totalSavings should be 280');
 assert(checkoutNode.totalSavings.currencyPrefix === 'RM', 'currencyPrefix should be preserved');
+assert(checkoutNode.subTotalBeforeDiscount.value === 119.8, 'checkout item subtotal should be 119.8');
+assert(checkoutNode.pricingSummary.totalPrice === 119.8, 'checkout pricingSummary.totalPrice should be 119.8');
 assert(checkoutNode.pricingSummary.totalSaved === 280, 'checkout pricingSummary.totalSaved should be 280');
 
 const mixedCart = {

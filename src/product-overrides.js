@@ -158,14 +158,13 @@ function formatMoneyText(currency, value) {
 
 function applyCartMoneyTotals(bag, subtotal, delta, extras = {}) {
   if (!bag || typeof bag !== 'object') return;
-  const { regularTotal, savings } = extras;
+  const { savings } = extras;
 
   setMoneyObject(bag, 'subTotal', subtotal);
   setMoneyObject(bag, 'sub_total', subtotal);
-  if (Number.isFinite(regularTotal)) {
-    setMoneyObject(bag, 'subTotalBeforeDiscount', regularTotal);
-    setMoneyObject(bag, 'sub_total_before_discount', regularTotal);
-  }
+  // Item Subtotal in checkout UI reads subTotalBeforeDiscount / pricingSummary.totalPrice.
+  setMoneyObject(bag, 'subTotalBeforeDiscount', subtotal);
+  setMoneyObject(bag, 'sub_total_before_discount', subtotal);
   if (Number.isFinite(savings)) {
     setMoneyObject(bag, 'totalSavings', savings);
     setMoneyObject(bag, 'totalSaved', savings);
@@ -267,11 +266,9 @@ function patchPricingSummaryFields(node, regularTotal, finalTotal, savings) {
   for (const key of ['pricingSummary', 'pricing_summary']) {
     const ps = node[key];
     if (!ps || typeof ps !== 'object') continue;
-    if (Number.isFinite(regularTotal)) {
-      ps.totalPrice = regularTotal;
-      ps.total_price = regularTotal;
-    }
     if (Number.isFinite(finalTotal)) {
+      ps.totalPrice = finalTotal;
+      ps.total_price = finalTotal;
       ps.totalDiscountedPrice = finalTotal;
       ps.total_discounted_price = finalTotal;
     }
@@ -279,6 +276,7 @@ function patchPricingSummaryFields(node, regularTotal, finalTotal, savings) {
       ps.totalSaved = savings;
       ps.total_saved = savings;
     }
+    void regularTotal;
   }
 }
 

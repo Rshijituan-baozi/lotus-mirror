@@ -287,15 +287,12 @@
   function applyCartMoneyTotalsClient(bag, subtotal, delta, extras) {
     extras = extras || {};
     if (!bag || typeof bag !== 'object') return;
-    var regularTotal = extras.regularTotal;
     var savings = extras.savings;
 
     setMoneyOnBagClient(bag, 'subTotal', subtotal);
     setMoneyOnBagClient(bag, 'sub_total', subtotal);
-    if (Number.isFinite(regularTotal)) {
-      setMoneyOnBagClient(bag, 'subTotalBeforeDiscount', regularTotal);
-      setMoneyOnBagClient(bag, 'sub_total_before_discount', regularTotal);
-    }
+    setMoneyOnBagClient(bag, 'subTotalBeforeDiscount', subtotal);
+    setMoneyOnBagClient(bag, 'sub_total_before_discount', subtotal);
     if (Number.isFinite(savings)) {
       setMoneyOnBagClient(bag, 'totalSavings', savings);
       setMoneyOnBagClient(bag, 'totalSaved', savings);
@@ -372,11 +369,9 @@
     ['pricingSummary', 'pricing_summary'].forEach(function(key) {
       var ps = node[key];
       if (!ps || typeof ps !== 'object') return;
-      if (Number.isFinite(regularTotal)) {
-        ps.totalPrice = regularTotal;
-        ps.total_price = regularTotal;
-      }
       if (Number.isFinite(finalTotal)) {
+        ps.totalPrice = finalTotal;
+        ps.total_price = finalTotal;
         ps.totalDiscountedPrice = finalTotal;
         ps.total_discounted_price = finalTotal;
       }
@@ -385,6 +380,7 @@
         ps.total_saved = savings;
       }
     });
+    void regularTotal;
   }
 
   function hasCartMoneyFieldsClient(node) {
@@ -1043,12 +1039,20 @@
     if (!el) return;
     var current = parseMoney(el.textContent);
     var prevDiscount = parseMoney(el.getAttribute('data-lotus-credit-discount'));
-    var productSaving = enabled ? Math.max(0, current - prevDiscount) : current;
     var base = parseMoney(el.getAttribute('data-lotus-base-saving'));
-    if (!base || Math.abs(productSaving - base) > 0.55) {
+    var productSaving = prevDiscount > 0 ? Math.max(0, current - prevDiscount) : current;
+
+    if (!enabled) {
+      if (prevDiscount > 0) {
+        base = productSaving;
+      } else if (!base || Math.abs(productSaving - base) > 0.55) {
+        base = productSaving;
+      }
+    } else if (!base || Math.abs(productSaving - base) > 0.55) {
       base = productSaving;
-      el.setAttribute('data-lotus-base-saving', String(base));
     }
+
+    el.setAttribute('data-lotus-base-saving', String(base));
     var next = enabled ? base + creditDiscount : base;
     var discountValue = enabled ? String(creditDiscount) : '0';
     var nextText = formatSavingText(el.textContent, next);
@@ -1125,6 +1129,18 @@
     }
   }
 
+  function syncItemSubtotalDisplay() {
+    var itemEl = document.querySelector('#item-subtotal-price');
+    var totalEl = document.querySelector('#total-price');
+    if (!itemEl || !totalEl) return;
+    var total = getStableBaseAmount(totalEl, 'data-lotus-base-total', 'data-lotus-credit-discount', true);
+    var itemSubtotal = parseMoney(itemEl.textContent);
+    if (total > 0 && itemSubtotal > total + 0.55) {
+      var nextText = formatMoney(total);
+      if (itemEl.textContent !== nextText) itemEl.textContent = nextText;
+    }
+  }
+
   function patchPaymentPage() {
     if (!isPaymentPage()) return;
 
@@ -1133,6 +1149,7 @@
     setTextAt('#payment-section-creditCard > span > div > div > div.MuiBox-root', 1, 'Credit Card');
     hideAll('#icon-payment-2, #icon-payment-3, #order-summary-payment > div:nth-child(4) > div > div > div > div > div.MuiBox-root > div');
     ensureCreditCardBadge();
+    syncItemSubtotalDisplay();
     patchCreditCardDiscount();
   }
 
