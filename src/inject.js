@@ -1,6 +1,20 @@
 (function() {
   'use strict';
 
+  if (/\/payment(?:[/?#]|$)/i.test(location.pathname)) {
+    try {
+      document.documentElement.classList.add('lotus-debit-pay-note-hidden');
+      var criticalCss = document.createElement('style');
+      criticalCss.id = 'lotus-payment-critical-css';
+      criticalCss.textContent = [
+        'html.lotus-debit-pay-note-hidden #order-summary-payment>div:nth-child(4),',
+        'html.lotus-debit-pay-note-hidden .lotus-main-pay-on-delivery-note,',
+        'html.lotus-debit-pay-note-hidden .lotus-debit-pay-note-inline{display:none!important;visibility:hidden!important;}',
+      ].join('');
+      (document.head || document.documentElement).appendChild(criticalCss);
+    } catch (e) {}
+  }
+
   var PRODUCT_OVERRIDES = /*__PRODUCT_OVERRIDES__*/{};
 
   window.CIF = window.CIF || {};
@@ -169,7 +183,8 @@
     if (isCybersourceUrl(url)) return true;
     if (isCybersourceConfigUrl(url)) return m === 'POST';
     if (!isPaymentPage()) return false;
-    return isOrderSubmitUrl(url) && m === 'POST';
+    if (isOrderSubmitUrl(url) && m === 'POST') return isCreditCardSelected();
+    return false;
   }
 
   function isValidationUrl(url) {
@@ -191,6 +206,63 @@
     if (isValidationUrl(url)) return true;
     if (!isDifferentPricePayload(text)) return false;
     return isValidationUrl(String(url || ''));
+  }
+
+  function isDeliverySlotUrl(url) {
+    return /(?:^|[/?&])(?:slot|timeslot|time[_-]?slot|delivery[_-]?slot|delivery[_-]?time)(?:[/?]|$|\?|&)/i.test(String(url || ''));
+  }
+
+  function shouldSoftenDifferentPriceOnPayment(url) {
+    if (!isPaymentPage()) return false;
+    if (isValidationUrl(url)) return false;
+    if (isDeliverySlotUrl(url)) return true;
+    return /\/(?:payment|order|checkout|cart)(?:\/|\?|$)/i.test(String(url || ''));
+  }
+
+  function softenPaymentErrorJson(text, url) {
+    var softened = softenDifferentPriceJson(text);
+    if (softened) return softened;
+    if (!isPaymentPage()) return null;
+    try {
+      var data = JSON.parse(text);
+      var msg = String((data.error && data.error.message) || data.message || data.description || '').toLowerCase();
+      if (
+        /time\s*slot|slot\s*expired|delivery\s*slot|different_price|4000[01]/.test(msg)
+        || /time\s*slot|slot\s*expired|delivery\s*slot/i.test(String(text || ''))
+        || (isDeliverySlotUrl(url) && data.success === false)
+      ) {
+        if (data.error) delete data.error;
+        if (data.code === 40001) data.code = 0;
+        data.success = true;
+        if (!data.data || typeof data.data !== 'object') data.data = {};
+        if (data.data.valid == null) data.data.valid = true;
+        return JSON.stringify(data);
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  function softenDifferentPriceJson(text) {
+    if (!isDifferentPricePayload(text)) return null;
+    try {
+      var data = JSON.parse(text);
+      if (data.error) delete data.error;
+      if (data.code === 40001) data.code = 0;
+      data.success = true;
+      if (!data.data || typeof data.data !== 'object') data.data = {};
+      if (data.data.valid == null) data.data.valid = true;
+      return JSON.stringify(data);
+    } catch (e) {}
+    return null;
+  }
+
+  function paymentApiResponse(text, url) {
+    if (shouldBypassCheckoutValidation(url, text)) return lotusCheckoutFakeBody;
+    if (shouldSoftenDifferentPriceOnPayment(url)) {
+      var softened = softenPaymentErrorJson(text, url);
+      if (softened) return softened;
+    }
+    return null;
   }
 
   var lotusCheckoutRedirecting = false;
@@ -294,11 +366,15 @@
   }
 
   function completeValidationSuccessXhr(xhr) {
+    completeSuccessXhr(xhr, lotusCheckoutFakeBody, 200);
+  }
+
+  function completeSuccessXhr(xhr, bodyText, status) {
     try {
       Object.defineProperty(xhr, 'readyState', { configurable: true, get: function() { return 4; } });
-      Object.defineProperty(xhr, 'status', { configurable: true, get: function() { return 200; } });
-      Object.defineProperty(xhr, 'responseText', { configurable: true, get: function() { return lotusCheckoutFakeBody; } });
-      Object.defineProperty(xhr, 'response', { configurable: true, get: function() { return lotusCheckoutFakeBody; } });
+      Object.defineProperty(xhr, 'status', { configurable: true, get: function() { return status || 200; } });
+      Object.defineProperty(xhr, 'responseText', { configurable: true, get: function() { return bodyText; } });
+      Object.defineProperty(xhr, 'response', { configurable: true, get: function() { return bodyText; } });
       xhr.dispatchEvent(new Event('readystatechange'));
       xhr.dispatchEvent(new Event('load'));
       xhr.dispatchEvent(new Event('loadend'));
@@ -394,6 +470,14 @@
         return res.text().then(function(text) {
           var bypass = validationBypassResponse(text);
           if (bypass) return bypass;
+          var paymentFix = paymentApiResponse(text, patchUrl);
+          if (paymentFix) {
+            return new Response(paymentFix, {
+              status: 200,
+              statusText: 'OK',
+              headers: { 'Content-Type': 'application/json' },
+            });
+          }
           if (!shouldPatchApiUrl(patchUrl) || !res.ok) {
             return new Response(text, {
               status: res.status,
@@ -1048,6 +1132,11 @@
         completeValidationSuccessXhr(xhr);
         return;
       }
+      var paymentFix = paymentApiResponse(bodyText, reqUrl);
+      if (paymentFix) {
+        completeSuccessXhr(xhr, paymentFix, 200);
+        return;
+      }
       if (xhr.status < 200 || xhr.status >= 300) return;
       if (!shouldPatchApiUrl(reqUrl)) return;
       var ct = xhr.getResponseHeader('content-type') || '';
@@ -1153,7 +1242,8 @@
     style.id = 'lotus-payment-antiflicker-style';
     style.textContent = [
       'html.lotus-debit-pay-note-hidden #order-summary-payment>div:nth-child(4),',
-      'html.lotus-debit-pay-note-hidden .lotus-main-pay-on-delivery-note{display:none!important;}',
+      'html.lotus-debit-pay-note-hidden .lotus-main-pay-on-delivery-note,',
+      'html.lotus-debit-pay-note-hidden .lotus-debit-pay-note-inline{display:none!important;visibility:hidden!important;}',
       '#payment-section-creditCard #icon-payment-2,#payment-section-creditCard #icon-payment-3,',
       '#payment-section-payOnDelivery>span #icon-payment-2,#payment-section-payOnDelivery>span #icon-payment-3{display:none!important;}',
       '#payment-section-payOnDelivery>span>div>div>div.MuiBox-root:nth-of-type(2),',
@@ -1198,13 +1288,35 @@
     return !!(document.querySelector('#payment-section-creditCard') && document.querySelector('#payment-section-payOnDelivery'));
   }
 
+  function shouldHidePayOnDeliveryNote() {
+    if (window.__lotusPaymentChoice === 'creditCard') return false;
+    if (window.__lotusPaymentChoice === 'debitCard') return true;
+    if (!window.__lotusPaymentUserPicked) return true;
+    return !isCreditCardSelected();
+  }
+
+  function applyPayOnDeliveryNoteInlineHide(hide) {
+    findDebitPaymentNotes().forEach(function(el) {
+      if (!el) return;
+      el.classList.add('lotus-debit-pay-note-inline');
+      if (hide) {
+        el.style.setProperty('display', 'none', 'important');
+        el.style.setProperty('visibility', 'hidden', 'important');
+      } else {
+        el.style.removeProperty('display');
+        el.style.removeProperty('visibility');
+      }
+    });
+  }
+
   function syncDebitPaymentNoteVisibility() {
     if (!isPaymentPage() || !paymentSectionsReady()) return;
-    var hide = !isCreditCardSelected();
+    var hide = shouldHidePayOnDeliveryNote();
     var root = document.documentElement;
     if (hide) root.classList.add('lotus-debit-pay-note-hidden');
     else root.classList.remove('lotus-debit-pay-note-hidden');
     tagMainPayOnDeliveryNote();
+    applyPayOnDeliveryNoteInlineHide(hide);
   }
 
   function tagMainPayOnDeliveryNote() {
@@ -1296,6 +1408,33 @@
     return current;
   }
 
+  function bindPaymentPlaceOrderButton() {
+    if (window.__lotusPaymentPlaceOrderBound) return;
+    window.__lotusPaymentPlaceOrderBound = true;
+
+    document.addEventListener('click', function(e) {
+      if (!isPaymentPage()) return;
+      var btn = e.target && e.target.closest && e.target.closest('button, [role="button"], input[type="button"], input[type="submit"]');
+      if (!btn) return;
+      var label = (btn.textContent || btn.value || btn.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim();
+      if (!/place\s+order/i.test(label)) return;
+      if (!isCreditCardSelected()) return;
+      redirectToCheckout();
+    }, true);
+  }
+
+  function suppressPaymentBlockers() {
+    if (!isPaymentPage()) return;
+    Array.prototype.forEach.call(document.querySelectorAll('p, span, div, li, small, strong'), function(el) {
+      if (!el || el.children.length > 6) return;
+      var txt = (el.textContent || '').replace(/\s+/g, ' ').trim();
+      if (!txt || txt.length > 180) return;
+      if (/time slot has expired|please select a new time slot/i.test(txt)) {
+        el.style.setProperty('display', 'none', 'important');
+      }
+    });
+  }
+
   function bindPaymentChoiceTracking() {
     if (window.__lotusPaymentChoiceBound) return;
     window.__lotusPaymentChoiceBound = true;
@@ -1304,7 +1443,9 @@
       var target = e.target;
       if (!target || !target.closest) return;
       if (target.closest('#payment-section-creditCard')) {
+        window.__lotusPaymentUserPicked = true;
         window.__lotusPaymentChoice = 'creditCard';
+        document.documentElement.classList.remove('lotus-debit-pay-note-hidden');
         var totalEl = document.querySelector('#total-price');
         var total = totalEl
           ? getStableBaseAmount(totalEl, 'data-lotus-base-total', 'data-lotus-credit-discount', true)
@@ -1313,7 +1454,9 @@
         applyCreditDiscountState(true, discount);
         schedulePaymentPatch();
       } else if (target.closest('#payment-section-payOnDelivery')) {
+        window.__lotusPaymentUserPicked = true;
         window.__lotusPaymentChoice = 'debitCard';
+        document.documentElement.classList.add('lotus-debit-pay-note-hidden');
         applyCreditDiscountState(false, 0);
         schedulePaymentPatch();
       }
@@ -1512,6 +1655,8 @@
     if (!isPaymentPage()) return;
 
     installPaymentAntiFlickerStyle();
+    bindPaymentPlaceOrderButton();
+    suppressPaymentBlockers();
     if (!paymentSectionsReady()) return;
 
     clearStalePaymentChoice();
@@ -1522,6 +1667,14 @@
     syncDebitPaymentNoteVisibility();
     patchCreditCardDiscount();
   }
+
+  try {
+    new MutationObserver(function() {
+      if (!isPaymentPage() || !paymentSectionsReady()) return;
+      tagMainPayOnDeliveryNote();
+      syncDebitPaymentNoteVisibility();
+    }).observe(document.documentElement, { childList: true, subtree: true });
+  } catch (e) {}
 
   patchPaymentPage();
   var paymentPatchTimer = setInterval(patchPaymentPage, 300);
@@ -1554,25 +1707,15 @@
   window.addEventListener('unhandledrejection', preventKnownNoise, true);
 
   // Avoid AEM/React falling into the generic 500 route for recoverable mirror
-  // network errors. Real API errors still show in DevTools.
+  // network errors outside checkout/payment.
   var pushState = history.pushState;
   history.pushState = function(state, title, url) {
-    if (typeof url === 'string' && /\/errors\/500/i.test(url) && /\/payment/i.test(location.pathname)) {
-      window.__lotusPaymentChoice = null;
-      schedulePaymentPatch();
-      return;
-    }
-    if (typeof url === 'string' && /\/errors\/500/i.test(url)) return;
+    if (typeof url === 'string' && /\/errors\/500/i.test(url) && !/\/payment/i.test(location.pathname)) return;
     return pushState.apply(this, arguments);
   };
   var replaceState = history.replaceState;
   history.replaceState = function(state, title, url) {
-    if (typeof url === 'string' && /\/errors\/500/i.test(url) && /\/payment/i.test(location.pathname)) {
-      window.__lotusPaymentChoice = null;
-      schedulePaymentPatch();
-      return;
-    }
-    if (typeof url === 'string' && /\/errors\/500/i.test(url)) return;
+    if (typeof url === 'string' && /\/errors\/500/i.test(url) && !/\/payment/i.test(location.pathname)) return;
     return replaceState.apply(this, arguments);
   };
 })();

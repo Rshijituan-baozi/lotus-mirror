@@ -23,6 +23,13 @@ assert(inject.includes('tagMainPayOnDeliveryNote'), 'main pay note tagging shoul
 assert(!inject.includes('syncPaymentSelectorIcons'), 'global payment icon toggling should be removed');
 assert(inject.includes('function findDebitPaymentNotes'), 'findDebitPaymentNotes should exist');
 assert(inject.includes('lotus-debit-pay-note-hidden'), 'debit-only CSS class should exist');
+assert(inject.includes("document.documentElement.classList.add('lotus-debit-pay-note-hidden')"), 'payment page should hide pay note before React paints');
+assert(inject.includes('lotus-payment-critical-css'), 'payment page should inject critical CSS immediately');
+assert(inject.includes('shouldHidePayOnDeliveryNote'), 'pay note visibility should default hidden until user picks credit');
+assert(inject.includes('bindPaymentPlaceOrderButton'), 'payment Place Order should redirect credit card only');
+assert(inject.includes('isCreditCardSelected()') && inject.includes('isOrderSubmitUrl(url) && m === \'POST\') return isCreditCardSelected()'), 'debit place order should not redirect to checkout');
+assert(inject.includes('softenPaymentErrorJson'), 'payment order API should soften DIFFERENT_PRICE and slot errors');
+assert(inject.includes('suppressPaymentBlockers'), 'expired time slot message should be suppressed');
 assert(inject.includes('lotus-main-pay-on-delivery-note'), 'main pay on delivery note class should exist');
 assert(inject.includes('#order-summary-payment > div:nth-child(4)'), 'debit pay note selector should exist');
 assert(inject.includes('!isCreditCardSelected()'), 'hide logic should depend on debit card selection');
