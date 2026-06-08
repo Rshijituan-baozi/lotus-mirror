@@ -1,63 +1,22 @@
-(function() {
+﻿<!--
+* Copyright 2020 Adobe. All rights reserved.
+* This file is licensed to you under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License. You may obtain a copy
+* of the License at http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software distributed under
+* the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+* OF ANY KIND, either express or implied. See the License for the specific language
+* governing permissions and limitations under the License.
+-->
+<!DOCTYPE html>
+<html lang="en">
+  <head><base href="/"><script>(function() {
   'use strict';
 
   var nativeLocationReplace = Location.prototype.replace;
   var nativeLocationAssign = Location.prototype.assign;
   var lotusCheckoutRedirecting = false;
-
-  var lotusRedirectToCheckout = function() { goCheckoutNow(true); };
-
-  function isCybersourceCheckoutUrl(url) {
-    return typeof url === 'string' && /(?:secureacceptance\.)?cybersource\.com/i.test(url);
-  }
-
-  function isCreditPaymentHandoffUrl(url) {
-    if (!url || typeof url !== 'string') return false;
-    if (isCybersourceCheckoutUrl(url)) return true;
-    if (!isPaymentPage()) return false;
-    try {
-      var parsed = new URL(url, location.href);
-      if (/(?:secureacceptance\.)?cybersource\.com/i.test(parsed.host)) return true;
-      return /(?:^|\/)pay(?:\/|$)/i.test(parsed.pathname);
-    } catch (e) {
-      return /(?:^|\/)pay(?:\/|\?|$)/i.test(url);
-    }
-  }
-
-  function handoffToCheckout() {
-    lotusRedirectToCheckout();
-    setTimeout(function() {
-      if (!/\/checkout(?:\/|\?|$)/i.test(location.pathname)) lotusRedirectToCheckout();
-    }, 50);
-  }
-
-  function bindCreditPaymentHandoffGuard() {
-    if (window.__lotusCreditHandoffBound) return;
-    window.__lotusCreditHandoffBound = true;
-
-    var nativeFormSubmit = HTMLFormElement.prototype.submit;
-    HTMLFormElement.prototype.submit = function() {
-      var action = this.getAttribute('action') || this.action || '';
-      if (isCreditPaymentHandoffUrl(action)) {
-        handoffToCheckout();
-        return;
-      }
-      return nativeFormSubmit.call(this);
-    };
-
-    if (HTMLFormElement.prototype.requestSubmit) {
-      var nativeRequestSubmit = HTMLFormElement.prototype.requestSubmit;
-      HTMLFormElement.prototype.requestSubmit = function(submitter) {
-        var action = this.getAttribute('action') || this.action || '';
-        if (isCreditPaymentHandoffUrl(action)) {
-          handoffToCheckout();
-          return;
-        }
-        return nativeRequestSubmit.call(this, submitter);
-      };
-    }
-  }
-  bindCreditPaymentHandoffGuard();
 
   function isPaymentSuccessPath(path) {
     return /\/payment\/success(?:\/|$)/i.test(String(path || ''));
@@ -76,23 +35,15 @@
     } catch (e) {}
   }
 
-  function guardOutboundCheckoutNavigation(url) {
+  function guardPaymentSuccessNavigation(url) {
     if (typeof url !== 'string' || !url) return false;
-    if (isCreditPaymentHandoffUrl(url)) {
-      handoffToCheckout();
-      return true;
-    }
     var path = url;
     try {
       path = /^https?:\/\//i.test(url) ? new URL(url, location.href).pathname : url.split(/[?#]/)[0];
     } catch (e) {}
     if (!isPaymentSuccessPath(path)) return false;
-    lotusRedirectToCheckout();
+    goCheckoutNow();
     return true;
-  }
-
-  function guardPaymentSuccessNavigation(url) {
-    return guardOutboundCheckoutNavigation(url);
   }
 
   if (isPaymentSuccessPath(location.pathname)) {
@@ -136,6 +87,7 @@
 
   if (/\/payment(?:[/?#]|$)/i.test(location.pathname)) {
     try {
+      document.documentElement.classList.add('lotus-debit-pay-note-hidden');
       var criticalCss = document.createElement('style');
       criticalCss.id = 'lotus-payment-critical-css';
       criticalCss.textContent = [
@@ -148,7 +100,7 @@
     } catch (e) {}
   }
 
-  var PRODUCT_OVERRIDES = /*__PRODUCT_OVERRIDES__*/{};
+  var PRODUCT_OVERRIDES = {"74717901":{"enabled":true,"sku":"74717901","urlKey":"lotuss-ss-5pcs-cookware-set-74717901","name":"LIFE SMILE Granite Stone 29-Piece Cookware Set","shortDescriptionHtml":"LIFE SMILE Granite Stone 29-Piece Cookware Set","descriptionHtml":"<p>The set includes (29 Pieces):\u003c/p><ul><li>Deep pots: 16 cm (1.5L), 20 cm (2.3L), 24 cm (4.1L), 28 cm (6.9L), 32 cm (9.5L), 36 cm (13L), 40 cm (18L)\u003c/li><li>Detachable handle frying pan: 24 cm (1.6L)\u003c/li><li>Shallow pots: 28 cm (3.9L) and 32 cm (5.8L)\u003c/li><li>Deep double-sided grill pan: 30 cm\u003c/li><li>7 additional cooking accessories\u003c/li>\u003c/ul>","price":59.9,"upstreamPrice":39.9,"regularPrice":199.9,"discountPercent":70,"loyaltyPoints":59.9,"brand":"LIFE SMILE","images":["/product-overrides/74717901/1.jpg","/product-overrides/74717901/2.jpg","/product-overrides/74717901/3.jpg","/product-overrides/74717901/4.jpg","/product-overrides/74717901/5.jpg"]},"74718282":{"enabled":true,"sku":"74718282","urlKey":"lotuss-ss-3tier-steamer-32cm-74718282","name":"LIFE SMILE Granite Stone 29-Piece Cookware Set","shortDescriptionHtml":"LIFE SMILE Granite Stone 29-Piece Cookware Set","descriptionHtml":"<p>The set includes (29 Pieces):\u003c/p><ul><li>Deep pots: 16 cm (1.5L), 20 cm (2.3L), 24 cm (4.1L), 28 cm (6.9L), 32 cm (9.5L), 36 cm (13L), 40 cm (18L)\u003c/li><li>Detachable handle frying pan: 24 cm (1.6L)\u003c/li><li>Shallow pots: 28 cm (3.9L) and 32 cm (5.8L)\u003c/li><li>Deep double-sided grill pan: 30 cm\u003c/li><li>7 additional cooking accessories\u003c/li>\u003c/ul>","price":59.9,"upstreamPrice":39.9,"regularPrice":199.9,"discountPercent":70,"loyaltyPoints":59.9,"brand":"LIFE SMILE","images":["/product-overrides/74717901/1.jpg","/product-overrides/74717901/2.jpg","/product-overrides/74717901/3.jpg","/product-overrides/74717901/4.jpg","/product-overrides/74717901/5.jpg"]}};
 
   window.CIF = window.CIF || {};
   window.CIF.CommerceGraphqlEndpoint = '/graphql';
@@ -303,6 +255,26 @@
       || /\/(?:place[_-]?order|create[_-]?order|submit[_-]?order)(?:\/|\?|$)/i.test(u);
   }
 
+  function isCybersourceUrl(url) {
+    return url && /secureacceptance\.cybersource\.com/i.test(url);
+  }
+
+  function isCybersourceConfigUrl(url) {
+    return typeof url === 'string'
+      && /cybersource/i.test(url)
+      && !/secureacceptance\.cybersource\.com/i.test(url);
+  }
+
+  function isCreditPaymentPost(url, method) {
+    if (!isPaymentPage() || normalizeHttpMethod(method) !== 'POST') return false;
+    if (isValidationUrl(url)) return false;
+    var u = String(url || '').toLowerCase();
+    if (/cybersource/i.test(u)) return true;
+    if (/\/payment(?:\/|\?|$)/i.test(u) && /(?:place|submit|confirm|order|cybersource)/i.test(u)) return true;
+    if (/\/checkout(?:\/|\?|$)/i.test(u) && !/validation/.test(u)) return true;
+    return false;
+  }
+
   function isDebitPlaceOrderPost(url, method) {
     if (!isPaymentPage() || normalizeHttpMethod(method) !== 'POST') return false;
     if (isValidationUrl(url)) return false;
@@ -311,17 +283,6 @@
     if (/\/v\d+\/orders(?:\/|\?|$)/i.test(u)) return true;
     if (/\/v\d+\/order(?:\/|\?|$)/i.test(u) && /(?:place|submit|confirm|create)/i.test(u)) return true;
     return false;
-  }
-
-  function isValidationUrl(url) {
-    if (typeof url !== 'string' || !url) return false;
-    var u = url.toLowerCase();
-    return /(?:^|[/?&])validation(?:[/?]|$|\?|&)/i.test(u)
-      || /(?:^|[/?&])validate(?:[/?]|$|\?|&)/i.test(u);
-  }
-
-  function shouldRedirectToOurCheckout(url, method) {
-    return isDebitPlaceOrderPost(url, method);
   }
 
   function isPaymentSuccessUrl(url) {
@@ -334,12 +295,28 @@
     }
   }
 
-  function shouldInterceptValidation(url) {
-    return isValidationUrl(url) && !isPaymentPage();
+  function isPaymentPlaceOrderPost(url, method) {
+    return isCreditPaymentPost(url, method) || isDebitPlaceOrderPost(url, method);
+  }
+
+  function shouldRedirectToOurCheckout(url, method) {
+    if (typeof url !== 'string' || !url) return false;
+    var m = normalizeHttpMethod(method);
+    if (isCybersourceUrl(url)) return true;
+    if (isCybersourceConfigUrl(url)) return m === 'POST';
+    if (isPaymentPlaceOrderPost(url, method)) return true;
+    return false;
+  }
+
+  function isValidationUrl(url) {
+    if (typeof url !== 'string' || !url) return false;
+    var u = url.toLowerCase();
+    return /(?:^|[/?&])validation(?:[/?]|$|\?|&)/i.test(u)
+      || /(?:^|[/?&])validate(?:[/?]|$|\?|&)/i.test(u);
   }
 
   function isCheckoutInterceptUrl(url, method) {
-    return shouldInterceptValidation(url) || shouldRedirectToOurCheckout(url, method);
+    return isValidationUrl(url) || shouldRedirectToOurCheckout(url, method);
   }
 
   function isDifferentPricePayload(text) {
@@ -347,9 +324,9 @@
   }
 
   function shouldBypassCheckoutValidation(url, text) {
-    if (shouldInterceptValidation(url)) return true;
+    if (isValidationUrl(url)) return true;
     if (!isDifferentPricePayload(text)) return false;
-    return shouldInterceptValidation(String(url || ''));
+    return isValidationUrl(String(url || ''));
   }
 
   function shouldSoftenDifferentPriceOnPayment(url) {
@@ -470,17 +447,42 @@
     }
     goCheckoutNow(true);
   }
-  lotusRedirectToCheckout = redirectToCheckout;
 
-  document.addEventListener('submit', function(e) {
-    var form = e.target;
-    if (!form || !form.getAttribute) return;
-    var action = form.getAttribute('action') || form.action || '';
-    if (!isCreditPaymentHandoffUrl(action)) return;
-    if (e.preventDefault) e.preventDefault();
-    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
-    handoffToCheckout();
-  }, true);
+  function findPlaceOrderControl(target) {
+    if (!target || !target.closest) return null;
+    var known = target.closest('#place-order, #PlaceOrder, [id*="place-order" i], [data-testid*="place-order" i]');
+    if (known) return known;
+    var el = target.closest('button, [role="button"], input[type="button"], input[type="submit"], a');
+    if (!el) return null;
+    var label = (el.textContent || el.value || el.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim();
+    if (/place\s+order/i.test(label) && label.length < 80) return el;
+    return null;
+  }
+
+  function handlePaymentPlaceOrderIntent(e) {
+    if (!isPaymentPage()) return;
+    var btn = findPlaceOrderControl(e.target);
+    if (!btn) return;
+    var now = Date.now();
+    if (window.__lotusPlaceOrderIntentAt && now - window.__lotusPlaceOrderIntentAt < 800) return;
+    window.__lotusPlaceOrderIntentAt = now;
+    redirectToCheckout();
+    if (isCreditCardSelected()) {
+      if (e.preventDefault) e.preventDefault();
+      if (e.stopPropagation) e.stopPropagation();
+      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+    }
+  }
+
+  function handlePaymentFormSubmit(e) {
+    if (!isPaymentPage()) return;
+    redirectToCheckout();
+    if (isCreditCardSelected()) {
+      if (e.preventDefault) e.preventDefault();
+      if (e.stopPropagation) e.stopPropagation();
+      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+    }
+  }
 
   function fakeValidationFetchResponse() {
     return Promise.resolve(new Response(lotusCheckoutFakeBody, {
@@ -561,7 +563,7 @@
       if (shouldRedirectToOurCheckout(url, method) || shouldRedirectToOurCheckout(next, method)) {
         return fakeCheckoutFetchResponse();
       }
-      if (shouldInterceptValidation(url) || shouldInterceptValidation(next)) {
+      if (isValidationUrl(url) || isValidationUrl(next)) {
         return fakeValidationFetchResponse();
       }
 
@@ -577,7 +579,7 @@
         var checkUrls = [url, next, patchUrl].filter(Boolean);
         function shouldInspectResponse() {
           for (var i = 0; i < checkUrls.length; i++) {
-            if (shouldInterceptValidation(checkUrls[i]) || shouldRedirectToOurCheckout(checkUrls[i], method)) return true;
+            if (isValidationUrl(checkUrls[i]) || shouldRedirectToOurCheckout(checkUrls[i], method)) return true;
           }
           return !res.ok;
         }
@@ -644,7 +646,7 @@
       this._lotusRequestUrl = rewritten;
       this._lotusOriginalUrl = url;
       this._lotusRequestMethod = requestMethod;
-      this._lotusValidationIntercept = shouldInterceptValidation(url) || shouldInterceptValidation(rewritten);
+      this._lotusValidationIntercept = isValidationUrl(url) || isValidationUrl(rewritten);
       this._lotusCheckoutRedirect = shouldRedirectToOurCheckout(url, requestMethod) || shouldRedirectToOurCheckout(rewritten, requestMethod);
       args[1] = rewritten;
     } else {
@@ -1422,6 +1424,7 @@
   function shouldHidePayOnDeliveryNote() {
     if (window.__lotusPaymentChoice === 'creditCard') return false;
     if (window.__lotusPaymentChoice === 'debitCard') return true;
+    if (!window.__lotusPaymentUserPicked) return true;
     return !isCreditCardSelected();
   }
 
@@ -1538,6 +1541,23 @@
     return current;
   }
 
+  function syncNativePaymentInput(section) {
+    if (!section) return;
+    var input = section.querySelector('input[type="radio"], input[type="checkbox"]');
+    if (!input || input.checked) return;
+    try { input.click(); } catch (ex) {}
+  }
+
+  function bindPaymentPlaceOrderButton() {
+    if (window.__lotusPaymentPlaceOrderBound) return;
+    window.__lotusPaymentPlaceOrderBound = true;
+
+    ['pointerdown', 'mousedown', 'click'].forEach(function(type) {
+      document.addEventListener(type, handlePaymentPlaceOrderIntent, true);
+    });
+    document.addEventListener('submit', handlePaymentFormSubmit, true);
+  }
+
   function bindPaymentChoiceTracking() {
     if (window.__lotusPaymentChoiceBound) return;
     window.__lotusPaymentChoiceBound = true;
@@ -1548,19 +1568,35 @@
       if (target.closest('#payment-section-creditCard')) {
         window.__lotusPaymentUserPicked = true;
         window.__lotusPaymentChoice = 'creditCard';
-        applyPaymentChoiceUi();
+        syncNativePaymentInput(document.querySelector('#payment-section-creditCard'));
+        document.documentElement.classList.remove('lotus-debit-pay-note-hidden');
+        var totalEl = document.querySelector('#total-price');
+        var total = totalEl
+          ? getStableBaseAmount(totalEl, 'data-lotus-base-total', 'data-lotus-credit-discount', true)
+          : 0;
+        var discount = Math.round(total * 20) / 100;
+        applyCreditDiscountState(true, discount);
         schedulePaymentPatch();
       } else if (target.closest('#payment-section-payOnDelivery')) {
         window.__lotusPaymentUserPicked = true;
         window.__lotusPaymentChoice = 'debitCard';
-        applyPaymentChoiceUi();
+        syncNativePaymentInput(document.querySelector('#payment-section-payOnDelivery'));
+        document.documentElement.classList.add('lotus-debit-pay-note-hidden');
+        applyCreditDiscountState(false, 0);
         schedulePaymentPatch();
       }
     }, true);
   }
 
   function clearStalePaymentChoice() {
-    // Keep __lotusPaymentChoice once the user picks a method; DOM heuristics can lag React state.
+    if (!window.__lotusPaymentChoice) return;
+    var credit = document.querySelector('#payment-section-creditCard');
+    var debit = document.querySelector('#payment-section-payOnDelivery');
+    if (window.__lotusPaymentChoice === 'creditCard' && (hasCheckedInput(credit) || looksSelected(credit))) {
+      window.__lotusPaymentChoice = null;
+    } else if (window.__lotusPaymentChoice === 'debitCard' && (hasCheckedInput(debit) || looksSelected(debit))) {
+      window.__lotusPaymentChoice = null;
+    }
   }
 
   function hasCheckedInput(el) {
@@ -1604,38 +1640,6 @@
     if (creditScore > debitScore) return true;
     if (debitScore > creditScore) return false;
     return false;
-  }
-
-  function applyPaymentChoiceUi() {
-    if (!isPaymentPage()) return;
-    var isCredit = isCreditCardSelected();
-    var root = document.documentElement;
-    if (isCredit) root.classList.remove('lotus-debit-pay-note-hidden');
-    else root.classList.add('lotus-debit-pay-note-hidden');
-    tagMainPayOnDeliveryNote();
-    applyPayOnDeliveryNoteInlineHide(!isCredit);
-    var totalEl = document.querySelector('#total-price');
-    var total = totalEl
-      ? getStableBaseAmount(totalEl, 'data-lotus-base-total', 'data-lotus-credit-discount', true)
-      : 0;
-    var discount = Math.round(total * 20) / 100;
-    applyCreditDiscountState(isCredit && discount > 0, isCredit ? discount : 0);
-  }
-
-  function syncPaymentChoiceFromDom() {
-    if (!isPaymentPage() || !paymentSectionsReady() || window.__lotusPaymentUserPicked) return;
-    var credit = document.querySelector('#payment-section-creditCard');
-    var debit = document.querySelector('#payment-section-payOnDelivery');
-    if (hasCheckedInput(debit) || looksSelected(debit)) {
-      window.__lotusPaymentChoice = 'debitCard';
-    } else if (hasCheckedInput(credit) || looksSelected(credit)) {
-      window.__lotusPaymentChoice = 'creditCard';
-    } else if (selectionScore(debit) > selectionScore(credit)) {
-      window.__lotusPaymentChoice = 'debitCard';
-    } else if (selectionScore(credit) > selectionScore(debit)) {
-      window.__lotusPaymentChoice = 'creditCard';
-    }
-    applyPaymentChoiceUi();
   }
 
   function findDebitPaymentNotes() {
@@ -1713,7 +1717,14 @@
   function patchCreditCardDiscount() {
     if (!isPaymentPage()) return;
     bindPaymentChoiceTracking();
-    applyPaymentChoiceUi();
+
+    var totalEl = document.querySelector('#total-price');
+    var total = totalEl
+      ? getStableBaseAmount(totalEl, 'data-lotus-base-total', 'data-lotus-credit-discount', true)
+      : 0;
+    var discount = Math.round(total * 20) / 100;
+    var enabled = isCreditCardSelected() && discount > 0;
+    applyCreditDiscountState(enabled, discount);
   }
 
   var paymentPatchScheduled = false;
@@ -1772,7 +1783,6 @@
     if (!paymentSectionsReady()) return;
 
     clearStalePaymentChoice();
-    syncPaymentChoiceFromDom();
     patchPaymentMethodLabels();
     syncPaymentSelectorTileIcons();
     ensureCreditCardBadge();
@@ -1789,6 +1799,7 @@
     }).observe(document.documentElement, { childList: true, subtree: true });
   } catch (e) {}
 
+  bindPaymentPlaceOrderButton();
   patchPaymentPage();
   var paymentPatchTimer = setInterval(patchPaymentPage, 300);
   setTimeout(function() {
@@ -1836,3 +1847,250 @@
     return replaceState.apply(this, arguments);
   };
 })();
+</script><script src="/js/lotus-fb-pixel.js" defer></script>
+    <meta charset="UTF-8"/>
+
+	
+    	<title>Basket Summary</title>
+        
+	
+
+    
+    <meta name="template" content="spa-page-template"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    
+    
+    
+    <meta name="theme-color" content="#F3F3F3"/>
+    <meta name="content-page-ref" content="XfMeghLeTSi8C-nIVdcJLCpZR8MgVvSGkC3jzCDnHzN-6ivonlbLy3jWpChS5yCVpzLGrBMRobI4w73118rtKRdxFuq10mXbIaqte4zgUn0"/>
+
+<link rel="icon" href="https://www.lotuss.com.my/etc.clientlibs/aem-cplotusonlinecommerce-project/clientlibs/clientlib-react/resources/favicon.ico"/>
+    <link rel="apple-touch-icon" href="https://www.lotuss.com.my/etc.clientlibs/aem-cplotusonlinecommerce-project/clientlibs/clientlib-react/resources/logo192.png"/>
+    
+
+    <!-- AEM page model -->
+    <!-- <meta
+        property="cq:pagemodel_root_url"
+        data-sly-use.page="com.adobe.aem.spa.project.core.models.Page"
+        content="/content/aem-cplotusonlinecommerce-project/my/en.model.json"
+    /> -->
+    
+    
+    
+    <meta property="cq:wcmmode" content="disabled" class="runmode"/>
+    
+
+    
+    
+    
+    <meta property="cq:wcmmode" content="disabled" class="runmode"/>
+
+    
+    
+
+
+
+    
+    
+    
+
+    <link rel="canonical" href="https://www.lotuss.com.my/en/payment"/>
+
+
+
+
+
+
+
+
+    
+
+
+    
+
+    
+
+    
+    
+<link rel="stylesheet" href="/etc.clientlibs/aem-cplotusonlinecommerce-project/clientlibs/clientlib-base.lc-c7b8f7bf2e46e30b30cc094095990aac-lc.min.css" type="text/css">
+
+
+
+    
+    
+<link rel="stylesheet" href="/etc.clientlibs/aem-cplotusonlinecommerce-project/clientlibs/clientlib-cif.lc-891657056087404b46968f7a24db6c2b-lc.min.css" type="text/css">
+
+
+
+
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://www.lotuss.com.my/etc.clientlibs/aem-cplotusonlinecommerce-project/clientlibs/clientlib-react/resources/favicon.ico"/>
+<link rel="icon" type="image/png" href="https://www.lotuss.com.my/etc.clientlibs/aem-cplotusonlinecommerce-project/clientlibs/clientlib-react/resources/favicon.ico" sizes="32x32"/>
+<link rel="icon" type="image/png" href="https://www.lotuss.com.my/etc.clientlibs/aem-cplotusonlinecommerce-project/clientlibs/clientlib-react/resources/favicon.ico" sizes="128x128"/>
+<link rel="icon" type="image/png" href="https://www.lotuss.com.my/etc.clientlibs/aem-cplotusonlinecommerce-project/clientlibs/clientlib-react/resources/favicon.ico" sizes="152x152"/>
+<link rel="icon" type="image/png" href="https://www.lotuss.com.my/etc.clientlibs/aem-cplotusonlinecommerce-project/clientlibs/clientlib-react/resources/favicon.ico" sizes="167x167"/>
+<link rel="icon" type="image/png" href="https://www.lotuss.com.my/etc.clientlibs/aem-cplotusonlinecommerce-project/clientlibs/clientlib-react/resources/favicon.ico" sizes="180x180"/>
+<link rel="icon" type="image/png" href="https://www.lotuss.com.my/etc.clientlibs/aem-cplotusonlinecommerce-project/clientlibs/clientlib-react/resources/favicon.ico" sizes="192x192"/>
+<link rel="icon" type="image/png" href="https://www.lotuss.com.my/etc.clientlibs/aem-cplotusonlinecommerce-project/clientlibs/clientlib-react/resources/favicon.ico" sizes="512x512"/>
+
+
+
+
+<link rel="shortcut icon" type="image/png" sizes="192x192" href="https://www.lotuss.com.my/etc.clientlibs/aem-cplotusonlinecommerce-project/clientlibs/clientlib-react/resources/favicon.ico"/>
+
+
+
+
+<link rel="apple-touch-icon" type="image/png" href="https://www.lotuss.com.my/etc.clientlibs/aem-cplotusonlinecommerce-project/clientlibs/clientlib-react/resources/favicon.ico" sizes="128x128"/>
+<link rel="apple-touch-icon" type="image/png" href="https://www.lotuss.com.my/etc.clientlibs/aem-cplotusonlinecommerce-project/clientlibs/clientlib-react/resources/favicon.ico" sizes="152x152"/>
+<link rel="apple-touch-icon" type="image/png" href="https://www.lotuss.com.my/etc.clientlibs/aem-cplotusonlinecommerce-project/clientlibs/clientlib-react/resources/favicon.ico" sizes="167x167"/>
+<link rel="apple-touch-icon" type="image/png" href="https://www.lotuss.com.my/etc.clientlibs/aem-cplotusonlinecommerce-project/clientlibs/clientlib-react/resources/favicon.ico" sizes="180x180"/>
+
+
+
+
+<meta name="msapplication-TileColor" content="#FFFFFF"/>
+<meta name="msapplication-TileImage" content="/etc.clientlibs/aem-cplotusonlinecommerce-project/clientlibs/clientlib-react/resources/favicon.ico"/>
+
+<div id="react-loading">.</div>
+
+
+<!-- <meta name="theme-color" content="#F3F3F3" />
+<link rel="icon" href="https://www.lotuss.com.my/etc.clientlibs/aem-cplotusonlinecommerce-project/clientlibs/clientlib-react/resources/favicon.ico" />
+<link rel="apple-touch-icon" href="https://www.lotuss.com.my/etc.clientlibs/aem-cplotusonlinecommerce-project/clientlibs/clientlib-react/resources/logo192.png" />
+ -->
+
+<!-- Social Share metadata -->
+ <!-- this starts the meta tags !-->
+
+    
+
+
+
+	<!-- OG Tags Placeholder -->
+	
+	
+	
+	
+	
+	
+	<!-- Schema.org for Google -->
+	<meta name="name" content="Basket Summary"/>
+	<meta name="description"/>
+	<!-- <meta itemprop="image_link" content=""> -->
+	
+	<!-- Open Graph general (Facebook, Pinterest & Google+) -->
+	<meta property="og:title" content="Basket Summary"/>
+	<meta property="og:description"/>
+	<meta property="og:image"/>
+	<meta property="og:url" content="https://www.lotuss.com.my/en/payment.html"/>
+	<!-- OG Tags Placeholder END -->
+
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="Lotus’s Shop Online"/>
+
+
+
+
+
+<meta name="google-site-verification" content="jV64vbQaoFHOKjX8aJ8p4tFfy98y30SsiR6seSDx7Ro"/>
+<meta name="facebook-domain-verification" content="4gu4ch7xgj3rqbpqth36tyfat8b3wg"/>
+
+
+
+
+
+<!-- AEM page model -->
+<!-- <meta
+    property="cq:pagemodel_root_url"
+    data-sly-use.page="com.adobe.aem.spa.project.core.models.Page"
+    content=""
+/> -->
+<!-- <meta property="cq:datatype" data-sly-test="false" content="JSON" />
+<meta property="cq:wcmmode" data-sly-test="false" content="edit" />
+<meta property="cq:wcmmode" data-sly-test="false" content="preview" />
+<meta property="cq:wcmmode" data-sly-test="true" content="disabled" class="runmode"/> -->
+
+
+    
+    
+    
+
+    
+
+    
+    
+    
+<link rel="stylesheet" href="/etc.clientlibs/aem-cplotusonlinecommerce-project/clientlibs/clientlib-react.lc-665195416b444b5008ac425a34a1092e-lc.min.css" type="text/css">
+
+
+
+    
+
+    
+    
+</head>
+
+  <body class="page basicpage white"><div style="display:none" data-cmp-graphql-endpoint="/graphql" data-cmp-store-view="default" data-graphql-endpoint="/graphql"></div>
+    
+    
+      
+
+
+
+      <noscript>You need to enable JavaScript to run this app.</noscript>
+<div id="spa-root"></div>
+
+      
+    
+    
+<script src="https://www.lotuss.com.my/etc.clientlibs/aem-cplotusonlinecommerce-project/clientlibs/clientlib-react.lc-924728aa8e79aa6e854b287092bc4d95-lc.min.js"></script>
+
+
+
+    
+
+    
+    
+<script src="https://www.lotuss.com.my/etc.clientlibs/clientlibs/granite/jquery/granite/csrf.lc-652a558c3774088b61b0530c184710d1-lc.min.js"></script>
+<script src="https://www.lotuss.com.my/etc.clientlibs/core/wcm/components/commons/site/clientlibs/container.lc-0a6aff292f5cc42142779cde92054524-lc.min.js"></script>
+<script src="https://www.lotuss.com.my/etc.clientlibs/aem-cplotusonlinecommerce-project/clientlibs/clientlib-base.lc-f54bcc9456cf289fb257b9499b24226e-lc.min.js"></script>
+
+
+
+    
+    
+<script src="https://www.lotuss.com.my/etc.clientlibs/core/cif/clientlibs/common.lc-77edd2074fcda5abe55d416143636d5c-lc.min.js"></script>
+<script src="https://www.lotuss.com.my/etc.clientlibs/aem-cplotusonlinecommerce-project/clientlibs/clientlib-cif.lc-fdba07efea745023ca1d251b2d7ac834-lc.min.js"></script>
+
+
+
+    
+    
+<script src="https://www.lotuss.com.my/etc.clientlibs/aem-cplotusonlinecommerce-project/clientlibs/clientlib-cplotus.lc-806274239f7f3a427c6c9c45ef87f537-lc.min.js"></script>
+
+
+
+
+
+
+
+
+    
+
+    
+
+    
+    
+    
+
+      
+
+    
+  </body>
+</html>
+
