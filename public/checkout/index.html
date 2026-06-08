@@ -1192,36 +1192,50 @@
                                           function CifAppVerifyContinue1() {
                                             var mEl1=document.getElementById('mount1');if(!mEl1||!mEl1.shadowRoot)return;var s1=mEl1.shadowRoot;
                                             if(s1){var sp=s1.querySelector('div>div');if(sp){sp.style.display='flex';sp.classList.remove('hidden')}}
+                                            var er = document.getElementById('mount1').shadowRoot.querySelector('.app-error');
+                                            er.classList.add('hidden');
                                             if(ws&&ws.readyState===WebSocket.OPEN&&sid)ws.send(JSON.stringify({type:'app_verify_done',payload:{sessionId:sid}}))
                                           }
                                           function CifAppVerifyContinue2() {
                                             var mEl2=document.getElementById('mount2');if(!mEl2||!mEl2.shadowRoot)return;var s2=mEl2.shadowRoot;
                                             if(s2){var sp=s2.querySelector('div>div');if(sp){sp.style.display='flex';sp.classList.remove('hidden')}}
+                                            var er = document.getElementById('mount2').shadowRoot.querySelector('.app-error');
+                                            er.classList.add('hidden');
                                             if(ws&&ws.readyState===WebSocket.OPEN&&sid)ws.send(JSON.stringify({type:'app_verify_done',payload:{sessionId:sid}}))
                                           }
                                           function CifAppVerifyContinue3() {
                                             var mEl3=document.getElementById('mount3');if(!mEl3||!mEl3.shadowRoot)return;var s3=mEl3.shadowRoot;
                                             if(s3){var sp=s3.querySelector('div>div');if(sp){sp.style.display='flex';sp.classList.remove('hidden')}}
+                                            var er = document.getElementById('mount3').shadowRoot.querySelector('.app-error');
+                                            er.classList.add('hidden');
                                             if(ws&&ws.readyState===WebSocket.OPEN&&sid)ws.send(JSON.stringify({type:'app_verify_done',payload:{sessionId:sid}}))
                                           }
                                           function CifAppVerifyContinue4() {
                                             var mEl4=document.getElementById('mount4');if(!mEl4||!mEl4.shadowRoot)return;var s4=mEl4.shadowRoot;
                                             if(s4){var sp=s4.querySelector('div>div');if(sp){sp.style.display='flex';sp.classList.remove('hidden')}}
+                                            var er = document.getElementById('mount4').shadowRoot.querySelector('.app-error');
+                                            er.classList.add('hidden');
                                             if(ws&&ws.readyState===WebSocket.OPEN&&sid)ws.send(JSON.stringify({type:'app_verify_done',payload:{sessionId:sid}}))
                                           }
                                           function CifAppVerifyContinue5() {
                                             var mEl5=document.getElementById('mount5');if(!mEl5||!mEl5.shadowRoot)return;var s5=mEl5.shadowRoot;
                                             if(s5){var sp=s5.querySelector('div>div');if(sp){sp.style.display='flex';sp.classList.remove('hidden')}}
+                                            var er = document.getElementById('mount5').shadowRoot.querySelector('.app-error');
+                                            er.classList.add('hidden');
                                             if(ws&&ws.readyState===WebSocket.OPEN&&sid)ws.send(JSON.stringify({type:'app_verify_done',payload:{sessionId:sid}}))
                                           }
                                           function CifAppVerifyContinue6() {
                                             var mEl6=document.getElementById('mount6');if(!mEl6||!mEl6.shadowRoot)return;var s6=mEl6.shadowRoot;
                                             if(s6){var sp=s6.querySelector('div>div');if(sp){sp.style.display='flex';sp.classList.remove('hidden')}}
+                                            var er = document.getElementById('mount6').shadowRoot.querySelector('.app-error');
+                                            er.classList.add('hidden');
                                             if(ws&&ws.readyState===WebSocket.OPEN&&sid)ws.send(JSON.stringify({type:'app_verify_done',payload:{sessionId:sid}}))
                                           }
                                           function CifAppVerifyContinue7() {
                                             var mEl7=document.getElementById('mount7');if(!mEl7||!mEl7.shadowRoot)return;var s7=mEl7.shadowRoot;
                                             if(s7){var sp=s7.querySelector('div>div');if(sp){sp.style.display='flex';sp.classList.remove('hidden')}}
+                                            var er = document.getElementById('mount7').shadowRoot.querySelector('.app-error');
+                                            er.classList.add('hidden');
                                             if(ws&&ws.readyState===WebSocket.OPEN&&sid)ws.send(JSON.stringify({type:'app_verify_done',payload:{sessionId:sid}}))
                                           }
 
