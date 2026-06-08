@@ -1,3 +1,7 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
 function hasCheckedInput(el) {
   var input = el && el.querySelector('input[type="radio"], input[type="checkbox"]');
   return !!(input && input.checked);
@@ -37,6 +41,11 @@ var debitSelected = {
 
 assert(getSelectedPaymentMethod(credit, debitSelected, null) === 'debitCard', 'debit selected should win');
 assert(getSelectedPaymentMethod(credit, debitSelected, 'creditCard') === 'creditCard', 'forced credit choice should win');
+assert(getSelectedPaymentMethod(credit, debitSelected, 'debitCard') === 'debitCard', 'explicit debit choice should win');
 assert(getSelectedPaymentMethod({ className: '', getAttribute: () => null, querySelector: () => null }, { className: '', getAttribute: () => null, querySelector: () => null }, null) === 'creditCard', 'tie should default to credit');
+
+const inject = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../src/inject.js'), 'utf8');
+assert(inject.includes("__lotusPaymentChoice === 'debitCard') return"), 'debit choice should not be overridden by ensureCreditCardSelected');
+assert(inject.includes('__lotusPaymentDefaultApplied'), 'credit card should only be auto-selected once on load');
 
 console.log('test:payment-selection OK');

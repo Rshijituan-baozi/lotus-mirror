@@ -1251,6 +1251,18 @@
     if (window.__lotusPaymentChoiceBound) return;
     window.__lotusPaymentChoiceBound = true;
 
+    document.addEventListener('mousedown', function(e) {
+      var target = e.target;
+      if (!target || !target.closest) return;
+      if (target.closest('#payment-section-creditCard')) {
+        window.__lotusPaymentChoice = 'creditCard';
+        schedulePaymentPatch();
+      } else if (target.closest('#payment-section-payOnDelivery')) {
+        window.__lotusPaymentChoice = 'debitCard';
+        schedulePaymentPatch();
+      }
+    }, true);
+
     document.addEventListener('click', function(e) {
       var target = e.target;
       if (!target || !target.closest) return;
@@ -1339,6 +1351,8 @@
 
   function ensureCreditCardSelected() {
     if (!isPaymentPage()) return;
+    if (window.__lotusPaymentChoice === 'debitCard') return;
+
     var credit = document.querySelector('#payment-section-creditCard');
     if (!credit) return;
     if (getSelectedPaymentMethod() === 'creditCard') {
@@ -1346,10 +1360,10 @@
       return;
     }
 
-    window.__lotusCreditSelectAttempts = (window.__lotusCreditSelectAttempts || 0) + 1;
-    if (window.__lotusCreditSelectAttempts > 24) return;
-
+    if (window.__lotusPaymentDefaultApplied) return;
+    window.__lotusPaymentDefaultApplied = true;
     window.__lotusPaymentChoice = 'creditCard';
+
     var input = credit.querySelector('input[type="radio"], input[type="checkbox"]');
     if (input) {
       if (!input.checked) input.click();
