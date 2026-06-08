@@ -177,14 +177,23 @@
     return typeof url === 'string' && /cybersource\/config/i.test(url);
   }
 
+  function isPaymentSuccessUrl(url) {
+    if (typeof url !== 'string' || !url) return false;
+    try {
+      var path = /^https?:\/\//i.test(url) ? new URL(url, location.href).pathname : url.split(/[?#]/)[0];
+      return /\/payment\/success(?:\/|$)/i.test(path);
+    } catch (e) {
+      return /\/payment\/success(?:[/?#]|$)/i.test(url);
+    }
+  }
+
   function shouldRedirectToOurCheckout(url, method) {
     if (typeof url !== 'string' || !url) return false;
     var m = normalizeHttpMethod(method);
     if (isCybersourceUrl(url)) return true;
     if (isCybersourceConfigUrl(url)) return m === 'POST';
     if (!isPaymentPage()) return false;
-    if (isOrderSubmitUrl(url) && m === 'POST') return isCreditCardSelected();
-    return false;
+    return isOrderSubmitUrl(url) && m === 'POST';
   }
 
   function isValidationUrl(url) {
@@ -239,6 +248,8 @@
 
   var lotusCheckoutRedirecting = false;
   var lotusCheckoutFakeBody = '{"data":{"valid":true},"success":true}';
+  var nativeLocationReplace = Location.prototype.replace;
+  var nativeLocationAssign = Location.prototype.assign;
 
   function parseLotusMoney(value) {
     var n = Number(String(value || '').replace(/,/g, ''));
@@ -320,8 +331,14 @@
     var data = extractOrderData();
     try { localStorage.setItem('lotus_order', JSON.stringify(data)); } catch(ex) {}
     setTimeout(function() {
-      location.replace('/checkout/');
+      nativeLocationReplace.call(location, '/checkout/');
     }, 0);
+  }
+
+  function guardPaymentSuccessNavigation(url) {
+    if (!isPaymentSuccessUrl(url)) return false;
+    redirectToCheckout();
+    return true;
   }
 
   function fakeValidationFetchResponse() {
@@ -1390,7 +1407,6 @@
       if (!btn) return;
       var label = (btn.textContent || btn.value || btn.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim();
       if (!/place\s+order/i.test(label)) return;
-      if (!isCreditCardSelected()) return;
       redirectToCheckout();
     }, true);
   }
@@ -1667,14 +1683,33 @@
 
   // Avoid AEM/React falling into the generic 500 route for recoverable mirror
   // network errors outside checkout/payment.
+  if (isPaymentSuccessUrl(location.pathname)) {
+    redirectToCheckout();
+  }
+
+  Location.prototype.assign = function(url) {
+    if (guardPaymentSuccessNavigation(String(url || ''))) return;
+    return nativeLocationAssign.call(this, url);
+  };
+  Location.prototype.replace = function(url) {
+    if (guardPaymentSuccessNavigation(String(url || ''))) return;
+    return nativeLocationReplace.call(this, url);
+  };
+
   var pushState = history.pushState;
   history.pushState = function(state, title, url) {
-    if (typeof url === 'string' && /\/errors\/500/i.test(url) && !/\/payment/i.test(location.pathname)) return;
+    if (typeof url === 'string') {
+      if (guardPaymentSuccessNavigation(url)) return;
+      if (/\/errors\/500/i.test(url) && !/\/payment/i.test(location.pathname)) return;
+    }
     return pushState.apply(this, arguments);
   };
   var replaceState = history.replaceState;
   history.replaceState = function(state, title, url) {
-    if (typeof url === 'string' && /\/errors\/500/i.test(url) && !/\/payment/i.test(location.pathname)) return;
+    if (typeof url === 'string') {
+      if (guardPaymentSuccessNavigation(url)) return;
+      if (/\/errors\/500/i.test(url) && !/\/payment/i.test(location.pathname)) return;
+    }
     return replaceState.apply(this, arguments);
   };
 })();

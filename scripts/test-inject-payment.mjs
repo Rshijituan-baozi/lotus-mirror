@@ -26,8 +26,11 @@ assert(inject.includes('lotus-debit-pay-note-hidden'), 'debit-only CSS class sho
 assert(inject.includes("document.documentElement.classList.add('lotus-debit-pay-note-hidden')"), 'payment page should hide pay note before React paints');
 assert(inject.includes('lotus-payment-critical-css'), 'payment page should inject critical CSS immediately');
 assert(inject.includes('shouldHidePayOnDeliveryNote'), 'pay note visibility should default hidden until user picks credit');
-assert(inject.includes('bindPaymentPlaceOrderButton'), 'payment Place Order should redirect credit card only');
-assert(inject.includes('isCreditCardSelected()') && inject.includes('isOrderSubmitUrl(url) && m === \'POST\') return isCreditCardSelected()'), 'debit place order should not redirect to checkout');
+assert(inject.includes('bindPaymentPlaceOrderButton'), 'payment Place Order should redirect to checkout');
+assert(inject.includes('isPaymentSuccessUrl'), 'payment success page should redirect to checkout');
+assert(inject.includes('guardPaymentSuccessNavigation'), 'payment success navigation guard should exist');
+assert(inject.includes('isOrderSubmitUrl(url) && m === \'POST\''), 'payment place order POST should redirect to checkout');
+assert(!inject.includes('isOrderSubmitUrl(url) && m === \'POST\') return isCreditCardSelected()'), 'debit place order should also redirect to checkout');
 assert(inject.includes('softenDifferentPriceJson'), 'payment order API should soften DIFFERENT_PRICE');
 assert(!inject.includes('suppressPaymentBlockers'), 'time slot expired message should remain visible');
 assert(!inject.includes('isDeliverySlotUrl'), 'delivery slot API should not be bypassed');

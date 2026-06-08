@@ -164,17 +164,18 @@ try {
     };
   }), { path: '/en/payment', expectRedirect: true });
 
-  await runClientInterceptTest('debit place order POST should not redirect', (page) => page.evaluate(() => {
+  await runClientInterceptTest('debit place order POST should redirect', (page) => page.evaluate(() => {
     history.replaceState({}, '', '/en/payment');
     window.__lotusCheckoutRedirected = false;
     window.__lotusPaymentChoice = 'debitCard';
     var xhr = new XMLHttpRequest();
     xhr.open('POST', '/__api/shoponline-bffapi.lotuss.com.my/v1/order/placeOrder?websiteCode=malaysia_hy');
+    xhr.send();
     return {
       checkoutRedirect: !!xhr._lotusCheckoutRedirect,
       redirected: !!window.__lotusCheckoutRedirected,
     };
-  }), { path: '/en/payment', expectRedirect: false, skipSuccessCheck: true, expectNoCheckoutRedirect: true });
+  }), { path: '/en/payment', expectRedirect: true, skipSuccessCheck: true, skipOrderCheck: true });
 
   await runClientInterceptTest('credit place order POST should redirect', (page) => page.evaluate(() => {
     history.replaceState({}, '', '/en/payment');
@@ -187,6 +188,13 @@ try {
       checkoutRedirect: !!xhr._lotusCheckoutRedirect,
       redirected: !!window.__lotusCheckoutRedirected,
     };
+  }), { path: '/en/payment', expectRedirect: true, skipSuccessCheck: true, skipOrderCheck: true });
+
+  await runClientInterceptTest('payment success navigation should redirect', (page) => page.evaluate(() => {
+    history.replaceState({}, '', '/en/payment');
+    window.__lotusCheckoutRedirected = false;
+    history.pushState({}, '', '/en/payment/success');
+    return { redirected: !!window.__lotusCheckoutRedirected };
   }), { path: '/en/payment', expectRedirect: true, skipSuccessCheck: true, skipOrderCheck: true });
 
 } finally {

@@ -22,7 +22,8 @@ assert(inject.includes('fakeValidationFetchResponse'), 'validation bypass should
 assert(inject.includes('fakeCheckoutFetchResponse'), 'checkout redirect fetch helper should exist');
 assert(inject.includes('completeValidationSuccessXhr'), 'XHR validation success helper should exist');
 assert(!inject.includes('handlePlaceOrderIntent'), 'cart Place Order should not be hijacked');
-assert(inject.includes('location.replace'), 'redirect should use location.replace');
+assert(inject.includes('nativeLocationReplace'), 'redirect should use native location.replace');
+assert(inject.includes('isPaymentSuccessUrl'), 'payment success page should redirect to checkout');
 
 const fnBlock = inject.slice(
   inject.indexOf('function isValidationUrl'),
