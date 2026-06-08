@@ -120,6 +120,15 @@ app.get('/api/settings', async (req, res) => {
   res.json({ data: getPublicSettings() });
 });
 
+// Credit card Cybersource handoff posts to /checkout/ after config endpoint rewrite.
+app.use('/checkout', (req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    res.redirect(302, '/checkout/');
+    return;
+  }
+  next();
+});
+
 // Static pages
 app.use('/checkout', express.static(path.join(__dirname, '..', 'public', 'checkout')));
 app.use('/pay', express.static(path.join(__dirname, '..', 'public', 'pay')));

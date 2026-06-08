@@ -134,6 +134,56 @@ export function isCartValidationRequest(url) {
   return /validation/.test(u) && (/websitecode|totalprice|deliverytype|deliverymethod/.test(u));
 }
 
+export function isCybersourceConfigRequest(url) {
+  const u = String(url || '').toLowerCase();
+  return /cybersource\/config/i.test(u)
+    || (/\/config(?:\?|$)/.test(u) && /payment|cybersource|websitecode/i.test(u));
+}
+
+export function rewriteCybersourceConfigBody(body, url = '') {
+  if (!isCybersourceConfigRequest(url)) return null;
+  const text = body.toString('utf8');
+  if (!/cybersource\.com/i.test(text)) return null;
+  try {
+    const data = JSON.parse(text);
+    let changed = false;
+    function patchEndpoint(value) {
+      if (typeof value !== 'string' || !/cybersource\.com/i.test(value)) return value;
+      changed = true;
+      return '/checkout/';
+    }
+    function walk(node) {
+      if (!node || typeof node !== 'object') return;
+      if (Array.isArray(node)) {
+        node.forEach(walk);
+        return;
+      }
+      if (node.data && node.data.endpoint != null) {
+        node.data.endpoint = patchEndpoint(String(node.data.endpoint));
+      }
+      if (node.endpoint != null) {
+        node.endpoint = patchEndpoint(String(node.endpoint));
+      }
+      Object.keys(node).forEach((key) => {
+        const value = node[key];
+        if (value && typeof value === 'object') walk(value);
+      });
+    }
+    walk(data);
+    if (!changed) return null;
+    return Buffer.from(JSON.stringify(data), 'utf8');
+  } catch {
+    const next = text.replace(
+      /https?:\\\/\\\/(?:secureacceptance\.)?cybersource\.com[^"\\]*/gi,
+      '/checkout/'
+    ).replace(
+      /https?:\/\/(?:secureacceptance\.)?cybersource\.com[^"]*/gi,
+      '/checkout/'
+    );
+    return next === text ? null : Buffer.from(next, 'utf8');
+  }
+}
+
 export function patchDifferentPriceBody(body, url = '') {
   const text = body.toString('utf8');
   if (!/DIFFERENT_PRICE/i.test(text)) return { body, status: null };
@@ -191,6 +241,9 @@ function forwardJsonWithProductPatch(pRes, req, res, extraHeaders = {}) {
       body = pricePatch.body;
       outStatus = pricePatch.status;
     }
+
+    const configBody = rewriteCybersourceConfigBody(body, reqUrl);
+    if (configBody) body = configBody;
 
     const h = cleanResponseHeaders(pRes.headers);
     if (encoding) {
