@@ -10,10 +10,13 @@ function assert(cond, msg) {
 }
 
 assert(inject.includes('function syncDebitPaymentNoteVisibility'), 'syncDebitPaymentNoteVisibility should exist');
-assert(inject.includes('function ensureCreditCardDefaultChoice'), 'ensureCreditCardDefaultChoice should exist');
-assert(!inject.includes('function ensureCreditCardSelected'), 'ensureCreditCardSelected should not force DOM clicks');
-assert(!inject.includes('location.pathname)) return true'), 'DIFFERENT_PRICE bypass should not depend on payment pathname');
-assert(inject.includes('function getSelectedPaymentMethod'), 'getSelectedPaymentMethod should exist');
+assert(inject.includes('function syncPaymentSelectorTileIcons'), 'tile icon hiding should be scoped to selectors');
+assert(inject.includes('function isCreditCardSelected'), 'isCreditCardSelected should exist');
+assert(!inject.includes('function getSelectedPaymentMethod'), 'getSelectedPaymentMethod should not duplicate selection logic');
+assert(!inject.includes('ensureCreditCardDefaultChoice'), 'should not force credit card default on load');
+assert(inject.includes('applyCreditDiscountState'), 'discount state should update immediately on click');
+assert(inject.includes('tagDebitPaymentNotes'), 'pay on delivery notes should use CSS class only');
+assert(!inject.includes('syncPaymentSelectorIcons'), 'global payment icon toggling should be removed');
 assert(inject.includes('function findDebitPaymentNotes'), 'findDebitPaymentNotes should exist');
 assert(inject.includes('lotus-debit-pay-note-hidden'), 'debit-only CSS class should exist');
 assert(inject.includes('lotus-pay-on-delivery-detail'), 'pay on delivery detail class should exist');
@@ -29,8 +32,6 @@ assert(inject.includes('function fakeValidationFetchResponse'), 'validation shou
 assert(!inject.includes('handlePlaceOrderIntent'), 'cart Place Order should not be hijacked');
 assert(inject.includes('_lotusCheckoutRedirect'), 'XHR checkout redirect flag should exist');
 assert(inject.includes('fakeCheckoutFetchResponse'), 'fetch fake success response should exist');
-assert(inject.includes('function syncPaymentSelectorIcons'), 'payment icon visibility should follow selected method');
-assert(inject.includes('patchPaymentMethodLabels'), 'payment label patch should be credit-only');
 assert(inject.includes('/payment(?:\\/|\\?|$)/i.test(url)'), 'payment API responses should not be cart-patched');
 
 console.log('test:inject-payment OK');

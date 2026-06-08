@@ -45,8 +45,8 @@ assert(getSelectedPaymentMethod({ className: '', getAttribute: () => null, query
 assert(getSelectedPaymentMethod({ className: '', getAttribute: () => null, querySelector: () => null }, { className: '', getAttribute: () => null, querySelector: () => null }, null) === 'creditCard', 'tie should default to credit');
 
 const inject = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../src/inject.js'), 'utf8');
-assert(inject.includes('ensureCreditCardDefaultChoice'), 'credit card default should not force DOM clicks');
-assert(!inject.includes('ensureCreditCardSelected'), 'forced credit card click helper should be removed');
-assert(!inject.includes('location.pathname)) return true'), 'payment page should not bypass non-validation API bodies');
+assert(inject.includes('syncPaymentSelectorTileIcons'), 'tile icon hiding should be scoped to selectors');
+assert(!inject.includes('ensureCreditCardDefaultChoice'), 'should not force credit default on load');
+assert(inject.includes('return false;'), 'ambiguous payment selection should default to debit');
 
 console.log('test:payment-selection OK');

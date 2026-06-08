@@ -8,8 +8,10 @@ function assert(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
-assert(inject.includes('syncPaymentSelectorIcons'), 'payment icon sync helper should exist');
-assert(inject.includes('isCreditCardSelected()') && inject.includes('removeProperty(\'display\')'), 'debit mode should restore payment icons');
-assert(!inject.includes("hideAll('#icon-payment-2, #icon-payment-3')"), 'should not always hide payment icons globally');
+assert(inject.includes('syncPaymentSelectorTileIcons'), 'tile icon helper should exist');
+assert(inject.includes('#payment-section-payOnDelivery > span #icon-payment-2'), 'tile icons should be scoped');
+assert(!inject.includes('syncPaymentSelectorIcons'), 'global icon toggling should be removed');
+assert(inject.includes('tagDebitPaymentNotes'), 'pay on delivery notes should be tagged for CSS hiding');
+assert(!inject.includes('if (hide) note.style.setProperty'), 'inline pay note hiding should be removed');
 
 console.log('test:payment-debit-icons OK');

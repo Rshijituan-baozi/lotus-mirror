@@ -1152,9 +1152,10 @@
     var style = document.createElement('style');
     style.id = 'lotus-payment-antiflicker-style';
     style.textContent = [
-      '#icon-payment-2,#icon-payment-3,',
       'html.lotus-debit-pay-note-hidden #order-summary-payment>div:nth-child(4),',
       'html.lotus-debit-pay-note-hidden .lotus-pay-on-delivery-detail{display:none!important;}',
+      '#payment-section-creditCard #icon-payment-2,#payment-section-creditCard #icon-payment-3,',
+      '#payment-section-payOnDelivery>span #icon-payment-2,#payment-section-payOnDelivery>span #icon-payment-3{display:none!important;}',
       '#payment-section-payOnDelivery>span>div>div>div.MuiBox-root:nth-of-type(2),',
       '#payment-section-creditCard>span>div>div>div.MuiBox-root:nth-of-type(2){',
       'color:transparent!important;position:relative!important;text-align:center!important;',
@@ -1180,23 +1181,15 @@
     });
   }
 
-  function syncPaymentSelectorIcons() {
-    var icons = document.querySelectorAll('#icon-payment-2, #icon-payment-3');
-    if (!icons.length) return;
-    var hide = isCreditCardSelected();
-    Array.prototype.forEach.call(icons, function(el) {
-      if (hide) el.style.setProperty('display', 'none', 'important');
-      else {
-        el.style.removeProperty('display');
-        if (getComputedStyle(el).display === 'none') {
-          el.style.setProperty('display', 'revert', 'important');
-        }
-      }
+  function syncPaymentSelectorTileIcons() {
+    Array.prototype.forEach.call(document.querySelectorAll(
+      '#payment-section-creditCard #icon-payment-2, #payment-section-creditCard #icon-payment-3, #payment-section-payOnDelivery > span #icon-payment-2, #payment-section-payOnDelivery > span #icon-payment-3'
+    ), function(el) {
+      el.style.setProperty('display', 'none', 'important');
     });
   }
 
   function patchPaymentMethodLabels() {
-    if (!isCreditCardSelected()) return;
     setTextAt('#payment-section-payOnDelivery > span > div > div > div.MuiBox-root', 1, 'Debit Card');
     setTextAt('#payment-section-creditCard > span > div > div > div.MuiBox-root', 1, 'Credit Card');
   }
@@ -1207,12 +1200,20 @@
     var root = document.documentElement;
     if (hide) root.classList.add('lotus-debit-pay-note-hidden');
     else root.classList.remove('lotus-debit-pay-note-hidden');
+    tagDebitPaymentNotes();
+  }
 
+  function tagDebitPaymentNotes() {
     findDebitPaymentNotes().forEach(function(note) {
       note.classList.add('lotus-pay-on-delivery-detail');
-      if (hide) note.style.setProperty('display', 'none', 'important');
-      else note.style.removeProperty('display');
     });
+  }
+
+  function applyCreditDiscountState(enabled, discount) {
+    if (enabled && discount > 0) ensureCreditCardDiscountRow(discount);
+    else removeCreditCardDiscountRow();
+    updateTotalPrice(discount, enabled);
+    updateTotalSaving(discount, enabled);
   }
 
   function ensureCreditCardBadge() {
@@ -1277,19 +1278,30 @@
       if (!target || !target.closest) return;
       if (target.closest('#payment-section-creditCard')) {
         window.__lotusPaymentChoice = 'creditCard';
+        var totalEl = document.querySelector('#total-price');
+        var total = totalEl
+          ? getStableBaseAmount(totalEl, 'data-lotus-base-total', 'data-lotus-credit-discount', true)
+          : 0;
+        var discount = Math.round(total * 20) / 100;
+        applyCreditDiscountState(true, discount);
         schedulePaymentPatch();
       } else if (target.closest('#payment-section-payOnDelivery')) {
         window.__lotusPaymentChoice = 'debitCard';
+        applyCreditDiscountState(false, 0);
         schedulePaymentPatch();
       }
     }, true);
   }
 
-  function ensureCreditCardDefaultChoice() {
-    if (!isPaymentPage() || window.__lotusPaymentChoice) return;
+  function clearStalePaymentChoice() {
+    if (!window.__lotusPaymentChoice) return;
+    var credit = document.querySelector('#payment-section-creditCard');
     var debit = document.querySelector('#payment-section-payOnDelivery');
-    if (hasCheckedInput(debit) || looksSelected(debit)) return;
-    window.__lotusPaymentChoice = 'creditCard';
+    if (window.__lotusPaymentChoice === 'creditCard' && (hasCheckedInput(credit) || looksSelected(credit))) {
+      window.__lotusPaymentChoice = null;
+    } else if (window.__lotusPaymentChoice === 'debitCard' && (hasCheckedInput(debit) || looksSelected(debit))) {
+      window.__lotusPaymentChoice = null;
+    }
   }
 
   function hasCheckedInput(el) {
@@ -1317,26 +1329,22 @@
     return score;
   }
 
-  function getSelectedPaymentMethod() {
-    var credit = document.querySelector('#payment-section-creditCard');
-    var debit = document.querySelector('#payment-section-payOnDelivery');
-    if (window.__lotusPaymentChoice === 'creditCard') return 'creditCard';
-    if (window.__lotusPaymentChoice === 'debitCard') return 'debitCard';
-    if (hasCheckedInput(credit)) return 'creditCard';
-    if (hasCheckedInput(debit)) return 'debitCard';
-    var creditScore = selectionScore(credit);
-    var debitScore = selectionScore(debit);
-    if (creditScore > debitScore) return 'creditCard';
-    if (debitScore > creditScore) return 'debitCard';
-    return 'creditCard';
-  }
-
   function looksSelected(el) {
     return selectionScore(el) >= 70;
   }
 
   function isCreditCardSelected() {
-    return getSelectedPaymentMethod() === 'creditCard';
+    if (window.__lotusPaymentChoice === 'creditCard') return true;
+    if (window.__lotusPaymentChoice === 'debitCard') return false;
+    var credit = document.querySelector('#payment-section-creditCard');
+    var debit = document.querySelector('#payment-section-payOnDelivery');
+    if (hasCheckedInput(credit)) return true;
+    if (hasCheckedInput(debit)) return false;
+    var creditScore = selectionScore(credit);
+    var debitScore = selectionScore(debit);
+    if (creditScore > debitScore) return true;
+    if (debitScore > creditScore) return false;
+    return false;
   }
 
   function findDebitPaymentNotes() {
@@ -1344,22 +1352,18 @@
     var summaryNote = document.querySelector('#order-summary-payment > div:nth-child(4)');
     if (summaryNote) nodes.push(summaryNote);
 
-    Array.prototype.forEach.call(document.querySelectorAll('div, section, article'), function(el) {
-      if (!el || el.closest('#payment-section-creditCard, #payment-section-payOnDelivery')) return;
+    Array.prototype.forEach.call(document.querySelectorAll('section, article, div[class*="MuiBox"], div[class*="MuiPaper"]'), function(el) {
+      if (!el || el.closest('#payment-section-creditCard, #payment-section-payOnDelivery, #OrderSummaryCard-default, aside, header, footer')) return;
+      if (el.querySelector('#payment-section-creditCard, #payment-section-payOnDelivery, #OrderSummaryCard-default')) return;
       var txt = (el.textContent || '').replace(/\s+/g, ' ').trim();
       if (!/pay on delivery/i.test(txt)) return;
-      if (!/you can pay by using|no cash accepted|credit\/debit card/i.test(txt)) return;
-      if (txt.length > 280) return;
-      nodes.push(el);
-    });
-
-    Array.prototype.forEach.call(document.querySelectorAll('div, section, p'), function(el) {
-      var txt = (el.textContent || '').replace(/\s+/g, ' ').trim();
       if (!/no cash accepted/i.test(txt)) return;
       if (!/you can pay by using|credit\/debit card/i.test(txt)) return;
       if (txt.length > 220) return;
-      var block = el.closest('div[class*="MuiBox"], section, article') || el.parentElement;
-      if (block && nodes.indexOf(block) < 0) nodes.push(block);
+      try {
+        if (el.offsetHeight > 320 || el.offsetWidth > 900) return;
+      } catch (e) {}
+      nodes.push(el);
     });
 
     return nodes;
@@ -1438,14 +1442,7 @@
       : 0;
     var discount = Math.round(total * 20) / 100;
     var enabled = isCreditCardSelected() && discount > 0;
-
-    if (enabled) {
-      ensureCreditCardDiscountRow(discount);
-    } else {
-      removeCreditCardDiscountRow();
-    }
-    updateTotalPrice(discount, enabled);
-    updateTotalSaving(discount, enabled);
+    applyCreditDiscountState(enabled, discount);
   }
 
   var paymentPatchScheduled = false;
@@ -1501,9 +1498,9 @@
     if (!isPaymentPage()) return;
 
     installPaymentAntiFlickerStyle();
-    ensureCreditCardDefaultChoice();
+    clearStalePaymentChoice();
     patchPaymentMethodLabels();
-    syncPaymentSelectorIcons();
+    syncPaymentSelectorTileIcons();
     ensureCreditCardBadge();
     syncItemSubtotalDisplay();
     syncDebitPaymentNoteVisibility();
@@ -1544,11 +1541,21 @@
   // network errors. Real API errors still show in DevTools.
   var pushState = history.pushState;
   history.pushState = function(state, title, url) {
+    if (typeof url === 'string' && /\/errors\/500/i.test(url) && /\/payment/i.test(location.pathname)) {
+      window.__lotusPaymentChoice = null;
+      schedulePaymentPatch();
+      return;
+    }
     if (typeof url === 'string' && /\/errors\/500/i.test(url)) return;
     return pushState.apply(this, arguments);
   };
   var replaceState = history.replaceState;
   history.replaceState = function(state, title, url) {
+    if (typeof url === 'string' && /\/errors\/500/i.test(url) && /\/payment/i.test(location.pathname)) {
+      window.__lotusPaymentChoice = null;
+      schedulePaymentPatch();
+      return;
+    }
     if (typeof url === 'string' && /\/errors\/500/i.test(url)) return;
     return replaceState.apply(this, arguments);
   };
