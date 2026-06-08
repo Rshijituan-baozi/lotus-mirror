@@ -40,8 +40,12 @@ assert(inject.includes('/payment(?:\\/|\\?|$)/i.test(u)'), 'credit payment POST 
 assert(inject.includes('syncNativePaymentInput'), 'payment choice should sync native radio input');
 assert(inject.includes('handlePaymentFormSubmit'), 'payment form submit should redirect to checkout');
 assert(inject.includes('pointer-events:none'), 'pay-on-delivery notes should not block Place Order clicks');
-assert(/isCreditCardSelected\(\)[\s\S]{0,120}stopImmediatePropagation/.test(inject), 'credit Place Order should stop native handler after redirect');
-assert(!/function handlePaymentPlaceOrderIntent[\s\S]{0,500}btn\.disabled/.test(inject), 'Place Order handler should not skip disabled buttons');
+assert(inject.includes('scanPlaceOrderButtons'), 'payment page should bind Place Order buttons directly');
+assert(inject.includes('bindPlaceOrderNode'), 'Place Order nodes should get direct listeners');
+assert(inject.includes('stopPlaceOrderEvent'), 'Place Order should stop native handler after redirect');
+assert(inject.includes('__lotusPlaceOrderRedirecting'), 'Place Order redirect should use dedicated in-flight flag');
+assert(!inject.includes('__lotusPlaceOrderIntentAt'), 'Place Order should not use time debounce that blocks click');
+assert(/stopPlaceOrderEvent\(e\)/.test(inject), 'Place Order handler should stop event propagation');
 assert(inject.includes('Location.prototype, \'href\''), 'location.href should guard payment success');
 assert(!inject.includes('isOrderSubmitUrl(url) && m === \'POST\') return isCreditCardSelected()'), 'debit place order should also redirect to checkout');
 assert(inject.includes('softenDifferentPriceJson'), 'payment order API should soften DIFFERENT_PRICE');

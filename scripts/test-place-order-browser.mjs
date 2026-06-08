@@ -206,15 +206,16 @@ try {
   await runClientInterceptTest('credit place order click should redirect', (page) => page.evaluate(() => {
     history.replaceState({}, '', '/en/payment');
     window.__lotusCheckoutRedirected = false;
+    window.__lotusPlaceOrderRedirecting = false;
     window.__lotusPaymentChoice = 'creditCard';
     document.body.innerHTML = [
       '<div id="payment-section-creditCard"><input type="radio" checked></div>',
       '<div class="lotus-main-pay-on-delivery-note" style="position:fixed;inset:0;z-index:9999">Pay on delivery note</div>',
-      '<button type="button">Place Order</button>',
+      '<footer><button type="button"><span>Place Order</span></button></footer>',
     ].join('');
-    var btn = document.querySelector('button');
+    var btn = document.querySelector('footer button');
     btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    return { redirected: !!window.__lotusCheckoutRedirected };
+    return { redirected: !!window.__lotusCheckoutRedirected, bound: !!btn.__lotusPlaceOrderBound };
   }), { path: '/en/payment', expectRedirect: true, skipSuccessCheck: true, skipOrderCheck: true });
 
   await runClientInterceptTest('payment success navigation should redirect', (page) => page.evaluate(() => {

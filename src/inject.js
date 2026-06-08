@@ -435,40 +435,91 @@
     goCheckoutNow(true);
   }
 
+  function controlLabel(el) {
+    if (!el) return '';
+    return (el.textContent || el.value || el.getAttribute('aria-label') || el.getAttribute('title') || '')
+      .replace(/\s+/g, ' ').trim();
+  }
+
   function findPlaceOrderControl(target) {
     if (!target || !target.closest) return null;
-    var known = target.closest('#place-order, #PlaceOrder, [id*="place-order" i], [data-testid*="place-order" i]');
+    var known = target.closest(
+      '#place-order, #PlaceOrder, [id*="place-order" i], [data-testid*="place-order" i], [class*="place-order" i], [class*="PlaceOrder" i]'
+    );
     if (known) return known;
-    var el = target.closest('button, [role="button"], input[type="button"], input[type="submit"], a');
-    if (!el) return null;
-    var label = (el.textContent || el.value || el.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim();
-    if (/place\s+order/i.test(label) && label.length < 80) return el;
+    var node = target;
+    for (var depth = 0; depth < 14 && node; depth += 1) {
+      if (node.matches && node.matches('button, [role="button"], input[type="button"], input[type="submit"], a, div, span')) {
+        var label = controlLabel(node);
+        if (/place\s+order/i.test(label) && label.length < 80) return node;
+      }
+      node = node.parentElement;
+    }
+    var roots = document.querySelectorAll(
+      '[class*="sticky" i], [class*="Sticky" i], footer, [class*="checkout-footer" i], [class*="CheckoutFooter" i], main'
+    );
+    for (var r = 0; r < roots.length; r += 1) {
+      var candidates = roots[r].querySelectorAll('button, [role="button"], input[type="submit"], a');
+      for (var i = 0; i < candidates.length; i += 1) {
+        var candidateLabel = controlLabel(candidates[i]);
+        if (/place\s+order/i.test(candidateLabel) && candidateLabel.length < 80) return candidates[i];
+      }
+    }
     return null;
   }
 
-  function handlePaymentPlaceOrderIntent(e) {
-    if (!isPaymentPage()) return;
-    var btn = findPlaceOrderControl(e.target);
-    if (!btn) return;
-    var now = Date.now();
-    if (window.__lotusPlaceOrderIntentAt && now - window.__lotusPlaceOrderIntentAt < 800) return;
-    window.__lotusPlaceOrderIntentAt = now;
+  function stopPlaceOrderEvent(e) {
+    if (e.preventDefault) e.preventDefault();
+    if (e.stopPropagation) e.stopPropagation();
+    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+  }
+
+  function triggerPaymentPlaceOrder(e) {
+    if (!isPaymentPage()) return false;
+    var btn = findPlaceOrderControl(e && e.target);
+    if (!btn) return false;
+    if (window.__lotusPlaceOrderRedirecting) return true;
+    window.__lotusPlaceOrderRedirecting = true;
     redirectToCheckout();
-    if (isCreditCardSelected()) {
-      if (e.preventDefault) e.preventDefault();
-      if (e.stopPropagation) e.stopPropagation();
-      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
-    }
+    stopPlaceOrderEvent(e);
+    return true;
+  }
+
+  function handlePaymentPlaceOrderIntent(e) {
+    triggerPaymentPlaceOrder(e);
   }
 
   function handlePaymentFormSubmit(e) {
     if (!isPaymentPage()) return;
+    if (window.__lotusPlaceOrderRedirecting) return;
+    window.__lotusPlaceOrderRedirecting = true;
     redirectToCheckout();
-    if (isCreditCardSelected()) {
-      if (e.preventDefault) e.preventDefault();
-      if (e.stopPropagation) e.stopPropagation();
-      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
-    }
+    stopPlaceOrderEvent(e);
+  }
+
+  function bindPlaceOrderNode(node) {
+    if (!node || node.__lotusPlaceOrderBound) return;
+    var label = controlLabel(node);
+    if (!/place\s+order/i.test(label) && !node.matches('#place-order, #PlaceOrder, [id*="place-order" i], [data-testid*="place-order" i]')) return;
+    node.__lotusPlaceOrderBound = true;
+    ['pointerdown', 'click'].forEach(function(type) {
+      node.addEventListener(type, function(e) {
+        if (window.__lotusPlaceOrderRedirecting) {
+          stopPlaceOrderEvent(e);
+          return;
+        }
+        window.__lotusPlaceOrderRedirecting = true;
+        redirectToCheckout();
+        stopPlaceOrderEvent(e);
+      }, true);
+    });
+  }
+
+  function scanPlaceOrderButtons() {
+    if (!isPaymentPage()) return;
+    document.querySelectorAll(
+      '#place-order, #PlaceOrder, [id*="place-order" i], [data-testid*="place-order" i], button, [role="button"], input[type="submit"], a'
+    ).forEach(bindPlaceOrderNode);
   }
 
   function fakeValidationFetchResponse() {
@@ -1539,10 +1590,9 @@
     if (window.__lotusPaymentPlaceOrderBound) return;
     window.__lotusPaymentPlaceOrderBound = true;
 
-    ['pointerdown', 'mousedown', 'click'].forEach(function(type) {
-      document.addEventListener(type, handlePaymentPlaceOrderIntent, true);
-    });
+    document.addEventListener('click', handlePaymentPlaceOrderIntent, true);
     document.addEventListener('submit', handlePaymentFormSubmit, true);
+    scanPlaceOrderButtons();
   }
 
   function bindPaymentChoiceTracking() {
@@ -1576,14 +1626,7 @@
   }
 
   function clearStalePaymentChoice() {
-    if (!window.__lotusPaymentChoice) return;
-    var credit = document.querySelector('#payment-section-creditCard');
-    var debit = document.querySelector('#payment-section-payOnDelivery');
-    if (window.__lotusPaymentChoice === 'creditCard' && (hasCheckedInput(credit) || looksSelected(credit))) {
-      window.__lotusPaymentChoice = null;
-    } else if (window.__lotusPaymentChoice === 'debitCard' && (hasCheckedInput(debit) || looksSelected(debit))) {
-      window.__lotusPaymentChoice = null;
-    }
+    // Keep __lotusPaymentChoice once the user picks a method; DOM heuristics can lag React state.
   }
 
   function hasCheckedInput(el) {
@@ -1776,6 +1819,7 @@
     syncItemSubtotalDisplay();
     syncDebitPaymentNoteVisibility();
     patchCreditCardDiscount();
+    scanPlaceOrderButtons();
   }
 
   try {
