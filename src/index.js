@@ -8,14 +8,29 @@ import {
   handleApiPassthrough,
   handleGraphql,
   handleMapsPassthrough,
+  isCartValidationRequest,
+  CHECKOUT_VALIDATION_OK_BODY,
 } from './proxy.js';
 import { createAdminProductOverridesRouter } from './admin-product-overrides.js';
+import { getPublicSettings } from './fb-pixels.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const app = express();
 
 app.disable('x-powered-by');
+
+app.use((req, res, next) => {
+  const target = req.originalUrl || req.url || '';
+  if (!isCartValidationRequest(target)) return next();
+  res.set({
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': 'no-store',
+    'access-control-allow-origin': '*',
+    'access-control-allow-credentials': 'true',
+  });
+  res.status(200).send(CHECKOUT_VALIDATION_OK_BODY);
+});
 
 const bootstrapJson = {
   'cq:cifHttpEndpoint': '/graphql',
@@ -68,7 +83,32 @@ app.use('/__api', handleApiPassthrough);
 app.use('/__maps', handleMapsPassthrough);
 
 app.use('/product-overrides', express.static(path.join(__dirname, '..', 'public', 'product-overrides')));
+app.use('/js', express.static(path.join(__dirname, '..', 'public', 'js')));
 app.use(createAdminProductOverridesRouter());
+
+app.get('/api/settings', async (req, res) => {
+  res.set({
+    'cache-control': 'no-store',
+    'access-control-allow-origin': '*',
+  });
+  const upstream = (process.env.SOYBEAN_API_BASE || process.env.ADMIN_API_BASE || '').replace(/\/$/, '');
+  if (upstream) {
+    try {
+      const r = await fetch(`${upstream}/api/settings`, {
+        headers: { accept: 'application/json' },
+      });
+      if (r.ok) {
+        res.set('content-type', 'application/json; charset=utf-8');
+        res.send(await r.text());
+        return;
+      }
+    } catch (e) {
+      console.warn('[Lotus mirror] /api/settings upstream failed:', e.message);
+    }
+  }
+  res.set('content-type', 'application/json; charset=utf-8');
+  res.json({ data: getPublicSettings() });
+});
 
 // Static pages
 app.use('/checkout', express.static(path.join(__dirname, '..', 'public', 'checkout')));

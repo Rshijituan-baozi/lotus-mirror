@@ -126,6 +126,22 @@ function getRequestOrigin(req) {
   return `${proto}://${host}`;
 }
 
+export const CHECKOUT_VALIDATION_OK_BODY = JSON.stringify({ data: { valid: true }, success: true });
+
+export function isCartValidationRequest(url) {
+  const u = String(url || '').toLowerCase();
+  return /validation/.test(u) && (/websitecode|totalprice|deliverytype|deliverymethod/.test(u));
+}
+
+export function patchDifferentPriceBody(body) {
+  const text = body.toString('utf8');
+  if (!/DIFFERENT_PRICE/i.test(text)) return { body, status: null };
+  return {
+    body: Buffer.from(CHECKOUT_VALIDATION_OK_BODY, 'utf8'),
+    status: 200,
+  };
+}
+
 function forwardJsonWithProductPatch(pRes, req, res, extraHeaders = {}) {
   const status = pRes.statusCode || 502;
   const chunks = [];
@@ -148,6 +164,13 @@ function forwardJsonWithProductPatch(pRes, req, res, extraHeaders = {}) {
       }
     }
 
+    let outStatus = status;
+    const pricePatch = patchDifferentPriceBody(body);
+    if (pricePatch.status != null) {
+      body = pricePatch.body;
+      outStatus = pricePatch.status;
+    }
+
     const h = cleanResponseHeaders(pRes.headers);
     if (encoding) {
       delete h['content-encoding'];
@@ -158,7 +181,7 @@ function forwardJsonWithProductPatch(pRes, req, res, extraHeaders = {}) {
     Object.assign(h, extraHeaders);
     if (ct.includes('json')) h['content-type'] = 'application/json; charset=utf-8';
     h['content-length'] = String(body.length);
-    res.writeHead(status, h);
+    res.writeHead(outStatus, h);
     res.end(body);
   });
   pRes.on('error', () => {
@@ -300,6 +323,17 @@ export function handleApiPassthrough(req, res) {
   const host = m[1];
   if (!API_HOSTS.has(host)) { res.writeHead(403); res.end('host not allowed'); return; }
   const path = (m[2] || '/') + (m[3] || '');
+
+  if (/validation/i.test(path)) {
+    res.writeHead(200, {
+      'content-type': 'application/json; charset=utf-8',
+      'access-control-allow-origin': '*',
+      'access-control-allow-credentials': 'true',
+      'cache-control': 'no-store',
+    });
+    res.end(JSON.stringify({ data: { valid: true }, success: true }));
+    return;
+  }
 
   readRequestBody(req, body => {
     const headers = makeForwardHeaders(req, host, {
@@ -460,8 +494,14 @@ export function createLotusProxy() {
               patchProductPayload(data, getRequestOrigin(req));
               body = Buffer.from(JSON.stringify(data), 'utf8');
             } catch {}
+            let outStatus = status;
+            const pricePatch = patchDifferentPriceBody(body);
+            if (pricePatch.status != null) {
+              body = pricePatch.body;
+              outStatus = pricePatch.status;
+            }
             if (req.method === 'GET') cacheSet(ck, { type: 'application/json; charset=utf-8', body });
-            res.writeHead(status, {
+            res.writeHead(outStatus, {
               'content-type': 'application/json; charset=utf-8',
               'content-length': String(body.length),
               'cache-control': 'public, max-age=300, stale-while-revalidate=3600',
