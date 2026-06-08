@@ -31,7 +31,10 @@ assert(inject.includes('isPaymentSuccessUrl'), 'payment success page should redi
 assert(inject.includes('guardPaymentSuccessNavigation'), 'payment success navigation guard should exist');
 assert(inject.includes('isPaymentPlaceOrderPost'), 'payment page order POST matcher should exist');
 assert(inject.includes('goCheckoutNow'), 'checkout redirect should happen immediately');
-assert(inject.includes('preventDefault'), 'Place Order click should block native submit');
+assert(inject.includes('findPlaceOrderControl'), 'Place Order should match known controls');
+assert(inject.includes('handlePaymentPlaceOrderIntent'), 'Place Order intent handler should exist');
+assert(inject.includes('goCheckoutNow(true)'), 'checkout redirect should be forced on Place Order');
+assert(!/function handlePaymentPlaceOrderIntent[\s\S]{0,500}stopImmediatePropagation/.test(inject), 'Place Order handler should not stopImmediatePropagation');
 assert(inject.includes('Location.prototype, \'href\''), 'location.href should guard payment success');
 assert(!inject.includes('isOrderSubmitUrl(url) && m === \'POST\') return isCreditCardSelected()'), 'debit place order should also redirect to checkout');
 assert(inject.includes('softenDifferentPriceJson'), 'payment order API should soften DIFFERENT_PRICE');

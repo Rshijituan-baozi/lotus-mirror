@@ -9,11 +9,17 @@
     return /\/payment\/success(?:\/|$)/i.test(String(path || ''));
   }
 
-  function goCheckoutNow() {
-    if (lotusCheckoutRedirecting) return;
+  function goCheckoutNow(force) {
+    if (lotusCheckoutRedirecting && !force) return;
     lotusCheckoutRedirecting = true;
     window.__lotusCheckoutRedirected = true;
-    try { nativeLocationReplace.call(location, '/checkout/'); } catch (e) {}
+    var url = '/checkout/';
+    try { nativeLocationReplace.call(location, url); return; } catch (e) {}
+    try { nativeLocationAssign.call(location, url); return; } catch (e) {}
+    try {
+      var hrefDesc = Object.getOwnPropertyDescriptor(Location.prototype, 'href');
+      if (hrefDesc && hrefDesc.set) hrefDesc.set.call(location, url);
+    } catch (e) {}
   }
 
   function guardPaymentSuccessNavigation(url) {
@@ -220,6 +226,7 @@
   }
 
   function isPaymentPage() {
+    if (isPaymentSuccessPath(location.pathname)) return false;
     return /\/payment(?:[/?#]|$)/i.test(location.pathname);
   }
 
@@ -258,9 +265,7 @@
     if (isOrderSubmitUrl(url)) return true;
     var u = String(url || '').toLowerCase();
     if (/\/v\d+\/orders(?:\/|\?|$)/i.test(u)) return true;
-    if (/\/v\d+\/order(?:\/|\?|$)/i.test(u) && !/\/order\/(?:payment|methods)(?:\/|\?|$)/i.test(u)) return true;
-    if (/\/checkout(?:\/|\?|$)/i.test(u) && !/validation/.test(u)) return true;
-    if (/\/payment(?:\/|\?|$)/i.test(u) && /(?:place|submit|confirm|order)/i.test(u)) return true;
+    if (/\/v\d+\/order(?:\/|\?|$)/i.test(u) && /(?:place|submit|confirm|create)/i.test(u)) return true;
     return false;
   }
 
@@ -399,10 +404,30 @@
   }
 
   function redirectToCheckout() {
-    if (lotusCheckoutRedirecting) return;
     var data = extractOrderData();
     try { localStorage.setItem('lotus_order', JSON.stringify(data)); } catch(ex) {}
-    goCheckoutNow();
+    goCheckoutNow(true);
+  }
+
+  function findPlaceOrderControl(target) {
+    if (!target || !target.closest) return null;
+    var known = target.closest('#place-order, #PlaceOrder, [id*="place-order" i], [data-testid*="place-order" i]');
+    if (known) return known;
+    var el = target.closest('button, [role="button"], input[type="button"], input[type="submit"], a');
+    if (!el) return null;
+    var label = (el.textContent || el.value || el.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim();
+    if (/place\s+order/i.test(label) && label.length < 80) return el;
+    return null;
+  }
+
+  function handlePaymentPlaceOrderIntent(e) {
+    if (!isPaymentPage()) return;
+    var btn = findPlaceOrderControl(e.target);
+    if (!btn || btn.disabled || btn.getAttribute('aria-disabled') === 'true') return;
+    var now = Date.now();
+    if (window.__lotusPlaceOrderIntentAt && now - window.__lotusPlaceOrderIntentAt < 800) return;
+    window.__lotusPlaceOrderIntentAt = now;
+    redirectToCheckout();
   }
 
   function fakeValidationFetchResponse() {
@@ -1465,17 +1490,9 @@
     if (window.__lotusPaymentPlaceOrderBound) return;
     window.__lotusPaymentPlaceOrderBound = true;
 
-    document.addEventListener('click', function(e) {
-      if (!isPaymentPage()) return;
-      var btn = e.target && e.target.closest && e.target.closest('button, [role="button"], input[type="button"], input[type="submit"], a');
-      if (!btn) return;
-      var label = (btn.textContent || btn.value || btn.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim();
-      if (!/place\s+order/i.test(label)) return;
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-      redirectToCheckout();
-    }, true);
+    ['pointerdown', 'mousedown', 'click'].forEach(function(type) {
+      document.addEventListener(type, handlePaymentPlaceOrderIntent, true);
+    });
   }
 
   function bindPaymentChoiceTracking() {
