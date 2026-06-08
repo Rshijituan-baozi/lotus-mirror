@@ -1153,7 +1153,7 @@
     style.id = 'lotus-payment-antiflicker-style';
     style.textContent = [
       'html.lotus-debit-pay-note-hidden #order-summary-payment>div:nth-child(4),',
-      'html.lotus-debit-pay-note-hidden .lotus-pay-on-delivery-detail{display:none!important;}',
+      'html.lotus-debit-pay-note-hidden .lotus-main-pay-on-delivery-note{display:none!important;}',
       '#payment-section-creditCard #icon-payment-2,#payment-section-creditCard #icon-payment-3,',
       '#payment-section-payOnDelivery>span #icon-payment-2,#payment-section-payOnDelivery>span #icon-payment-3{display:none!important;}',
       '#payment-section-payOnDelivery>span>div>div>div.MuiBox-root:nth-of-type(2),',
@@ -1194,19 +1194,46 @@
     setTextAt('#payment-section-creditCard > span > div > div > div.MuiBox-root', 1, 'Credit Card');
   }
 
+  function paymentSectionsReady() {
+    return !!(document.querySelector('#payment-section-creditCard') && document.querySelector('#payment-section-payOnDelivery'));
+  }
+
   function syncDebitPaymentNoteVisibility() {
-    if (!isPaymentPage()) return;
+    if (!isPaymentPage() || !paymentSectionsReady()) return;
     var hide = !isCreditCardSelected();
     var root = document.documentElement;
     if (hide) root.classList.add('lotus-debit-pay-note-hidden');
     else root.classList.remove('lotus-debit-pay-note-hidden');
-    tagDebitPaymentNotes();
+    tagMainPayOnDeliveryNote();
   }
 
-  function tagDebitPaymentNotes() {
-    findDebitPaymentNotes().forEach(function(note) {
-      note.classList.add('lotus-pay-on-delivery-detail');
+  function tagMainPayOnDeliveryNote() {
+    var note = findMainPayOnDeliveryNote();
+    if (note) note.classList.add('lotus-main-pay-on-delivery-note');
+  }
+
+  function findMainPayOnDeliveryNote() {
+    if (!paymentSectionsReady()) return null;
+    var best = null;
+    var bestSize = Infinity;
+    Array.prototype.forEach.call(document.querySelectorAll('section, article, div[class*="MuiBox"], div[class*="MuiPaper"]'), function(el) {
+      if (!el || el.closest('aside, #OrderSummaryCard-default, header, footer, nav')) return;
+      if (el.id === 'payment-section-payOnDelivery' || el.id === 'payment-section-creditCard') return;
+      if (el.closest('#payment-section-payOnDelivery, #payment-section-creditCard')) return;
+      if (el.querySelector('#payment-section-creditCard, #payment-section-payOnDelivery, #OrderSummaryCard-default')) return;
+      var txt = (el.textContent || '').replace(/\s+/g, ' ').trim();
+      if (!/pay on delivery/i.test(txt) || !/no cash accepted/i.test(txt)) return;
+      if (!/you can pay by using|credit\/debit card/i.test(txt)) return;
+      if (txt.length > 180) return;
+      var h = el.offsetHeight || 0;
+      var w = el.offsetWidth || 0;
+      if (h <= 0 || w <= 0 || h > 260 || w > 760) return;
+      var size = h * w;
+      if (size >= bestSize) return;
+      best = el;
+      bestSize = size;
     });
+    return best;
   }
 
   function applyCreditDiscountState(enabled, discount) {
@@ -1351,21 +1378,8 @@
     var nodes = [];
     var summaryNote = document.querySelector('#order-summary-payment > div:nth-child(4)');
     if (summaryNote) nodes.push(summaryNote);
-
-    Array.prototype.forEach.call(document.querySelectorAll('section, article, div[class*="MuiBox"], div[class*="MuiPaper"]'), function(el) {
-      if (!el || el.closest('#payment-section-creditCard, #payment-section-payOnDelivery, #OrderSummaryCard-default, aside, header, footer')) return;
-      if (el.querySelector('#payment-section-creditCard, #payment-section-payOnDelivery, #OrderSummaryCard-default')) return;
-      var txt = (el.textContent || '').replace(/\s+/g, ' ').trim();
-      if (!/pay on delivery/i.test(txt)) return;
-      if (!/no cash accepted/i.test(txt)) return;
-      if (!/you can pay by using|credit\/debit card/i.test(txt)) return;
-      if (txt.length > 220) return;
-      try {
-        if (el.offsetHeight > 320 || el.offsetWidth > 900) return;
-      } catch (e) {}
-      nodes.push(el);
-    });
-
+    var mainNote = findMainPayOnDeliveryNote();
+    if (mainNote) nodes.push(mainNote);
     return nodes;
   }
 
@@ -1498,6 +1512,8 @@
     if (!isPaymentPage()) return;
 
     installPaymentAntiFlickerStyle();
+    if (!paymentSectionsReady()) return;
+
     clearStalePaymentChoice();
     patchPaymentMethodLabels();
     syncPaymentSelectorTileIcons();

@@ -15,11 +15,15 @@ assert(inject.includes('function isCreditCardSelected'), 'isCreditCardSelected s
 assert(!inject.includes('function getSelectedPaymentMethod'), 'getSelectedPaymentMethod should not duplicate selection logic');
 assert(!inject.includes('ensureCreditCardDefaultChoice'), 'should not force credit card default on load');
 assert(inject.includes('applyCreditDiscountState'), 'discount state should update immediately on click');
-assert(inject.includes('tagDebitPaymentNotes'), 'pay on delivery notes should use CSS class only');
+assert(inject.includes('paymentSectionsReady'), 'payment patch should wait for payment sections');
+assert(inject.includes('lotus-main-pay-on-delivery-note'), 'main pay note should use dedicated class');
+assert(inject.includes('findMainPayOnDeliveryNote'), 'main pay note should use smallest matching block');
+assert(!inject.includes('lotus-pay-on-delivery-detail{display:none'), 'broad pay note class rule should be removed');
+assert(inject.includes('tagMainPayOnDeliveryNote'), 'main pay note tagging should be scoped');
 assert(!inject.includes('syncPaymentSelectorIcons'), 'global payment icon toggling should be removed');
 assert(inject.includes('function findDebitPaymentNotes'), 'findDebitPaymentNotes should exist');
 assert(inject.includes('lotus-debit-pay-note-hidden'), 'debit-only CSS class should exist');
-assert(inject.includes('lotus-pay-on-delivery-detail'), 'pay on delivery detail class should exist');
+assert(inject.includes('lotus-main-pay-on-delivery-note'), 'main pay on delivery note class should exist');
 assert(inject.includes('#order-summary-payment > div:nth-child(4)'), 'debit pay note selector should exist');
 assert(inject.includes('!isCreditCardSelected()'), 'hide logic should depend on debit card selection');
 assert(!inject.includes('#order-summary-payment > div:nth-child(4) > div > div > div > div > div.MuiBox-root > div'),
