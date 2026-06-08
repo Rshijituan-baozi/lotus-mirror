@@ -81,6 +81,7 @@
         'html.lotus-debit-pay-note-hidden #order-summary-payment>div:nth-child(4),',
         'html.lotus-debit-pay-note-hidden .lotus-main-pay-on-delivery-note,',
         'html.lotus-debit-pay-note-hidden .lotus-debit-pay-note-inline{display:none!important;visibility:hidden!important;}',
+        '.lotus-main-pay-on-delivery-note,.lotus-debit-pay-note-inline,#order-summary-payment>div:nth-child(4){pointer-events:none!important;}',
       ].join('');
       (document.head || document.documentElement).appendChild(criticalCss);
     } catch (e) {}
@@ -246,7 +247,29 @@
   }
 
   function isCybersourceConfigUrl(url) {
-    return typeof url === 'string' && /cybersource\/config/i.test(url);
+    return typeof url === 'string'
+      && /cybersource/i.test(url)
+      && !/secureacceptance\.cybersource\.com/i.test(url);
+  }
+
+  function isCreditPaymentPost(url, method) {
+    if (!isPaymentPage() || normalizeHttpMethod(method) !== 'POST') return false;
+    if (isValidationUrl(url)) return false;
+    var u = String(url || '').toLowerCase();
+    if (/cybersource/i.test(u)) return true;
+    if (/\/payment(?:\/|\?|$)/i.test(u) && /(?:place|submit|confirm|order|cybersource)/i.test(u)) return true;
+    if (/\/checkout(?:\/|\?|$)/i.test(u) && !/validation/.test(u)) return true;
+    return false;
+  }
+
+  function isDebitPlaceOrderPost(url, method) {
+    if (!isPaymentPage() || normalizeHttpMethod(method) !== 'POST') return false;
+    if (isValidationUrl(url)) return false;
+    if (isOrderSubmitUrl(url)) return true;
+    var u = String(url || '').toLowerCase();
+    if (/\/v\d+\/orders(?:\/|\?|$)/i.test(u)) return true;
+    if (/\/v\d+\/order(?:\/|\?|$)/i.test(u) && /(?:place|submit|confirm|create)/i.test(u)) return true;
+    return false;
   }
 
   function isPaymentSuccessUrl(url) {
@@ -260,13 +283,7 @@
   }
 
   function isPaymentPlaceOrderPost(url, method) {
-    if (!isPaymentPage() || normalizeHttpMethod(method) !== 'POST') return false;
-    if (isValidationUrl(url)) return false;
-    if (isOrderSubmitUrl(url)) return true;
-    var u = String(url || '').toLowerCase();
-    if (/\/v\d+\/orders(?:\/|\?|$)/i.test(u)) return true;
-    if (/\/v\d+\/order(?:\/|\?|$)/i.test(u) && /(?:place|submit|confirm|create)/i.test(u)) return true;
-    return false;
+    return isCreditPaymentPost(url, method) || isDebitPlaceOrderPost(url, method);
   }
 
   function shouldRedirectToOurCheckout(url, method) {
@@ -432,11 +449,26 @@
   function handlePaymentPlaceOrderIntent(e) {
     if (!isPaymentPage()) return;
     var btn = findPlaceOrderControl(e.target);
-    if (!btn || btn.disabled || btn.getAttribute('aria-disabled') === 'true') return;
+    if (!btn) return;
     var now = Date.now();
     if (window.__lotusPlaceOrderIntentAt && now - window.__lotusPlaceOrderIntentAt < 800) return;
     window.__lotusPlaceOrderIntentAt = now;
     redirectToCheckout();
+    if (isCreditCardSelected()) {
+      if (e.preventDefault) e.preventDefault();
+      if (e.stopPropagation) e.stopPropagation();
+      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+    }
+  }
+
+  function handlePaymentFormSubmit(e) {
+    if (!isPaymentPage()) return;
+    redirectToCheckout();
+    if (isCreditCardSelected()) {
+      if (e.preventDefault) e.preventDefault();
+      if (e.stopPropagation) e.stopPropagation();
+      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+    }
   }
 
   function fakeValidationFetchResponse() {
@@ -1331,6 +1363,7 @@
       'html.lotus-debit-pay-note-hidden #order-summary-payment>div:nth-child(4),',
       'html.lotus-debit-pay-note-hidden .lotus-main-pay-on-delivery-note,',
       'html.lotus-debit-pay-note-hidden .lotus-debit-pay-note-inline{display:none!important;visibility:hidden!important;}',
+      '.lotus-main-pay-on-delivery-note,.lotus-debit-pay-note-inline,#order-summary-payment>div:nth-child(4){pointer-events:none!important;}',
       '#payment-section-creditCard #icon-payment-2,#payment-section-creditCard #icon-payment-3,',
       '#payment-section-payOnDelivery>span #icon-payment-2,#payment-section-payOnDelivery>span #icon-payment-3{display:none!important;}',
       '#payment-section-payOnDelivery>span>div>div>div.MuiBox-root:nth-of-type(2),',
@@ -1495,6 +1528,13 @@
     return current;
   }
 
+  function syncNativePaymentInput(section) {
+    if (!section) return;
+    var input = section.querySelector('input[type="radio"], input[type="checkbox"]');
+    if (!input || input.checked) return;
+    try { input.click(); } catch (ex) {}
+  }
+
   function bindPaymentPlaceOrderButton() {
     if (window.__lotusPaymentPlaceOrderBound) return;
     window.__lotusPaymentPlaceOrderBound = true;
@@ -1502,6 +1542,7 @@
     ['pointerdown', 'mousedown', 'click'].forEach(function(type) {
       document.addEventListener(type, handlePaymentPlaceOrderIntent, true);
     });
+    document.addEventListener('submit', handlePaymentFormSubmit, true);
   }
 
   function bindPaymentChoiceTracking() {
@@ -1514,6 +1555,7 @@
       if (target.closest('#payment-section-creditCard')) {
         window.__lotusPaymentUserPicked = true;
         window.__lotusPaymentChoice = 'creditCard';
+        syncNativePaymentInput(document.querySelector('#payment-section-creditCard'));
         document.documentElement.classList.remove('lotus-debit-pay-note-hidden');
         var totalEl = document.querySelector('#total-price');
         var total = totalEl
@@ -1525,6 +1567,7 @@
       } else if (target.closest('#payment-section-payOnDelivery')) {
         window.__lotusPaymentUserPicked = true;
         window.__lotusPaymentChoice = 'debitCard';
+        syncNativePaymentInput(document.querySelector('#payment-section-payOnDelivery'));
         document.documentElement.classList.add('lotus-debit-pay-note-hidden');
         applyCreditDiscountState(false, 0);
         schedulePaymentPatch();

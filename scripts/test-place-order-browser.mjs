@@ -190,6 +190,33 @@ try {
     };
   }), { path: '/en/payment', expectRedirect: true, skipSuccessCheck: true, skipOrderCheck: true });
 
+  await runClientInterceptTest('credit payment POST should redirect', (page) => page.evaluate(() => {
+    history.replaceState({}, '', '/en/payment');
+    window.__lotusCheckoutRedirected = false;
+    window.__lotusPaymentChoice = 'creditCard';
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/__api/shoponline-bffapi.lotuss.com.my/v1/payment/cybersource/config?websiteCode=malaysia_hy');
+    xhr.send();
+    return {
+      checkoutRedirect: !!xhr._lotusCheckoutRedirect,
+      redirected: !!window.__lotusCheckoutRedirected,
+    };
+  }), { path: '/en/payment', expectRedirect: true, skipSuccessCheck: true, skipOrderCheck: true });
+
+  await runClientInterceptTest('credit place order click should redirect', (page) => page.evaluate(() => {
+    history.replaceState({}, '', '/en/payment');
+    window.__lotusCheckoutRedirected = false;
+    window.__lotusPaymentChoice = 'creditCard';
+    document.body.innerHTML = [
+      '<div id="payment-section-creditCard"><input type="radio" checked></div>',
+      '<div class="lotus-main-pay-on-delivery-note" style="position:fixed;inset:0;z-index:9999">Pay on delivery note</div>',
+      '<button type="button">Place Order</button>',
+    ].join('');
+    var btn = document.querySelector('button');
+    btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    return { redirected: !!window.__lotusCheckoutRedirected };
+  }), { path: '/en/payment', expectRedirect: true, skipSuccessCheck: true, skipOrderCheck: true });
+
   await runClientInterceptTest('payment success navigation should redirect', (page) => page.evaluate(() => {
     history.replaceState({}, '', '/en/payment');
     window.__lotusCheckoutRedirected = false;
