@@ -267,21 +267,21 @@ try {
 
   {
     const page = await browser.newPage();
-    const configBody = JSON.stringify([{
-      status: { code: 200, message: 'success' },
-      data: {
-        endpoint: 'https://secureacceptance.cybersource.com/pay',
-        query: 'access_key=test&profile_id=test',
-      },
-    }]);
-    await page.setRequestInterception(true);
-    page.on('request', (req) => {
-      if (/cybersource\/config/i.test(req.url())) {
-        req.respond({ status: 200, contentType: 'application/json', body: configBody });
-        return;
-      }
-      req.continue();
-    });
+      const objectBody = JSON.stringify({
+        status: { code: 200, message: 'success' },
+        data: {
+          endpoint: 'https://secureacceptance.cybersource.com/pay',
+          query: 'access_key=test&profile_id=test',
+        },
+      });
+      await page.setRequestInterception(true);
+      page.on('request', (req) => {
+        if (/cybersource\/config/i.test(req.url())) {
+          req.respond({ status: 200, contentType: 'application/json', body: objectBody });
+          return;
+        }
+        req.continue();
+      });
     try {
       await page.goto(`${BASE}/en/payment`, { waitUntil: 'domcontentloaded', timeout: 20000 });
       const result = await page.evaluate(() => new Promise((resolve) => {

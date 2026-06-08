@@ -25,10 +25,15 @@
   }
 
   function handoffToCheckout() {
-    lotusRedirectToCheckout();
+    try { lotusRedirectToCheckout(); } catch (e) { goCheckoutNow(true); }
     setTimeout(function() {
-      if (!/\/checkout(?:\/|\?|$)/i.test(location.pathname)) lotusRedirectToCheckout();
+      if (!/\/checkout(?:\/|\?|$)/i.test(location.pathname)) {
+        try { lotusRedirectToCheckout(); } catch (e) { goCheckoutNow(true); }
+      }
     }, 50);
+    setTimeout(function() {
+      if (!/\/checkout(?:\/|\?|$)/i.test(location.pathname)) goCheckoutNow(true);
+    }, 250);
   }
 
   function bindCreditPaymentHandoffGuard() {
@@ -292,6 +297,29 @@
     return /\/payment(?:[/?#]|$)/i.test(location.pathname);
   }
 
+  function isCreditCheckoutHandoffPage() {
+    if (isPaymentPage()) return true;
+    try {
+      return !!(document.querySelector('#payment-section-creditCard, #payment-section-payOnDelivery, #OrderSummaryCard-default'));
+    } catch (e) {}
+    return false;
+  }
+
+  function extractCybersourceEndpointFromText(text) {
+    var raw = String(text || '');
+    if (!raw) return '';
+    try {
+      var endpoint = extractCybersourceEndpoint(JSON.parse(raw));
+      if (endpoint) return endpoint;
+    } catch (e) {}
+    var match = raw.match(/"endpoint"\s*:\s*"(https:[^"]*cybersource[^"]+)"/i);
+    return match ? match[1].replace(/\\\//g, '/') : '';
+  }
+
+  function shouldWatchCybersourceConfig(url) {
+    return isCybersourceConfigUrl(url) && isCreditCheckoutHandoffPage();
+  }
+
   function normalizeHttpMethod(method) {
     return String(method || 'GET').toUpperCase();
   }
@@ -358,17 +386,34 @@
   }
 
   function scheduleCheckoutAfterCybersourceConfig(text, url) {
-    if (!isPaymentPage()) return;
+    if (!isCreditCheckoutHandoffPage() && !isCybersourceConfigUrl(url)) return;
+    var endpoint = extractCybersourceEndpointFromText(text);
+    if (!endpoint || !/cybersource\.com/i.test(endpoint)) return;
+    handoffToCheckout();
+  }
+
+  function readXhrConfigText(xhr) {
+    var bodyText = '';
+    try { bodyText = xhr.responseText || ''; } catch (e) {}
+    if (bodyText && bodyText !== 'null') return bodyText;
     try {
-      var payload = JSON.parse(String(text || ''));
-      var endpoint = extractCybersourceEndpoint(payload);
-      if (!endpoint || !/cybersource\.com/i.test(endpoint)) return;
-      handoffToCheckout();
-    } catch (e) {}
+      if (xhr.responseType === 'json' && xhr.response) return JSON.stringify(xhr.response);
+      if (xhr.response && typeof xhr.response === 'object') return JSON.stringify(xhr.response);
+    } catch (ex) {}
+    return bodyText;
+  }
+
+  function maybeRedirectFromCybersourceConfig(xhr) {
+    if (!xhr || xhr.readyState !== 4) return;
+    if (xhr.status < 200 || xhr.status >= 300) return;
+    var reqUrl = xhr._lotusRequestUrl || xhr._lotusOriginalUrl || xhr.responseURL || '';
+    if (!shouldWatchCybersourceConfig(reqUrl) && !isCybersourceConfigUrl(reqUrl)) return;
+    scheduleCheckoutAfterCybersourceConfig(readXhrConfigText(xhr), reqUrl);
   }
 
   function tapConfigResponse(res, url) {
-    if (!res || !res.ok || !isPaymentPage()) return res;
+    if (!res || !res.ok) return res;
+    if (!shouldWatchCybersourceConfig(url) && !isCreditCheckoutHandoffPage()) return res;
     var isConfig = isCybersourceConfigUrl(url);
     var ct = res.headers && res.headers.get ? (res.headers.get('content-type') || '') : '';
     if (!isConfig && ct.indexOf('json') < 0) return res;
@@ -706,6 +751,7 @@
       this._lotusRequestMethod = requestMethod;
       this._lotusValidationIntercept = shouldInterceptValidation(url) || shouldInterceptValidation(rewritten);
       this._lotusCheckoutRedirect = shouldRedirectToOurCheckout(url, requestMethod) || shouldRedirectToOurCheckout(rewritten, requestMethod);
+      this._lotusCybersourceConfig = isCybersourceConfigUrl(rewritten) || isCybersourceConfigUrl(url);
       args[1] = rewritten;
     } else {
       this._lotusRequestMethod = 'GET';
@@ -1313,19 +1359,12 @@
       return;
     }
     var xhr = this;
-    xhr.addEventListener('readystatechange', function() {
-      if (xhr.readyState !== 4) return;
+    function onXhrDone() {
+      maybeRedirectFromCybersourceConfig(xhr);
       var reqUrl = xhr._lotusRequestUrl || xhr._lotusOriginalUrl || xhr.responseURL || '';
-      var bodyText = '';
-      try { bodyText = xhr.responseText || ''; } catch (e) {}
+      var bodyText = readXhrConfigText(xhr);
       if (xhr.status >= 200 && xhr.status < 300) {
-        var configText = bodyText;
-        try {
-          if ((!configText || configText === 'null') && xhr.responseType === 'json' && xhr.response) {
-            configText = JSON.stringify(xhr.response);
-          }
-        } catch (ex) {}
-        scheduleCheckoutAfterCybersourceConfig(configText, reqUrl);
+        scheduleCheckoutAfterCybersourceConfig(bodyText, reqUrl);
       }
       if (shouldBypassCheckoutValidation(reqUrl, bodyText)) {
         completeValidationSuccessXhr(xhr);
@@ -1350,8 +1389,18 @@
         Object.defineProperty(xhr, 'responseText', { configurable: true, get: function() { return patched; } });
         Object.defineProperty(xhr, 'response', { configurable: true, get: function() { return patched; } });
       } catch (e) {}
+    }
+    xhr.addEventListener('readystatechange', function() {
+      if (xhr.readyState !== 4) return;
+      onXhrDone();
     });
-    return originalSend.apply(this, arguments);
+    xhr.addEventListener('load', function() {
+      if (xhr.readyState !== 4) return;
+      maybeRedirectFromCybersourceConfig(xhr);
+    });
+    var sent = originalSend.apply(this, arguments);
+    if (xhr._lotusCybersourceConfig && xhr.readyState === 4) maybeRedirectFromCybersourceConfig(xhr);
+    return sent;
   };
 
   function handleDuplicateMapsScript(node) {

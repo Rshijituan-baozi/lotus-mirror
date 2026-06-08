@@ -36,4 +36,28 @@ assert(
   'object config response should still work'
 );
 
+function extractCybersourceEndpointFromText(text) {
+  var raw = String(text || '');
+  if (!raw) return '';
+  try {
+    var endpoint = extractCybersourceEndpoint(JSON.parse(raw));
+    if (endpoint) return endpoint;
+  } catch (e) {}
+  var match = raw.match(/"endpoint"\s*:\s*"(https:[^"]*cybersource[^"]+)"/i);
+  return match ? match[1].replace(/\\\//g, '/') : '';
+}
+
+const objectShape = JSON.stringify({
+  status: { code: 200, message: 'success' },
+  data: {
+    endpoint: 'https://secureacceptance.cybersource.com/pay',
+    query: 'access_key=test',
+  },
+});
+
+assert(
+  extractCybersourceEndpointFromText(objectShape) === 'https://secureacceptance.cybersource.com/pay',
+  'production object config response should expose cybersource endpoint'
+);
+
 console.log('test:cybersource-config-parse OK');

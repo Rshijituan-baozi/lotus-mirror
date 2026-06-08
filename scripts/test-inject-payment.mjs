@@ -17,7 +17,8 @@ assert(inject.includes('function applyPaymentChoiceUi'), 'payment choice UI shou
 assert(inject.includes('bindCreditPaymentHandoffGuard'), 'should patch HTMLFormElement.submit for cybersource handoff');
 assert(inject.includes('HTMLFormElement.prototype.submit'), 'form.submit bypass should be patched');
 assert(inject.includes('function extractCybersourceEndpoint'), 'should parse array/object cybersource config payloads');
-assert(inject.includes('Array.isArray(payload)'), 'config parser should handle array responses');
+assert(inject.includes('function extractCybersourceEndpointFromText'), 'should regex-fallback cybersource config payloads');
+assert(inject.includes('function isCreditCheckoutHandoffPage'), 'config redirect should work when payment DOM is present');
 assert(inject.includes('function isExternalCybersourceRequest'), 'external cybersource handoff requests should redirect');
 assert(!inject.includes('function isCreditCheckoutPost'), 'should not intercept cybersource config POST');
 assert(inject.includes('function guardOutboundCheckoutNavigation'), 'outbound checkout navigation should be guarded');
