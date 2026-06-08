@@ -10,7 +10,9 @@ function assert(cond, msg) {
 }
 
 assert(inject.includes('function syncDebitPaymentNoteVisibility'), 'syncDebitPaymentNoteVisibility should exist');
-assert(inject.includes('function ensureCreditCardSelected'), 'ensureCreditCardSelected should exist');
+assert(inject.includes('function ensureCreditCardDefaultChoice'), 'ensureCreditCardDefaultChoice should exist');
+assert(!inject.includes('function ensureCreditCardSelected'), 'ensureCreditCardSelected should not force DOM clicks');
+assert(!inject.includes('location.pathname)) return true'), 'DIFFERENT_PRICE bypass should not depend on payment pathname');
 assert(inject.includes('function getSelectedPaymentMethod'), 'getSelectedPaymentMethod should exist');
 assert(inject.includes('function findDebitPaymentNotes'), 'findDebitPaymentNotes should exist');
 assert(inject.includes('lotus-debit-pay-note-hidden'), 'debit-only CSS class should exist');

@@ -52,6 +52,9 @@ async function runClientInterceptTest(label, runner, options = {}) {
     if (options.expectNoCheckoutRedirect) {
       assert(result.checkoutRedirect === false, `${label} should not mark checkout redirect, got ${JSON.stringify(result)}`);
     }
+    if (options.expectNoValidationIntercept) {
+      assert(result.validationIntercept === false, `${label} should not intercept as validation, got ${JSON.stringify(result)}`);
+    }
     if (options.expectRedirect) {
       assert(result.redirected === true, `${label} should mark checkout redirect`);
       assert(result.order && result.order.currency === 'MYR', `${label} should save lotus_order, got ${JSON.stringify(result.order)}`);
@@ -101,6 +104,17 @@ try {
     xhr.onerror = function() { clearTimeout(timer); reject(new Error('xhr error')); };
     xhr.send();
   })), { expectRedirect: false });
+
+  await runClientInterceptTest('payment POST should not use validation intercept', (page) => page.evaluate(() => {
+    history.replaceState({}, '', '/en/payment');
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/__api/shoponline-bffapi.lotuss.com.my/v1/payment?websiteCode=malaysia_hy');
+    return {
+      validationIntercept: !!xhr._lotusValidationIntercept,
+      checkoutRedirect: !!xhr._lotusCheckoutRedirect,
+      redirected: !!window.__lotusCheckoutRedirected,
+    };
+  }), { path: '/en/payment', expectRedirect: false, skipSuccessCheck: true, expectNoValidationIntercept: true });
 
   const apiResult = await fetch(`${BASE}/__api/shoponline-bffapi.lotuss.com.my/v1/cart/validation?websiteCode=malaysia_hy&totalPrice=65.2`);
   const apiText = await apiResult.text();

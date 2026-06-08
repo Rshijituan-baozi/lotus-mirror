@@ -133,9 +133,10 @@ export function isCartValidationRequest(url) {
   return /validation/.test(u) && (/websitecode|totalprice|deliverytype|deliverymethod/.test(u));
 }
 
-export function patchDifferentPriceBody(body) {
+export function patchDifferentPriceBody(body, url = '') {
   const text = body.toString('utf8');
   if (!/DIFFERENT_PRICE/i.test(text)) return { body, status: null };
+  if (!isCartValidationRequest(url)) return { body, status: null };
   return {
     body: Buffer.from(CHECKOUT_VALIDATION_OK_BODY, 'utf8'),
     status: 200,
@@ -165,7 +166,8 @@ function forwardJsonWithProductPatch(pRes, req, res, extraHeaders = {}) {
     }
 
     let outStatus = status;
-    const pricePatch = patchDifferentPriceBody(body);
+    const reqUrl = req.originalUrl || req.url || '';
+    const pricePatch = patchDifferentPriceBody(body, reqUrl);
     if (pricePatch.status != null) {
       body = pricePatch.body;
       outStatus = pricePatch.status;

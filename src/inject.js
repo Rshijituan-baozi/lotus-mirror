@@ -188,10 +188,9 @@
   }
 
   function shouldBypassCheckoutValidation(url, text) {
-    if (isCheckoutInterceptUrl(url)) return true;
+    if (isValidationUrl(url)) return true;
     if (!isDifferentPricePayload(text)) return false;
-    if (/\/cart(?:[/?#]|$)|\/payment(?:[/?#]|$)/i.test(location.pathname)) return true;
-    return /validation|totalprice|websitecode/i.test(String(url || '') + String(text || ''));
+    return isValidationUrl(String(url || ''));
   }
 
   var lotusCheckoutRedirecting = false;
@@ -1251,18 +1250,6 @@
     if (window.__lotusPaymentChoiceBound) return;
     window.__lotusPaymentChoiceBound = true;
 
-    document.addEventListener('mousedown', function(e) {
-      var target = e.target;
-      if (!target || !target.closest) return;
-      if (target.closest('#payment-section-creditCard')) {
-        window.__lotusPaymentChoice = 'creditCard';
-        schedulePaymentPatch();
-      } else if (target.closest('#payment-section-payOnDelivery')) {
-        window.__lotusPaymentChoice = 'debitCard';
-        schedulePaymentPatch();
-      }
-    }, true);
-
     document.addEventListener('click', function(e) {
       var target = e.target;
       if (!target || !target.closest) return;
@@ -1274,6 +1261,13 @@
         schedulePaymentPatch();
       }
     }, true);
+  }
+
+  function ensureCreditCardDefaultChoice() {
+    if (!isPaymentPage() || window.__lotusPaymentChoice) return;
+    var debit = document.querySelector('#payment-section-payOnDelivery');
+    if (hasCheckedInput(debit) || looksSelected(debit)) return;
+    window.__lotusPaymentChoice = 'creditCard';
   }
 
   function hasCheckedInput(el) {
@@ -1304,10 +1298,10 @@
   function getSelectedPaymentMethod() {
     var credit = document.querySelector('#payment-section-creditCard');
     var debit = document.querySelector('#payment-section-payOnDelivery');
-    if (window.__lotusPaymentChoice === 'creditCard') return 'creditCard';
-    if (window.__lotusPaymentChoice === 'debitCard') return 'debitCard';
     if (hasCheckedInput(credit)) return 'creditCard';
     if (hasCheckedInput(debit)) return 'debitCard';
+    if (window.__lotusPaymentChoice === 'creditCard') return 'creditCard';
+    if (window.__lotusPaymentChoice === 'debitCard') return 'debitCard';
     var creditScore = selectionScore(credit);
     var debitScore = selectionScore(debit);
     if (creditScore > debitScore) return 'creditCard';
@@ -1347,33 +1341,6 @@
     });
 
     return nodes;
-  }
-
-  function ensureCreditCardSelected() {
-    if (!isPaymentPage()) return;
-    if (window.__lotusPaymentChoice === 'debitCard') return;
-
-    var credit = document.querySelector('#payment-section-creditCard');
-    if (!credit) return;
-    if (getSelectedPaymentMethod() === 'creditCard') {
-      window.__lotusPaymentChoice = 'creditCard';
-      return;
-    }
-
-    if (window.__lotusPaymentDefaultApplied) return;
-    window.__lotusPaymentDefaultApplied = true;
-    window.__lotusPaymentChoice = 'creditCard';
-
-    var input = credit.querySelector('input[type="radio"], input[type="checkbox"]');
-    if (input) {
-      if (!input.checked) input.click();
-      input.checked = true;
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-    var clickTarget = credit.querySelector('[role="button"], label, button, span[tabindex]') || credit.querySelector('span') || credit;
-    clickTarget.click();
-    schedulePaymentPatch();
   }
 
   function ensureCreditCardDiscountRow(amount) {
@@ -1512,7 +1479,7 @@
     if (!isPaymentPage()) return;
 
     installPaymentAntiFlickerStyle();
-    ensureCreditCardSelected();
+    ensureCreditCardDefaultChoice();
     setTextAt('#payment-section-payOnDelivery > span > div > div > div.MuiBox-root', 1, 'Debit Card');
     setTextAt('#payment-section-creditCard > span > div > div > div.MuiBox-root', 1, 'Credit Card');
     hideAll('#icon-payment-2, #icon-payment-3');

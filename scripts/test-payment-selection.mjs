@@ -17,10 +17,10 @@ function selectionScore(el) {
 }
 
 function getSelectedPaymentMethod(credit, debit, choice) {
-  if (choice === 'creditCard') return 'creditCard';
-  if (choice === 'debitCard') return 'debitCard';
   if (hasCheckedInput(credit)) return 'creditCard';
   if (hasCheckedInput(debit)) return 'debitCard';
+  if (choice === 'creditCard') return 'creditCard';
+  if (choice === 'debitCard') return 'debitCard';
   var creditScore = selectionScore(credit);
   var debitScore = selectionScore(debit);
   if (creditScore > debitScore) return 'creditCard';
@@ -40,12 +40,14 @@ var debitSelected = {
 };
 
 assert(getSelectedPaymentMethod(credit, debitSelected, null) === 'debitCard', 'debit selected should win');
-assert(getSelectedPaymentMethod(credit, debitSelected, 'creditCard') === 'creditCard', 'forced credit choice should win');
-assert(getSelectedPaymentMethod(credit, debitSelected, 'debitCard') === 'debitCard', 'explicit debit choice should win');
+assert(getSelectedPaymentMethod(credit, debitSelected, 'creditCard') === 'creditCard', 'tracked credit choice should win when radios unchecked');
+assert(getSelectedPaymentMethod({ className: '', getAttribute: () => null, querySelector: () => ({ checked: true }) }, debitSelected, 'debitCard') === 'creditCard', 'checked credit input should win');
+assert(getSelectedPaymentMethod(credit, debitSelected, 'debitCard') === 'debitCard', 'explicit debit choice should win when DOM is ambiguous');
 assert(getSelectedPaymentMethod({ className: '', getAttribute: () => null, querySelector: () => null }, { className: '', getAttribute: () => null, querySelector: () => null }, null) === 'creditCard', 'tie should default to credit');
 
 const inject = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../src/inject.js'), 'utf8');
-assert(inject.includes("__lotusPaymentChoice === 'debitCard') return"), 'debit choice should not be overridden by ensureCreditCardSelected');
-assert(inject.includes('__lotusPaymentDefaultApplied'), 'credit card should only be auto-selected once on load');
+assert(inject.includes('ensureCreditCardDefaultChoice'), 'credit card default should not force DOM clicks');
+assert(!inject.includes('ensureCreditCardSelected'), 'forced credit card click helper should be removed');
+assert(!inject.includes('location.pathname)) return true'), 'payment page should not bypass non-validation API bodies');
 
 console.log('test:payment-selection OK');
