@@ -51,11 +51,14 @@ try {
       window.__lotusCheckoutRedirected = false;
       const xhr = new XMLHttpRequest();
       xhr.open('GET', 'validation?websiteCode=malaysia_hy&totalPrice=168.08&storeId=5502');
-      xhr.send();
-      return { redirected: !!window.__lotusCheckoutRedirected };
+      return {
+        validationIntercept: !!xhr._lotusValidationIntercept,
+        redirected: !!window.__lotusCheckoutRedirected,
+      };
     });
-    assert(validationResult.redirected === true, `payment validation expected redirect, got ${JSON.stringify(validationResult)}`);
-    console.log('PASS: payment validation redirects to /checkout/');
+    assert(validationResult.validationIntercept === false, `payment validation should pass through, got ${JSON.stringify(validationResult)}`);
+    assert(validationResult.redirected === false, `payment validation should not redirect, got ${JSON.stringify(validationResult)}`);
+    console.log('PASS: payment validation passes through without redirect');
 
     await page.goto(`${BASE}/en/payment`, { waitUntil: 'domcontentloaded', timeout: 30000 });
     const pushResult = await page.evaluate(() => {

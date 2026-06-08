@@ -241,26 +241,6 @@
       || /\/(?:place[_-]?order|create[_-]?order|submit[_-]?order)(?:\/|\?|$)/i.test(u);
   }
 
-  function isCybersourceUrl(url) {
-    return url && /secureacceptance\.cybersource\.com/i.test(url);
-  }
-
-  function isCybersourceConfigUrl(url) {
-    return typeof url === 'string'
-      && /cybersource/i.test(url)
-      && !/secureacceptance\.cybersource\.com/i.test(url);
-  }
-
-  function isCreditPaymentPost(url, method) {
-    if (!isPaymentPage() || normalizeHttpMethod(method) !== 'POST') return false;
-    if (isValidationUrl(url)) return false;
-    var u = String(url || '').toLowerCase();
-    if (/cybersource/i.test(u)) return true;
-    if (/\/payment(?:\/|\?|$)/i.test(u) && /(?:place|submit|confirm|order|cybersource)/i.test(u)) return true;
-    if (/\/checkout(?:\/|\?|$)/i.test(u) && !/validation/.test(u)) return true;
-    return false;
-  }
-
   function isDebitPlaceOrderPost(url, method) {
     if (!isPaymentPage() || normalizeHttpMethod(method) !== 'POST') return false;
     if (isValidationUrl(url)) return false;
@@ -269,6 +249,17 @@
     if (/\/v\d+\/orders(?:\/|\?|$)/i.test(u)) return true;
     if (/\/v\d+\/order(?:\/|\?|$)/i.test(u) && /(?:place|submit|confirm|create)/i.test(u)) return true;
     return false;
+  }
+
+  function shouldRedirectToOurCheckout(url, method) {
+    return isDebitPlaceOrderPost(url, method);
+  }
+
+  function isValidationUrl(url) {
+    if (typeof url !== 'string' || !url) return false;
+    var u = url.toLowerCase();
+    return /(?:^|[/?&])validation(?:[/?]|$|\?|&)/i.test(u)
+      || /(?:^|[/?&])validate(?:[/?]|$|\?|&)/i.test(u);
   }
 
   function isPaymentSuccessUrl(url) {
@@ -281,28 +272,12 @@
     }
   }
 
-  function isPaymentPlaceOrderPost(url, method) {
-    return isCreditPaymentPost(url, method) || isDebitPlaceOrderPost(url, method);
-  }
-
-  function shouldRedirectToOurCheckout(url, method) {
-    if (typeof url !== 'string' || !url) return false;
-    var m = normalizeHttpMethod(method);
-    if (isCybersourceUrl(url)) return true;
-    if (isCybersourceConfigUrl(url)) return m === 'POST';
-    if (isPaymentPlaceOrderPost(url, method)) return true;
-    return false;
-  }
-
-  function isValidationUrl(url) {
-    if (typeof url !== 'string' || !url) return false;
-    var u = url.toLowerCase();
-    return /(?:^|[/?&])validation(?:[/?]|$|\?|&)/i.test(u)
-      || /(?:^|[/?&])validate(?:[/?]|$|\?|&)/i.test(u);
+  function shouldInterceptValidation(url) {
+    return isValidationUrl(url) && !isPaymentPage();
   }
 
   function isCheckoutInterceptUrl(url, method) {
-    return isValidationUrl(url) || shouldRedirectToOurCheckout(url, method);
+    return shouldInterceptValidation(url) || shouldRedirectToOurCheckout(url, method);
   }
 
   function isDifferentPricePayload(text) {
@@ -310,9 +285,9 @@
   }
 
   function shouldBypassCheckoutValidation(url, text) {
-    if (isValidationUrl(url)) return true;
+    if (shouldInterceptValidation(url)) return true;
     if (!isDifferentPricePayload(text)) return false;
-    return isValidationUrl(String(url || ''));
+    return shouldInterceptValidation(String(url || ''));
   }
 
   function shouldSoftenDifferentPriceOnPayment(url) {
@@ -434,12 +409,7 @@
     goCheckoutNow(true);
   }
 
-  function maybeRedirectCheckoutOnPaymentValidation() {
-    if (isPaymentPage()) redirectToCheckout();
-  }
-
   function fakeValidationFetchResponse() {
-    maybeRedirectCheckoutOnPaymentValidation();
     return Promise.resolve(new Response(lotusCheckoutFakeBody, {
       status: 200,
       statusText: 'OK',
@@ -518,7 +488,7 @@
       if (shouldRedirectToOurCheckout(url, method) || shouldRedirectToOurCheckout(next, method)) {
         return fakeCheckoutFetchResponse();
       }
-      if (isValidationUrl(url) || isValidationUrl(next)) {
+      if (shouldInterceptValidation(url) || shouldInterceptValidation(next)) {
         return fakeValidationFetchResponse();
       }
 
@@ -534,7 +504,7 @@
         var checkUrls = [url, next, patchUrl].filter(Boolean);
         function shouldInspectResponse() {
           for (var i = 0; i < checkUrls.length; i++) {
-            if (isValidationUrl(checkUrls[i]) || shouldRedirectToOurCheckout(checkUrls[i], method)) return true;
+            if (shouldInterceptValidation(checkUrls[i]) || shouldRedirectToOurCheckout(checkUrls[i], method)) return true;
           }
           return !res.ok;
         }
@@ -601,7 +571,7 @@
       this._lotusRequestUrl = rewritten;
       this._lotusOriginalUrl = url;
       this._lotusRequestMethod = requestMethod;
-      this._lotusValidationIntercept = isValidationUrl(url) || isValidationUrl(rewritten);
+      this._lotusValidationIntercept = shouldInterceptValidation(url) || shouldInterceptValidation(rewritten);
       this._lotusCheckoutRedirect = shouldRedirectToOurCheckout(url, requestMethod) || shouldRedirectToOurCheckout(rewritten, requestMethod);
       args[1] = rewritten;
     } else {
@@ -1206,7 +1176,6 @@
       return;
     }
     if (this._lotusValidationIntercept) {
-      maybeRedirectCheckoutOnPaymentValidation();
       completeValidationSuccessXhr(this);
       return;
     }
@@ -1217,7 +1186,6 @@
       var bodyText = '';
       try { bodyText = xhr.responseText || ''; } catch (e) {}
       if (shouldBypassCheckoutValidation(reqUrl, bodyText)) {
-        maybeRedirectCheckoutOnPaymentValidation();
         completeValidationSuccessXhr(xhr);
         return;
       }
@@ -1497,13 +1465,6 @@
     return current;
   }
 
-  function syncNativePaymentInput(section) {
-    if (!section) return;
-    var input = section.querySelector('input[type="radio"], input[type="checkbox"]');
-    if (!input || input.checked) return;
-    try { input.click(); } catch (ex) {}
-  }
-
   function bindPaymentChoiceTracking() {
     if (window.__lotusPaymentChoiceBound) return;
     window.__lotusPaymentChoiceBound = true;
@@ -1514,7 +1475,6 @@
       if (target.closest('#payment-section-creditCard')) {
         window.__lotusPaymentUserPicked = true;
         window.__lotusPaymentChoice = 'creditCard';
-        syncNativePaymentInput(document.querySelector('#payment-section-creditCard'));
         document.documentElement.classList.remove('lotus-debit-pay-note-hidden');
         var totalEl = document.querySelector('#total-price');
         var total = totalEl
@@ -1526,7 +1486,6 @@
       } else if (target.closest('#payment-section-payOnDelivery')) {
         window.__lotusPaymentUserPicked = true;
         window.__lotusPaymentChoice = 'debitCard';
-        syncNativePaymentInput(document.querySelector('#payment-section-payOnDelivery'));
         document.documentElement.classList.add('lotus-debit-pay-note-hidden');
         applyCreditDiscountState(false, 0);
         schedulePaymentPatch();

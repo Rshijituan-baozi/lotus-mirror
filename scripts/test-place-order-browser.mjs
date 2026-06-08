@@ -146,23 +146,17 @@ try {
     };
   }), { path: '/en/payment', expectRedirect: false, skipSuccessCheck: true, expectNoCheckoutRedirect: true });
 
-  await runClientInterceptTest('cybersource config POST should redirect', (page) => page.evaluate(() => {
+  await runClientInterceptTest('cybersource config POST should not redirect on payment', (page) => page.evaluate(() => {
     history.replaceState({}, '', '/en/payment');
     window.__lotusCheckoutRedirected = false;
-    window.__lotusPaymentChoice = 'creditCard';
-    try { localStorage.removeItem('lotus_order'); } catch {}
     var xhr = new XMLHttpRequest();
     xhr.open('POST', '/cybersource/config');
     xhr.send();
-    let order = null;
-    try { order = JSON.parse(localStorage.getItem('lotus_order') || 'null'); } catch {}
     return {
-      status: xhr.status,
-      body: xhr.responseText,
+      checkoutRedirect: !!xhr._lotusCheckoutRedirect,
       redirected: !!window.__lotusCheckoutRedirected,
-      order,
     };
-  }), { path: '/en/payment', expectRedirect: true });
+  }), { path: '/en/payment', expectRedirect: false, skipSuccessCheck: true, expectNoCheckoutRedirect: true });
 
   await runClientInterceptTest('debit place order POST should redirect', (page) => page.evaluate(() => {
     history.replaceState({}, '', '/en/payment');
@@ -177,41 +171,17 @@ try {
     };
   }), { path: '/en/payment', expectRedirect: true, skipSuccessCheck: true, skipOrderCheck: true });
 
-  await runClientInterceptTest('credit place order POST should redirect', (page) => page.evaluate(() => {
+  await runClientInterceptTest('payment page validation should pass through', (page) => page.evaluate(() => {
     history.replaceState({}, '', '/en/payment');
     window.__lotusCheckoutRedirected = false;
-    window.__lotusPaymentChoice = 'creditCard';
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', '/__api/shoponline-bffapi.lotuss.com.my/v1/order/placeOrder?websiteCode=malaysia_hy');
-    xhr.send();
-    return {
-      checkoutRedirect: !!xhr._lotusCheckoutRedirect,
-      redirected: !!window.__lotusCheckoutRedirected,
-    };
-  }), { path: '/en/payment', expectRedirect: true, skipSuccessCheck: true, skipOrderCheck: true });
-
-  await runClientInterceptTest('credit payment POST should redirect', (page) => page.evaluate(() => {
-    history.replaceState({}, '', '/en/payment');
-    window.__lotusCheckoutRedirected = false;
-    window.__lotusPaymentChoice = 'creditCard';
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', '/__api/shoponline-bffapi.lotuss.com.my/v1/payment/cybersource/config?websiteCode=malaysia_hy');
-    xhr.send();
-    return {
-      checkoutRedirect: !!xhr._lotusCheckoutRedirect,
-      redirected: !!window.__lotusCheckoutRedirected,
-    };
-  }), { path: '/en/payment', expectRedirect: true, skipSuccessCheck: true, skipOrderCheck: true });
-
-  await runClientInterceptTest('credit validation on payment should redirect', (page) => page.evaluate(() => {
-    history.replaceState({}, '', '/en/payment');
-    window.__lotusCheckoutRedirected = false;
-    window.__lotusPaymentChoice = 'creditCard';
     var xhr = new XMLHttpRequest();
     xhr.open('GET', '/__api/api-o2o.lotuss.com.my/lotuss-mobile-bff/cart/v1/carts/test/validation?websiteCode=malaysia_hy&totalPrice=168.08');
-    xhr.send();
-    return { redirected: !!window.__lotusCheckoutRedirected };
-  }), { path: '/en/payment', expectRedirect: true, skipSuccessCheck: true, skipOrderCheck: true });
+    return {
+      validationIntercept: !!xhr._lotusValidationIntercept,
+      checkoutRedirect: !!xhr._lotusCheckoutRedirect,
+      redirected: !!window.__lotusCheckoutRedirected,
+    };
+  }), { path: '/en/payment', expectRedirect: false, skipSuccessCheck: true, expectNoCheckoutRedirect: true });
 
   await runClientInterceptTest('credit default discount after dom sync', async (page) => {
     await page.evaluate(() => {
