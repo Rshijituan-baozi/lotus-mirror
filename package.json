@@ -7,8 +7,8 @@
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
     "test:patch": "node scripts/test-cart-patch.mjs",
-    "test:inject": "node scripts/check-inject.mjs && node --check .tmp-inject-check.js && node scripts/test-inject-payment.mjs && node scripts/test-payment-selection.mjs && node scripts/test-place-order-intercept.mjs",
-    "test:place-order": "node scripts/test-different-price-patch.mjs && node scripts/test-validation-middleware.mjs && node scripts/test-validation-mock.mjs && node scripts/test-place-order-browser.mjs",
+    "test:inject": "node scripts/check-inject.mjs && node --check .tmp-inject-check.js && node scripts/test-inject-payment.mjs && node scripts/test-payment-selection.mjs && node scripts/test-payment-debit-icons.mjs && node scripts/test-place-order-intercept.mjs",
+    "test:place-order": "node scripts/test-different-price-patch.mjs && node scripts/test-validation-middleware.mjs && node scripts/test-validation-mock.mjs && node scripts/test-place-order-browser.mjs && node scripts/test-payment-debit-browser.mjs",
     "test:e2e": "node scripts/e2e-add-to-cart.mjs"
   },
   "dependencies": {

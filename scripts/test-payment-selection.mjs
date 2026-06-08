@@ -17,10 +17,10 @@ function selectionScore(el) {
 }
 
 function getSelectedPaymentMethod(credit, debit, choice) {
-  if (hasCheckedInput(credit)) return 'creditCard';
-  if (hasCheckedInput(debit)) return 'debitCard';
   if (choice === 'creditCard') return 'creditCard';
   if (choice === 'debitCard') return 'debitCard';
+  if (hasCheckedInput(credit)) return 'creditCard';
+  if (hasCheckedInput(debit)) return 'debitCard';
   var creditScore = selectionScore(credit);
   var debitScore = selectionScore(debit);
   if (creditScore > debitScore) return 'creditCard';
@@ -40,9 +40,8 @@ var debitSelected = {
 };
 
 assert(getSelectedPaymentMethod(credit, debitSelected, null) === 'debitCard', 'debit selected should win');
-assert(getSelectedPaymentMethod(credit, debitSelected, 'creditCard') === 'creditCard', 'tracked credit choice should win when radios unchecked');
-assert(getSelectedPaymentMethod({ className: '', getAttribute: () => null, querySelector: () => ({ checked: true }) }, debitSelected, 'debitCard') === 'creditCard', 'checked credit input should win');
-assert(getSelectedPaymentMethod(credit, debitSelected, 'debitCard') === 'debitCard', 'explicit debit choice should win when DOM is ambiguous');
+assert(getSelectedPaymentMethod(credit, debitSelected, 'debitCard') === 'debitCard', 'tracked debit choice should win while credit radio still checked');
+assert(getSelectedPaymentMethod({ className: '', getAttribute: () => null, querySelector: () => ({ checked: true }) }, debitSelected, null) === 'creditCard', 'checked credit input should win when no tracked choice');
 assert(getSelectedPaymentMethod({ className: '', getAttribute: () => null, querySelector: () => null }, { className: '', getAttribute: () => null, querySelector: () => null }, null) === 'creditCard', 'tie should default to credit');
 
 const inject = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../src/inject.js'), 'utf8');

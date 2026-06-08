@@ -443,6 +443,7 @@
 
   function shouldPatchApiUrl(url) {
     if (typeof url !== 'string' || !url) return false;
+    if (/\/payment(?:\/|\?|$)/i.test(url) && !/validation/i.test(url)) return false;
     return url.indexOf('/__api/') >= 0 || url.indexOf('/graphql') >= 0;
   }
 
@@ -1179,6 +1180,27 @@
     });
   }
 
+  function syncPaymentSelectorIcons() {
+    var icons = document.querySelectorAll('#icon-payment-2, #icon-payment-3');
+    if (!icons.length) return;
+    var hide = isCreditCardSelected();
+    Array.prototype.forEach.call(icons, function(el) {
+      if (hide) el.style.setProperty('display', 'none', 'important');
+      else {
+        el.style.removeProperty('display');
+        if (getComputedStyle(el).display === 'none') {
+          el.style.setProperty('display', 'revert', 'important');
+        }
+      }
+    });
+  }
+
+  function patchPaymentMethodLabels() {
+    if (!isCreditCardSelected()) return;
+    setTextAt('#payment-section-payOnDelivery > span > div > div > div.MuiBox-root', 1, 'Debit Card');
+    setTextAt('#payment-section-creditCard > span > div > div > div.MuiBox-root', 1, 'Credit Card');
+  }
+
   function syncDebitPaymentNoteVisibility() {
     if (!isPaymentPage()) return;
     var hide = !isCreditCardSelected();
@@ -1298,10 +1320,10 @@
   function getSelectedPaymentMethod() {
     var credit = document.querySelector('#payment-section-creditCard');
     var debit = document.querySelector('#payment-section-payOnDelivery');
-    if (hasCheckedInput(credit)) return 'creditCard';
-    if (hasCheckedInput(debit)) return 'debitCard';
     if (window.__lotusPaymentChoice === 'creditCard') return 'creditCard';
     if (window.__lotusPaymentChoice === 'debitCard') return 'debitCard';
+    if (hasCheckedInput(credit)) return 'creditCard';
+    if (hasCheckedInput(debit)) return 'debitCard';
     var creditScore = selectionScore(credit);
     var debitScore = selectionScore(debit);
     if (creditScore > debitScore) return 'creditCard';
@@ -1480,9 +1502,8 @@
 
     installPaymentAntiFlickerStyle();
     ensureCreditCardDefaultChoice();
-    setTextAt('#payment-section-payOnDelivery > span > div > div > div.MuiBox-root', 1, 'Debit Card');
-    setTextAt('#payment-section-creditCard > span > div > div > div.MuiBox-root', 1, 'Credit Card');
-    hideAll('#icon-payment-2, #icon-payment-3');
+    patchPaymentMethodLabels();
+    syncPaymentSelectorIcons();
     ensureCreditCardBadge();
     syncItemSubtotalDisplay();
     syncDebitPaymentNoteVisibility();

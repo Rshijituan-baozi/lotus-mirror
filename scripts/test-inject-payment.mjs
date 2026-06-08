@@ -29,6 +29,8 @@ assert(inject.includes('function fakeValidationFetchResponse'), 'validation shou
 assert(!inject.includes('handlePlaceOrderIntent'), 'cart Place Order should not be hijacked');
 assert(inject.includes('_lotusCheckoutRedirect'), 'XHR checkout redirect flag should exist');
 assert(inject.includes('fakeCheckoutFetchResponse'), 'fetch fake success response should exist');
-assert(!inject.includes('lotus-fb-pixel.js'), 'fb pixel loader should be deferred');
+assert(inject.includes('function syncPaymentSelectorIcons'), 'payment icon visibility should follow selected method');
+assert(inject.includes('patchPaymentMethodLabels'), 'payment label patch should be credit-only');
+assert(inject.includes('/payment(?:\\/|\\?|$)/i.test(url)'), 'payment API responses should not be cart-patched');
 
 console.log('test:inject-payment OK');

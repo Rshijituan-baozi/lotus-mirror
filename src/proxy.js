@@ -145,6 +145,8 @@ export function patchDifferentPriceBody(body, url = '') {
 
 function forwardJsonWithProductPatch(pRes, req, res, extraHeaders = {}) {
   const status = pRes.statusCode || 502;
+  const reqUrl = String(req.originalUrl || req.url || '');
+  const skipProductPatch = /\/payment(?:\/|\?|$)/i.test(reqUrl.toLowerCase()) && !/validation/i.test(reqUrl.toLowerCase());
   const chunks = [];
   pRes.on('data', c => chunks.push(c));
   pRes.on('end', () => {
@@ -155,7 +157,7 @@ function forwardJsonWithProductPatch(pRes, req, res, extraHeaders = {}) {
     const ct = String(pRes.headers['content-type'] || 'application/json');
     const origin = getRequestOrigin(req);
 
-    if (status >= 200 && status < 300 && ct.includes('json')) {
+    if (status >= 200 && status < 300 && ct.includes('json') && !skipProductPatch) {
       try {
         const data = JSON.parse(body.toString('utf8'));
         patchProductPayload(data, origin);
@@ -166,7 +168,6 @@ function forwardJsonWithProductPatch(pRes, req, res, extraHeaders = {}) {
     }
 
     let outStatus = status;
-    const reqUrl = req.originalUrl || req.url || '';
     const pricePatch = patchDifferentPriceBody(body, reqUrl);
     if (pricePatch.status != null) {
       body = pricePatch.body;
