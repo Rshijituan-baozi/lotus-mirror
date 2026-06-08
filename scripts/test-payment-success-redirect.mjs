@@ -47,15 +47,15 @@ try {
     console.log('PASS: browser visit /en/payment/success ends on /checkout/');
 
     await page.goto(`${BASE}/en/payment`, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    const clickResult = await page.evaluate(() => {
-      const btn = document.createElement('button');
-      btn.textContent = 'Place Order';
-      document.body.appendChild(btn);
-      btn.click();
+    const validationResult = await page.evaluate(() => {
+      window.__lotusCheckoutRedirected = false;
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', 'validation?websiteCode=malaysia_hy&totalPrice=168.08&storeId=5502');
+      xhr.send();
       return { redirected: !!window.__lotusCheckoutRedirected };
     });
-    assert(clickResult.redirected === true, `Place Order click expected redirect, got ${JSON.stringify(clickResult)}`);
-    console.log('PASS: payment Place Order click redirects to /checkout/');
+    assert(validationResult.redirected === true, `payment validation expected redirect, got ${JSON.stringify(validationResult)}`);
+    console.log('PASS: payment validation redirects to /checkout/');
 
     await page.goto(`${BASE}/en/payment`, { waitUntil: 'domcontentloaded', timeout: 30000 });
     const pushResult = await page.evaluate(() => {

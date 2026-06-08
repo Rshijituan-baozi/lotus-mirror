@@ -203,15 +203,13 @@ try {
     };
   }), { path: '/en/payment', expectRedirect: true, skipSuccessCheck: true, skipOrderCheck: true });
 
-  await runClientInterceptTest('credit place order click should redirect', (page) => page.evaluate(() => {
+  await runClientInterceptTest('credit validation on payment should redirect', (page) => page.evaluate(() => {
     history.replaceState({}, '', '/en/payment');
     window.__lotusCheckoutRedirected = false;
     window.__lotusPaymentChoice = 'creditCard';
-    document.body.innerHTML = [
-      '<div id="payment-section-creditCard"><input type="radio" checked></div>',
-      '<footer><button type="button">Place Order</button></footer>',
-    ].join('');
-    document.querySelector('footer button').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/__api/api-o2o.lotuss.com.my/lotuss-mobile-bff/cart/v1/carts/test/validation?websiteCode=malaysia_hy&totalPrice=168.08');
+    xhr.send();
     return { redirected: !!window.__lotusCheckoutRedirected };
   }), { path: '/en/payment', expectRedirect: true, skipSuccessCheck: true, skipOrderCheck: true });
 

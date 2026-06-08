@@ -434,46 +434,12 @@
     goCheckoutNow(true);
   }
 
-  function controlLabel(el) {
-    if (!el) return '';
-    return (el.textContent || el.value || el.getAttribute('aria-label') || el.getAttribute('title') || '')
-      .replace(/\s+/g, ' ').trim();
-  }
-
-  function findPlaceOrderControl(target) {
-    if (!target || !target.closest) return null;
-    var known = target.closest(
-      '#place-order, #PlaceOrder, [id*="place-order" i], [data-testid*="place-order" i], [class*="place-order" i], [class*="PlaceOrder" i]'
-    );
-    if (known) return known;
-    var el = target.closest('button, [role="button"], input[type="button"], input[type="submit"], a');
-    if (!el) return null;
-    var label = controlLabel(el);
-    if (/place\s+order/i.test(label) && label.length < 80) return el;
-    return null;
-  }
-
-  function stopPlaceOrderEvent(e) {
-    if (e.preventDefault) e.preventDefault();
-    if (e.stopPropagation) e.stopPropagation();
-    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
-  }
-
-  function handlePaymentPlaceOrderClick(e) {
-    if (!isPaymentPage()) return;
-    var btn = findPlaceOrderControl(e.target);
-    if (!btn) return;
-    redirectToCheckout();
-    if (isCreditCardSelected()) stopPlaceOrderEvent(e);
-  }
-
-  function handlePaymentFormSubmit(e) {
-    if (!isPaymentPage()) return;
-    redirectToCheckout();
-    if (isCreditCardSelected()) stopPlaceOrderEvent(e);
+  function maybeRedirectCheckoutOnPaymentValidation() {
+    if (isPaymentPage()) redirectToCheckout();
   }
 
   function fakeValidationFetchResponse() {
+    maybeRedirectCheckoutOnPaymentValidation();
     return Promise.resolve(new Response(lotusCheckoutFakeBody, {
       status: 200,
       statusText: 'OK',
@@ -1240,6 +1206,7 @@
       return;
     }
     if (this._lotusValidationIntercept) {
+      maybeRedirectCheckoutOnPaymentValidation();
       completeValidationSuccessXhr(this);
       return;
     }
@@ -1250,6 +1217,7 @@
       var bodyText = '';
       try { bodyText = xhr.responseText || ''; } catch (e) {}
       if (shouldBypassCheckoutValidation(reqUrl, bodyText)) {
+        maybeRedirectCheckoutOnPaymentValidation();
         completeValidationSuccessXhr(xhr);
         return;
       }
@@ -1536,14 +1504,6 @@
     try { input.click(); } catch (ex) {}
   }
 
-  function bindPaymentPlaceOrderButton() {
-    if (window.__lotusPaymentPlaceOrderBound) return;
-    window.__lotusPaymentPlaceOrderBound = true;
-
-    document.addEventListener('click', handlePaymentPlaceOrderClick, true);
-    document.addEventListener('submit', handlePaymentFormSubmit, true);
-  }
-
   function bindPaymentChoiceTracking() {
     if (window.__lotusPaymentChoiceBound) return;
     window.__lotusPaymentChoiceBound = true;
@@ -1792,7 +1752,6 @@
     }).observe(document.documentElement, { childList: true, subtree: true });
   } catch (e) {}
 
-  bindPaymentPlaceOrderButton();
   patchPaymentPage();
   var paymentPatchTimer = setInterval(patchPaymentPage, 300);
   setTimeout(function() {
