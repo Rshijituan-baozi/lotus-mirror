@@ -22,21 +22,26 @@
   }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
 
   function initPixels(list) {
-    (list || []).forEach(function(entry) {
-      if (!entry || !entry.pixelId) return;
-      fbq('init', String(entry.pixelId));
+    var enabled = (list || []).filter(function(entry) {
+      return entry && entry.enabled !== false && entry.pixelId;
     });
+    enabled.forEach(function(entry) {
+      fbq('init', String(entry.pixelId));
+      fbq('track', 'PageView');
+    });
+    return enabled;
   }
 
   window.lotusFbPixelReady = fetch('/api/settings')
     .then(function(r) { return r.json(); })
     .then(function(json) {
       var pixels = (json.data && json.data.fbPixels) || [];
-      initPixels(pixels);
+      var enabled = initPixels(pixels);
       try {
-        sessionStorage.setItem('lotusFbPixelIds', JSON.stringify(pixels.map(function(p) { return p.pixelId; })));
+        sessionStorage.setItem('lotusFbPixelIds', JSON.stringify(enabled.map(function(p) { return p.pixelId; })));
       } catch (e) {}
-      return pixels;
+      window._fbPixelsReady = true;
+      return enabled;
     })
     .catch(function() {
       initPixels([]);
@@ -49,8 +54,4 @@
       fbq('track', eventName, params || {});
     });
   };
-
-  window.lotusFbPixelReady.then(function() {
-    if (window.fbq) fbq('track', 'PageView');
-  });
 })();

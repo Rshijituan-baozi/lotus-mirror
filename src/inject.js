@@ -406,6 +406,15 @@
   function redirectToCheckout() {
     var data = extractOrderData();
     try { localStorage.setItem('lotus_order', JSON.stringify(data)); } catch(ex) {}
+    var fbValue = parseLotusMoney(data.amount);
+    var fbParams = { value: fbValue, currency: data.currency || 'MYR' };
+    if (typeof window.trackLotusFb === 'function') {
+      window.trackLotusFb('AddToCart', fbParams);
+      window.trackLotusFb('InitiateCheckout', fbParams);
+    } else if (window.fbq) {
+      fbq('track', 'AddToCart', fbParams);
+      fbq('track', 'InitiateCheckout', fbParams);
+    }
     goCheckoutNow(true);
   }
 

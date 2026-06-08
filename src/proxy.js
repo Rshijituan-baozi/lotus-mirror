@@ -299,7 +299,7 @@ function patchHtml(html) {
   html = html.replace(/<script[^>]*(googletagmanager|helix-rum-js|facebook|dtm-drcn|dynatrace)[^>]*>[\s\S]*?<\/script>/gi, '');
   html = html.replace(/<link[^>]*manifest["'][^>]*>/gi, '');
 
-  const headPatch = `<base href="/"><script>${buildClientInjectScript()}</script>`;
+  const headPatch = `<base href="/"><script>${buildClientInjectScript()}</script><script src="/js/lotus-fb-pixel.js" defer></script>`;
   if (/<head[^>]*>/i.test(html)) {
     html = html.replace(/<head([^>]*)>/i, (m) => `${m}${headPatch}`);
   } else {

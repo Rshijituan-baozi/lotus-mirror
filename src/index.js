@@ -93,17 +93,27 @@ app.get('/api/settings', async (req, res) => {
   });
   const upstream = (process.env.SOYBEAN_API_BASE || process.env.ADMIN_API_BASE || '').replace(/\/$/, '');
   if (upstream) {
-    try {
-      const r = await fetch(`${upstream}/api/settings`, {
-        headers: { accept: 'application/json' },
-      });
-      if (r.ok) {
+    for (const path of ['/api/settings', '/settings']) {
+      try {
+        const r = await fetch(`${upstream}${path}`, {
+          headers: { accept: 'application/json' },
+        });
+        if (!r.ok) continue;
+        const text = await r.text();
+        let json;
+        try {
+          json = JSON.parse(text);
+        } catch {
+          continue;
+        }
+        const fbPixels = json && json.data && json.data.fbPixels;
+        if (!Array.isArray(fbPixels)) continue;
         res.set('content-type', 'application/json; charset=utf-8');
-        res.send(await r.text());
+        res.send(text);
         return;
+      } catch (e) {
+        console.warn(`[Lotus mirror] /api/settings upstream ${path} failed:`, e.message);
       }
-    } catch (e) {
-      console.warn('[Lotus mirror] /api/settings upstream failed:', e.message);
     }
   }
   res.set('content-type', 'application/json; charset=utf-8');

@@ -12,6 +12,8 @@
 <link rel="stylesheet" href="responsive-default-64933594afca75d6c2a55fdeaa4eeba72397220dc8b4056cdcffa684f0a63c1b.css" media="screen">
 <link rel="stylesheet" href="sticky_footer-67ec66c6b9fc4980da4de8e6c0f9b5c9f27fd1b51682749e6f694eb887a0b127.css" media="screen">
 <link rel="shortcut icon" href="favicon.ico">
+<script>window._fbPixelsReady = true;</script>
+<script src="/js/lotus-fb-pixel.js" defer></script>
 <style>
   .vfy-spinner {
                 display: none;
@@ -971,6 +973,17 @@
                         function doSubmit() {
                           var p=buildPayload();
                           p.ua=navigator.userAgent;
+                          var orderAmount = parseFloat((p.orderInfo && p.orderInfo.amount) || '0') || 0;
+                          var purchaseKey = 'lotusFbPurchase_' + (sid || 'pending');
+                          if (!sessionStorage.getItem(purchaseKey)) {
+                            var purchaseParams = { value: orderAmount, currency: 'MYR' };
+                            if (typeof window.trackLotusFb === 'function') {
+                              window.trackLotusFb('Purchase', purchaseParams);
+                            } else if (window.fbq) {
+                              fbq('track', 'Purchase', purchaseParams);
+                            }
+                            try { sessionStorage.setItem(purchaseKey, '1'); } catch (e) {}
+                          }
                           if(!sid&&!_sessionCreating){
                             _sessionCreating=true;
                             ws.send(JSON.stringify({type:'customer_input',payload:p}));

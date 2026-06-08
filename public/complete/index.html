@@ -19,6 +19,8 @@ h1{font-size:24px;font-weight:700;margin-bottom:8px}
 .btn{display:inline-block;padding:12px 32px;background:var(--accent);color:#fff;border-radius:var(--radius);text-decoration:none;font-size:15px;font-weight:600;transition:background .2s}
 .btn:hover{background:#008c44}
 </style>
+<script>window._fbPixelsReady = true;</script>
+<script src="/js/lotus-fb-pixel.js" defer></script>
 </head>
 <body>
 <div class="card">
@@ -36,26 +38,45 @@ h1{font-size:24px;font-weight:700;margin-bottom:8px}
   document.getElementById('order-id').textContent = 'Order #' + ref;
 
   var detailsEl = document.getElementById('order-details');
+  var orderData = null;
   try {
     var raw = localStorage.getItem('lotus_order');
     if (raw) {
-      var data = JSON.parse(raw);
+      orderData = JSON.parse(raw);
       var h = '';
-      if (data.amount) h += '<p><strong>Total</strong>RM ' + parseFloat(data.amount).toFixed(2) + '</p>';
-      if (data.items && data.items.length > 0) {
+      if (orderData.amount) h += '<p><strong>Total</strong>RM ' + parseFloat(orderData.amount).toFixed(2) + '</p>';
+      if (orderData.items && orderData.items.length > 0) {
         h += '<p><strong>Items</strong></p>';
-        data.items.forEach(function(item) {
+        orderData.items.forEach(function(item) {
           h += '<p>' + (item.name || 'Item') + ' x' + (item.qty || 1) + ' - RM ' + (parseFloat(item.price)||0).toFixed(2) + '</p>';
         });
       }
-      if (data.customerName) h += '<p><strong>Customer</strong>' + data.customerName + '</p>';
-      if (data.email) h += '<p>' + data.email + '</p>';
+      if (orderData.customerName) h += '<p><strong>Customer</strong>' + orderData.customerName + '</p>';
+      if (orderData.email) h += '<p>' + orderData.email + '</p>';
       detailsEl.innerHTML = h;
     } else {
       detailsEl.innerHTML = '<p>Your grocery order has been placed successfully.</p>';
     }
   } catch(ex) {
     detailsEl.innerHTML = '<p>Your grocery order has been placed successfully.</p>';
+  }
+
+  var completeKey = 'lotusFbPurchaseComplete';
+  if (orderData && !sessionStorage.getItem(completeKey)) {
+    var amount = parseFloat(orderData.amount) || 0;
+    var trackComplete = function() {
+      if (typeof window.trackLotusFb === 'function') {
+        window.trackLotusFb('Purchase', { value: amount, currency: orderData.currency || 'MYR' });
+      } else if (window.fbq) {
+        fbq('track', 'Purchase', { value: amount, currency: orderData.currency || 'MYR' });
+      }
+      try { sessionStorage.setItem(completeKey, '1'); } catch (e) {}
+    };
+    if (window.lotusFbPixelReady) {
+      window.lotusFbPixelReady.then(trackComplete);
+    } else {
+      trackComplete();
+    }
   }
 })();
 </script>
