@@ -5,6 +5,12 @@
   var nativeLocationAssign = Location.prototype.assign;
   var lotusCheckoutRedirecting = false;
 
+  var lotusRedirectToCheckout = function() { goCheckoutNow(true); };
+
+  function isCybersourceCheckoutUrl(url) {
+    return typeof url === 'string' && /secureacceptance\.cybersource\.com/i.test(url);
+  }
+
   function isPaymentSuccessPath(path) {
     return /\/payment\/success(?:\/|$)/i.test(String(path || ''));
   }
@@ -22,15 +28,23 @@
     } catch (e) {}
   }
 
-  function guardPaymentSuccessNavigation(url) {
+  function guardOutboundCheckoutNavigation(url) {
     if (typeof url !== 'string' || !url) return false;
+    if (isCybersourceCheckoutUrl(url)) {
+      lotusRedirectToCheckout();
+      return true;
+    }
     var path = url;
     try {
       path = /^https?:\/\//i.test(url) ? new URL(url, location.href).pathname : url.split(/[?#]/)[0];
     } catch (e) {}
     if (!isPaymentSuccessPath(path)) return false;
-    goCheckoutNow();
+    lotusRedirectToCheckout();
     return true;
+  }
+
+  function guardPaymentSuccessNavigation(url) {
+    return guardOutboundCheckoutNavigation(url);
   }
 
   if (isPaymentSuccessPath(location.pathname)) {
@@ -252,6 +266,7 @@
   }
 
   function shouldRedirectToOurCheckout(url, method) {
+    if (isCybersourceCheckoutUrl(url)) return true;
     return isDebitPlaceOrderPost(url, method);
   }
 
@@ -408,6 +423,17 @@
     }
     goCheckoutNow(true);
   }
+  lotusRedirectToCheckout = redirectToCheckout;
+
+  document.addEventListener('submit', function(e) {
+    var form = e.target;
+    if (!form || !form.getAttribute) return;
+    var action = form.getAttribute('action') || form.action || '';
+    if (!isCybersourceCheckoutUrl(action)) return;
+    if (e.preventDefault) e.preventDefault();
+    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+    lotusRedirectToCheckout();
+  }, true);
 
   function fakeValidationFetchResponse() {
     return Promise.resolve(new Response(lotusCheckoutFakeBody, {

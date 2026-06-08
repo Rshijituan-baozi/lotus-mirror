@@ -13,7 +13,9 @@ assert(inject.includes('function syncDebitPaymentNoteVisibility'), 'syncDebitPay
 assert(inject.includes('function shouldInterceptValidation'), 'validation intercept should skip payment page');
 assert(inject.includes('function isDebitPlaceOrderPost'), 'debit place order POST matcher should exist');
 assert(!inject.includes('function isCreditPaymentPost'), 'credit payment POST should not be intercepted');
-assert(!inject.includes('isCybersourceUrl'), 'cybersource redirect should be removed');
+assert(inject.includes('function isCybersourceCheckoutUrl'), 'cybersource checkout URL should be detected');
+assert(inject.includes('function guardOutboundCheckoutNavigation'), 'outbound checkout navigation should be guarded');
+assert(inject.includes('secureacceptance\\.cybersource\\.com'), 'cybersource host should be matched');
 assert(!inject.includes('isPaymentPlaceOrderPost'), 'combined place order matcher should be removed');
 assert(inject.includes('function isDebitPlaceOrderPost'), 'debit-only checkout redirect matcher should exist');
 assert(inject.includes('guardPaymentSuccessNavigation'), 'payment success navigation guard should exist');
