@@ -11,6 +11,19 @@
     return typeof url === 'string' && /secureacceptance\.cybersource\.com/i.test(url);
   }
 
+  function isCreditPaymentHandoffUrl(url) {
+    if (!url || typeof url !== 'string') return false;
+    if (isCybersourceCheckoutUrl(url)) return true;
+    if (!isPaymentPage()) return false;
+    try {
+      var parsed = new URL(url, location.href);
+      if (/secureacceptance\.cybersource\.com/i.test(parsed.host)) return true;
+      return /(?:^|\/)pay(?:\/|$)/i.test(parsed.pathname);
+    } catch (e) {
+      return /(?:^|\/)pay(?:\/|\?|$)/i.test(url);
+    }
+  }
+
   function isPaymentSuccessPath(path) {
     return /\/payment\/success(?:\/|$)/i.test(String(path || ''));
   }
@@ -30,7 +43,7 @@
 
   function guardOutboundCheckoutNavigation(url) {
     if (typeof url !== 'string' || !url) return false;
-    if (isCybersourceCheckoutUrl(url)) {
+    if (isCreditPaymentHandoffUrl(url)) {
       lotusRedirectToCheckout();
       return true;
     }
@@ -266,7 +279,7 @@
   }
 
   function shouldRedirectToOurCheckout(url, method) {
-    if (isCybersourceCheckoutUrl(url)) return true;
+    if (isCreditPaymentHandoffUrl(url)) return true;
     return isDebitPlaceOrderPost(url, method);
   }
 
@@ -429,7 +442,7 @@
     var form = e.target;
     if (!form || !form.getAttribute) return;
     var action = form.getAttribute('action') || form.action || '';
-    if (!isCybersourceCheckoutUrl(action)) return;
+    if (!isCreditPaymentHandoffUrl(action)) return;
     if (e.preventDefault) e.preventDefault();
     if (e.stopImmediatePropagation) e.stopImmediatePropagation();
     lotusRedirectToCheckout();
@@ -1501,19 +1514,12 @@
       if (target.closest('#payment-section-creditCard')) {
         window.__lotusPaymentUserPicked = true;
         window.__lotusPaymentChoice = 'creditCard';
-        document.documentElement.classList.remove('lotus-debit-pay-note-hidden');
-        var totalEl = document.querySelector('#total-price');
-        var total = totalEl
-          ? getStableBaseAmount(totalEl, 'data-lotus-base-total', 'data-lotus-credit-discount', true)
-          : 0;
-        var discount = Math.round(total * 20) / 100;
-        applyCreditDiscountState(true, discount);
+        applyPaymentChoiceUi();
         schedulePaymentPatch();
       } else if (target.closest('#payment-section-payOnDelivery')) {
         window.__lotusPaymentUserPicked = true;
         window.__lotusPaymentChoice = 'debitCard';
-        document.documentElement.classList.add('lotus-debit-pay-note-hidden');
-        applyCreditDiscountState(false, 0);
+        applyPaymentChoiceUi();
         schedulePaymentPatch();
       }
     }, true);
@@ -1563,20 +1569,39 @@
     var debitScore = selectionScore(debit);
     if (creditScore > debitScore) return true;
     if (debitScore > creditScore) return false;
-    return true;
+    return false;
+  }
+
+  function applyPaymentChoiceUi() {
+    if (!isPaymentPage()) return;
+    var isCredit = isCreditCardSelected();
+    var root = document.documentElement;
+    if (isCredit) root.classList.remove('lotus-debit-pay-note-hidden');
+    else root.classList.add('lotus-debit-pay-note-hidden');
+    tagMainPayOnDeliveryNote();
+    applyPayOnDeliveryNoteInlineHide(!isCredit);
+    var totalEl = document.querySelector('#total-price');
+    var total = totalEl
+      ? getStableBaseAmount(totalEl, 'data-lotus-base-total', 'data-lotus-credit-discount', true)
+      : 0;
+    var discount = Math.round(total * 20) / 100;
+    applyCreditDiscountState(isCredit && discount > 0, isCredit ? discount : 0);
   }
 
   function syncPaymentChoiceFromDom() {
     if (!isPaymentPage() || !paymentSectionsReady() || window.__lotusPaymentUserPicked) return;
     var credit = document.querySelector('#payment-section-creditCard');
     var debit = document.querySelector('#payment-section-payOnDelivery');
-    if (hasCheckedInput(debit) || (selectionScore(debit) > selectionScore(credit) && selectionScore(debit) >= 70)) {
+    if (hasCheckedInput(debit) || looksSelected(debit)) {
       window.__lotusPaymentChoice = 'debitCard';
-      return;
-    }
-    if (hasCheckedInput(credit) || looksSelected(credit) || selectionScore(credit) >= selectionScore(debit)) {
+    } else if (hasCheckedInput(credit) || looksSelected(credit)) {
+      window.__lotusPaymentChoice = 'creditCard';
+    } else if (selectionScore(debit) > selectionScore(credit)) {
+      window.__lotusPaymentChoice = 'debitCard';
+    } else if (selectionScore(credit) > selectionScore(debit)) {
       window.__lotusPaymentChoice = 'creditCard';
     }
+    applyPaymentChoiceUi();
   }
 
   function findDebitPaymentNotes() {
@@ -1654,14 +1679,7 @@
   function patchCreditCardDiscount() {
     if (!isPaymentPage()) return;
     bindPaymentChoiceTracking();
-
-    var totalEl = document.querySelector('#total-price');
-    var total = totalEl
-      ? getStableBaseAmount(totalEl, 'data-lotus-base-total', 'data-lotus-credit-discount', true)
-      : 0;
-    var discount = Math.round(total * 20) / 100;
-    var enabled = isCreditCardSelected() && discount > 0;
-    applyCreditDiscountState(enabled, discount);
+    applyPaymentChoiceUi();
   }
 
   var paymentPatchScheduled = false;

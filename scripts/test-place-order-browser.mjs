@@ -194,6 +194,17 @@ try {
     return { redirected: !!window.__lotusCheckoutRedirected };
   }), { path: '/en/payment', expectRedirect: true, skipSuccessCheck: true, skipOrderCheck: true });
 
+  await runClientInterceptTest('payment pay form submit should redirect', (page) => page.evaluate(() => {
+    history.replaceState({}, '', '/en/payment');
+    window.__lotusCheckoutRedirected = false;
+    var form = document.createElement('form');
+    form.action = '/en/payment/pay';
+    form.method = 'POST';
+    document.body.appendChild(form);
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    return { redirected: !!window.__lotusCheckoutRedirected };
+  }), { path: '/en/payment', expectRedirect: true, skipSuccessCheck: true, skipOrderCheck: true });
+
   await runClientInterceptTest('payment page validation should pass through', (page) => page.evaluate(() => {
     history.replaceState({}, '', '/en/payment');
     window.__lotusCheckoutRedirected = false;

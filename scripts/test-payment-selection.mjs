@@ -48,6 +48,6 @@ const inject = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.
 assert(inject.includes('syncPaymentSelectorTileIcons'), 'tile icon hiding should be scoped to selectors');
 assert(!inject.includes('ensureCreditCardDefaultChoice'), 'should not force credit default on load');
 assert(inject.includes('function syncPaymentChoiceFromDom'), 'should sync payment choice from DOM');
-assert(inject.includes('if (debitScore > creditScore) return false;\n    return true;'), 'tie should default to credit');
+assert(inject.includes('if (debitScore > creditScore) return false;\n    return false;'), 'tie should default to debit');
 
 console.log('test:payment-selection OK');
