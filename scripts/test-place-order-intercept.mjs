@@ -28,7 +28,11 @@ const fnBlock = inject.slice(
   inject.indexOf('function isValidationUrl'),
   inject.indexOf('var lotusCheckoutRedirecting')
 );
-assert(fnBlock.includes('shouldRedirectToOurCheckout'), 'payment-only redirect logic should exist');
+assert(inject.includes('normalizeHttpMethod'), 'HTTP method helper should exist');
+assert(inject.includes('isOrderSubmitUrl'), 'order submit URL matcher should exist');
+assert(inject.includes('isCybersourceConfigUrl'), 'cybersource config matcher should exist');
+assert(!inject.includes('set[_-]?payment'), 'setPayment should not trigger checkout redirect');
+assert(!inject.includes('/__api/') || !fnBlock.includes('/payment(?:[/?]|$)/i.test(u)'), 'payment page GET APIs should not auto redirect');
 
 console.log('test:place-order-intercept OK');
 console.log('sample URLs covered:', samples.join(' | '));

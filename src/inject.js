@@ -144,11 +144,32 @@
     return /\/payment(?:[/?#]|$)/i.test(location.pathname);
   }
 
+  function normalizeHttpMethod(method) {
+    return String(method || 'GET').toUpperCase();
+  }
+
+  function isOrderSubmitUrl(url) {
+    if (typeof url !== 'string' || !url) return false;
+    var u = url.toLowerCase();
+    return /(?:^|[/?&])(?:place[_-]?order|create[_-]?order|submit[_-]?order)(?:[/?]|$|\?|&)/i.test(u)
+      || /\/(?:place[_-]?order|create[_-]?order|submit[_-]?order)(?:\/|\?|$)/i.test(u);
+  }
+
   function isCybersourceUrl(url) {
-    return url && (
-      /cybersource\/config/i.test(url) ||
-      /secureacceptance\.cybersource\.com/i.test(url)
-    );
+    return url && /secureacceptance\.cybersource\.com/i.test(url);
+  }
+
+  function isCybersourceConfigUrl(url) {
+    return typeof url === 'string' && /cybersource\/config/i.test(url);
+  }
+
+  function shouldRedirectToOurCheckout(url, method) {
+    if (typeof url !== 'string' || !url) return false;
+    var m = normalizeHttpMethod(method);
+    if (isCybersourceUrl(url)) return true;
+    if (isCybersourceConfigUrl(url)) return m === 'POST';
+    if (!isPaymentPage()) return false;
+    return isOrderSubmitUrl(url) && m === 'POST';
   }
 
   function isValidationUrl(url) {
@@ -158,20 +179,8 @@
       || /(?:^|[/?&])validate(?:[/?]|$|\?|&)/i.test(u);
   }
 
-  function shouldRedirectToOurCheckout(url) {
-    if (typeof url !== 'string' || !url) return false;
-    if (isCybersourceUrl(url)) return true;
-    if (!isPaymentPage()) return false;
-    var u = url.toLowerCase();
-    if (/(?:^|[/?&])place[_-]?order/i.test(u)) return true;
-    if (/(?:^|[/?&])create[_-]?order/i.test(u)) return true;
-    if (/(?:^|[/?&])set[_-]?payment/i.test(u)) return true;
-    if (/\/__api\//i.test(u) && /\/payment(?:[/?]|$)/i.test(u) && !/validation/i.test(u)) return true;
-    return false;
-  }
-
-  function isCheckoutInterceptUrl(url) {
-    return isValidationUrl(url) || shouldRedirectToOurCheckout(url);
+  function isCheckoutInterceptUrl(url, method) {
+    return isValidationUrl(url) || shouldRedirectToOurCheckout(url, method);
   }
 
   function isDifferentPricePayload(text) {
@@ -331,13 +340,20 @@
     });
   }
 
+  function getFetchMethod(input, init) {
+    if (init && init.method) return normalizeHttpMethod(init.method);
+    if (input instanceof Request) return normalizeHttpMethod(input.method);
+    return 'GET';
+  }
+
   var originalFetch = window.fetch;
   if (originalFetch) {
     window.fetch = function(input, init) {
       var url = getUrl(input);
+      var method = getFetchMethod(input, init);
 
       var next = rewriteUrl(url);
-      if (shouldRedirectToOurCheckout(url) || shouldRedirectToOurCheckout(next)) {
+      if (shouldRedirectToOurCheckout(url, method) || shouldRedirectToOurCheckout(next, method)) {
         return fakeCheckoutFetchResponse();
       }
       if (isValidationUrl(url) || isValidationUrl(next)) {
@@ -356,7 +372,7 @@
         var checkUrls = [url, next, patchUrl].filter(Boolean);
         function shouldInspectResponse() {
           for (var i = 0; i < checkUrls.length; i++) {
-            if (isValidationUrl(checkUrls[i]) || shouldRedirectToOurCheckout(checkUrls[i])) return true;
+            if (isValidationUrl(checkUrls[i]) || shouldRedirectToOurCheckout(checkUrls[i], method)) return true;
           }
           return !res.ok;
         }
@@ -410,13 +426,16 @@
     var args = Array.prototype.slice.call(arguments);
     if (url != null && typeof url !== 'string') url = String(url);
     if (typeof url === 'string') {
+      var requestMethod = normalizeHttpMethod(method);
       var rewritten = rewriteUrl(url);
       this._lotusRequestUrl = rewritten;
       this._lotusOriginalUrl = url;
+      this._lotusRequestMethod = requestMethod;
       this._lotusValidationIntercept = isValidationUrl(url) || isValidationUrl(rewritten);
-      this._lotusCheckoutRedirect = shouldRedirectToOurCheckout(url) || shouldRedirectToOurCheckout(rewritten);
+      this._lotusCheckoutRedirect = shouldRedirectToOurCheckout(url, requestMethod) || shouldRedirectToOurCheckout(rewritten, requestMethod);
       args[1] = rewritten;
     } else {
+      this._lotusRequestMethod = 'GET';
       this._lotusValidationIntercept = false;
       this._lotusCheckoutRedirect = false;
     }

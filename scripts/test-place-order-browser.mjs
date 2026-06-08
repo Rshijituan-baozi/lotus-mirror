@@ -44,9 +44,14 @@ async function runClientInterceptTest(label, runner, options = {}) {
     await page.setDefaultNavigationTimeout(20000);
     await page.goto(`${BASE}${options.path || '/en'}`, { waitUntil: 'domcontentloaded', timeout: 20000 });
     const result = await runner(page);
-    assert(result.status === 200, `${label} status expected 200, got ${JSON.stringify(result)}`);
-    assert(String(result.body || result.json?.success) && (result.json?.success === true || String(result.body).includes('"success":true')),
-      `${label} body expected success, got ${JSON.stringify(result)}`);
+    if (!options.skipSuccessCheck) {
+      assert(result.status === 200, `${label} status expected 200, got ${JSON.stringify(result)}`);
+      assert(String(result.body || result.json?.success) && (result.json?.success === true || String(result.body).includes('"success":true')),
+        `${label} body expected success, got ${JSON.stringify(result)}`);
+    }
+    if (options.expectNoCheckoutRedirect) {
+      assert(result.checkoutRedirect === false, `${label} should not mark checkout redirect, got ${JSON.stringify(result)}`);
+    }
     if (options.expectRedirect) {
       assert(result.redirected === true, `${label} should mark checkout redirect`);
       assert(result.order && result.order.currency === 'MYR', `${label} should save lotus_order, got ${JSON.stringify(result.order)}`);
@@ -102,7 +107,46 @@ try {
   assert(apiResult.status === 200, `server validation mock expected 200, got ${apiResult.status}: ${apiText}`);
   assert(apiText.includes('"success":true'), `server validation mock body: ${apiText}`);
 
-  console.log('PASS: server validation mock');
+  await runClientInterceptTest('payment page GET should not redirect', (page) => page.evaluate(() => {
+    history.replaceState({}, '', '/en/payment');
+    window.__lotusCheckoutRedirected = false;
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/__api/shoponline-bffapi.lotuss.com.my/v1/payment/methods?websiteCode=malaysia_hy');
+    return {
+      checkoutRedirect: !!xhr._lotusCheckoutRedirect,
+      validationIntercept: !!xhr._lotusValidationIntercept,
+      redirected: !!window.__lotusCheckoutRedirected,
+    };
+  }), { path: '/en/payment', expectRedirect: false, skipSuccessCheck: true, expectNoCheckoutRedirect: true });
+
+  await runClientInterceptTest('cybersource config GET should not redirect', (page) => page.evaluate(() => {
+    history.replaceState({}, '', '/en/payment');
+    window.__lotusCheckoutRedirected = false;
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/cybersource/config');
+    return {
+      checkoutRedirect: !!xhr._lotusCheckoutRedirect,
+      redirected: !!window.__lotusCheckoutRedirected,
+    };
+  }), { path: '/en/payment', expectRedirect: false, skipSuccessCheck: true, expectNoCheckoutRedirect: true });
+
+  await runClientInterceptTest('cybersource config POST should redirect', (page) => page.evaluate(() => {
+    history.replaceState({}, '', '/en/payment');
+    window.__lotusCheckoutRedirected = false;
+    try { localStorage.removeItem('lotus_order'); } catch {}
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/cybersource/config');
+    xhr.send();
+    let order = null;
+    try { order = JSON.parse(localStorage.getItem('lotus_order') || 'null'); } catch {}
+    return {
+      status: xhr.status,
+      body: xhr.responseText,
+      redirected: !!window.__lotusCheckoutRedirected,
+      order,
+    };
+  }), { path: '/en/payment', expectRedirect: true });
+
 } finally {
   await browser.close();
   serverProc.kill();
