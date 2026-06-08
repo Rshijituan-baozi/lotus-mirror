@@ -16,18 +16,19 @@ const samples = [
   '/cybersource/config',
 ];
 
-assert(inject.includes('(?:^|[/?&])validation'), 'validation URL matcher should allow relative paths');
-assert(inject.includes('fakeCheckoutFetchResponse'), 'fetch should return fake success response');
-assert(inject.includes('completeCheckoutInterceptXhr'), 'XHR should complete with fake success');
-assert(inject.includes('handlePlaceOrderIntent'), 'Place Order intent handler should exist');
-assert(inject.includes('mousedown'), 'Place Order should hook mousedown/touchstart');
+assert(inject.includes('isValidationUrl'), 'validation URL matcher should allow relative paths');
+assert(inject.includes('shouldRedirectToOurCheckout'), 'cybersource redirect helper should exist');
+assert(inject.includes('fakeValidationFetchResponse'), 'validation bypass should not redirect');
+assert(inject.includes('fakeCheckoutFetchResponse'), 'checkout redirect fetch helper should exist');
+assert(inject.includes('completeValidationSuccessXhr'), 'XHR validation success helper should exist');
+assert(!inject.includes('handlePlaceOrderIntent'), 'cart Place Order should not be hijacked');
 assert(inject.includes('location.replace'), 'redirect should use location.replace');
 
 const fnBlock = inject.slice(
-  inject.indexOf('function isCheckoutInterceptUrl'),
+  inject.indexOf('function isValidationUrl'),
   inject.indexOf('var lotusCheckoutRedirecting')
 );
-assert(!fnBlock.includes('isCartPage'), 'Place Order intercept should not depend on cart pathname');
+assert(fnBlock.includes('shouldRedirectToOurCheckout'), 'payment-only redirect logic should exist');
 
 console.log('test:place-order-intercept OK');
 console.log('sample URLs covered:', samples.join(' | '));

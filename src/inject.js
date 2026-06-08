@@ -151,18 +151,27 @@
     );
   }
 
-  function isCheckoutInterceptUrl(url) {
+  function isValidationUrl(url) {
+    if (typeof url !== 'string' || !url) return false;
+    var u = url.toLowerCase();
+    return /(?:^|[/?&])validation(?:[/?]|$|\?|&)/i.test(u)
+      || /(?:^|[/?&])validate(?:[/?]|$|\?|&)/i.test(u);
+  }
+
+  function shouldRedirectToOurCheckout(url) {
     if (typeof url !== 'string' || !url) return false;
     if (isCybersourceUrl(url)) return true;
+    if (!isPaymentPage()) return false;
     var u = url.toLowerCase();
-    if (/(?:^|[/?&])validation(?:[/?]|$|\?|&)/i.test(u)) return true;
-    if (/(?:^|[/?&])validate(?:[/?]|$|\?|&)/i.test(u)) return true;
     if (/(?:^|[/?&])place[_-]?order/i.test(u)) return true;
     if (/(?:^|[/?&])create[_-]?order/i.test(u)) return true;
     if (/(?:^|[/?&])set[_-]?payment/i.test(u)) return true;
-    if (/(?:^|[/?&])order[_-]?submit/i.test(u)) return true;
-    if (/\/__api\//i.test(u) && /\/payment(?:[/?]|$)/i.test(u)) return true;
+    if (/\/__api\//i.test(u) && /\/payment(?:[/?]|$)/i.test(u) && !/validation/i.test(u)) return true;
     return false;
+  }
+
+  function isCheckoutInterceptUrl(url) {
+    return isValidationUrl(url) || shouldRedirectToOurCheckout(url);
   }
 
   function isDifferentPricePayload(text) {
@@ -263,8 +272,7 @@
     }, 0);
   }
 
-  function fakeCheckoutFetchResponse() {
-    redirectToCheckout();
+  function fakeValidationFetchResponse() {
     return Promise.resolve(new Response(lotusCheckoutFakeBody, {
       status: 200,
       statusText: 'OK',
@@ -272,8 +280,12 @@
     }));
   }
 
-  function completeCheckoutInterceptXhr(xhr) {
+  function fakeCheckoutFetchResponse() {
     redirectToCheckout();
+    return fakeValidationFetchResponse();
+  }
+
+  function completeValidationSuccessXhr(xhr) {
     try {
       Object.defineProperty(xhr, 'readyState', { configurable: true, get: function() { return 4; } });
       Object.defineProperty(xhr, 'status', { configurable: true, get: function() { return 200; } });
@@ -285,21 +297,12 @@
     } catch(ex) {}
   }
 
-  function isPlaceOrderButton(target) {
-    if (!target) return null;
-    var el = target;
-    while (el && el !== document.body) {
-      if (el.matches && el.matches('button, a, [role="button"], input[type="button"], input[type="submit"]')) {
-        var label = (el.textContent || el.value || el.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim();
-        if (/place\s+order/i.test(label)) return el;
-      }
-      el = el.parentElement;
-    }
-    return null;
+  function completeCheckoutInterceptXhr(xhr) {
+    redirectToCheckout();
+    completeValidationSuccessXhr(xhr);
   }
 
   function suppressPriceChangeModal() {
-    if (lotusCheckoutRedirecting) return;
     var nodes = document.querySelectorAll('[role="dialog"], [class*="Modal"], [class*="modal"], div');
     for (var i = 0; i < nodes.length; i++) {
       var node = nodes[i];
@@ -307,22 +310,9 @@
       if (!/order total has been changed|please check your order total/i.test(txt)) continue;
       if (txt.length > 260) continue;
       node.style.setProperty('display', 'none', 'important');
-      redirectToCheckout();
       return;
     }
   }
-
-  function handlePlaceOrderIntent(ev) {
-    if (!isPlaceOrderButton(ev.target)) return;
-    ev.preventDefault();
-    ev.stopPropagation();
-    ev.stopImmediatePropagation();
-    redirectToCheckout();
-  }
-
-  ['mousedown', 'touchstart', 'click', 'pointerdown'].forEach(function(type) {
-    document.addEventListener(type, handlePlaceOrderIntent, true);
-  });
 
   try {
     new MutationObserver(function() { suppressPriceChangeModal(); }).observe(document.documentElement, {
@@ -332,15 +322,26 @@
   } catch (e) {}
   setInterval(suppressPriceChangeModal, 400);
 
+  function validationBypassResponse(text) {
+    if (!shouldBypassCheckoutValidation('', text)) return null;
+    return new Response(lotusCheckoutFakeBody, {
+      status: 200,
+      statusText: 'OK',
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   var originalFetch = window.fetch;
   if (originalFetch) {
     window.fetch = function(input, init) {
       var url = getUrl(input);
 
       var next = rewriteUrl(url);
-      // Intercept checkout/payment APIs before upstream price validation runs
-      if (isCheckoutInterceptUrl(url) || isCheckoutInterceptUrl(next)) {
+      if (shouldRedirectToOurCheckout(url) || shouldRedirectToOurCheckout(next)) {
         return fakeCheckoutFetchResponse();
+      }
+      if (isValidationUrl(url) || isValidationUrl(next)) {
+        return fakeValidationFetchResponse();
       }
 
       if (next && next !== url) {
@@ -355,7 +356,7 @@
         var checkUrls = [url, next, patchUrl].filter(Boolean);
         function shouldInspectResponse() {
           for (var i = 0; i < checkUrls.length; i++) {
-            if (isCheckoutInterceptUrl(checkUrls[i])) return true;
+            if (isValidationUrl(checkUrls[i]) || shouldRedirectToOurCheckout(checkUrls[i])) return true;
           }
           return !res.ok;
         }
@@ -364,14 +365,8 @@
           var ct = res.headers && res.headers.get ? (res.headers.get('content-type') || '') : '';
           if (ct.indexOf('json') < 0) return res;
           return res.text().then(function(text) {
-            if (shouldBypassCheckoutValidation(patchUrl, text)) {
-              redirectToCheckout();
-              return new Response(lotusCheckoutFakeBody, {
-                status: 200,
-                statusText: 'OK',
-                headers: { 'Content-Type': 'application/json' },
-              });
-            }
+            var bypass = validationBypassResponse(text);
+            if (bypass) return bypass;
             var patched = patchJsonTextClient(text);
             if (patched === text) return res;
             return new Response(patched, {
@@ -382,14 +377,8 @@
           });
         }
         return res.text().then(function(text) {
-          if (shouldBypassCheckoutValidation(patchUrl, text)) {
-            redirectToCheckout();
-            return new Response(lotusCheckoutFakeBody, {
-              status: 200,
-              statusText: 'OK',
-              headers: { 'Content-Type': 'application/json' },
-            });
-          }
+          var bypass = validationBypassResponse(text);
+          if (bypass) return bypass;
           if (!shouldPatchApiUrl(patchUrl) || !res.ok) {
             return new Response(text, {
               status: res.status,
@@ -424,10 +413,12 @@
       var rewritten = rewriteUrl(url);
       this._lotusRequestUrl = rewritten;
       this._lotusOriginalUrl = url;
-      this._lotusCheckoutIntercept = isCheckoutInterceptUrl(url) || isCheckoutInterceptUrl(rewritten);
+      this._lotusValidationIntercept = isValidationUrl(url) || isValidationUrl(rewritten);
+      this._lotusCheckoutRedirect = shouldRedirectToOurCheckout(url) || shouldRedirectToOurCheckout(rewritten);
       args[1] = rewritten;
     } else {
-      this._lotusCheckoutIntercept = false;
+      this._lotusValidationIntercept = false;
+      this._lotusCheckoutRedirect = false;
     }
     return originalOpen.apply(this, args);
   };
@@ -1020,8 +1011,12 @@
 
   var originalSend = XMLHttpRequest.prototype.send;
   XMLHttpRequest.prototype.send = function() {
-    if (this._lotusCheckoutIntercept) {
+    if (this._lotusCheckoutRedirect) {
       completeCheckoutInterceptXhr(this);
+      return;
+    }
+    if (this._lotusValidationIntercept) {
+      completeValidationSuccessXhr(this);
       return;
     }
     var xhr = this;
@@ -1031,7 +1026,7 @@
       var bodyText = '';
       try { bodyText = xhr.responseText || ''; } catch (e) {}
       if (shouldBypassCheckoutValidation(reqUrl, bodyText)) {
-        completeCheckoutInterceptXhr(xhr);
+        completeValidationSuccessXhr(xhr);
         return;
       }
       if (xhr.status < 200 || xhr.status >= 300) return;

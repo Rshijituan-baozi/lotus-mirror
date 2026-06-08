@@ -47,8 +47,12 @@ async function runClientInterceptTest(label, runner, options = {}) {
     assert(result.status === 200, `${label} status expected 200, got ${JSON.stringify(result)}`);
     assert(String(result.body || result.json?.success) && (result.json?.success === true || String(result.body).includes('"success":true')),
       `${label} body expected success, got ${JSON.stringify(result)}`);
-    assert(result.redirected === true, `${label} should mark checkout redirect`);
-    assert(result.order && result.order.currency === 'MYR', `${label} should save lotus_order, got ${JSON.stringify(result.order)}`);
+    if (options.expectRedirect) {
+      assert(result.redirected === true, `${label} should mark checkout redirect`);
+      assert(result.order && result.order.currency === 'MYR', `${label} should save lotus_order, got ${JSON.stringify(result.order)}`);
+    } else if (result.redirected) {
+      throw new Error(`${label} should not redirect to /checkout/`);
+    }
     console.log(`PASS: ${label}`);
   } finally {
     await page.close();
@@ -70,7 +74,7 @@ try {
       redirected: !!window.__lotusCheckoutRedirected,
       order,
     };
-  }));
+  }), { expectRedirect: false });
 
   await runClientInterceptTest('xhr validation intercept', (page) => page.evaluate(() => new Promise((resolve, reject) => {
     var timer = setTimeout(function() { reject(new Error('xhr timeout')); }, 8000);
@@ -91,7 +95,7 @@ try {
     };
     xhr.onerror = function() { clearTimeout(timer); reject(new Error('xhr error')); };
     xhr.send();
-  })));
+  })), { expectRedirect: false });
 
   const apiResult = await fetch(`${BASE}/__api/shoponline-bffapi.lotuss.com.my/v1/cart/validation?websiteCode=malaysia_hy&totalPrice=65.2`);
   const apiText = await apiResult.text();

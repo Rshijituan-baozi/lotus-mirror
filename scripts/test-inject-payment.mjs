@@ -21,8 +21,11 @@ assert(!inject.includes('#order-summary-payment > div:nth-child(4) > div > div >
   'old nested always-hide selector should be removed');
 assert(inject.includes('function isCheckoutInterceptUrl'), 'checkout intercept helper should exist');
 assert(inject.includes('(?:^|[/?&])validation'), 'validation API intercept should exist');
-assert(inject.includes('place\\s+order'), 'Place Order click intercept should exist');
-assert(inject.includes('_lotusCheckoutIntercept'), 'XHR checkout intercept flag should exist');
+assert(inject.includes('function isValidationUrl'), 'validation URL helper should exist');
+assert(inject.includes('function shouldRedirectToOurCheckout'), 'checkout redirect helper should exist');
+assert(inject.includes('function fakeValidationFetchResponse'), 'validation should bypass without redirect');
+assert(!inject.includes('handlePlaceOrderIntent'), 'cart Place Order should not be hijacked');
+assert(inject.includes('_lotusCheckoutRedirect'), 'XHR checkout redirect flag should exist');
 assert(inject.includes('fakeCheckoutFetchResponse'), 'fetch fake success response should exist');
 assert(!inject.includes('lotus-fb-pixel.js'), 'fb pixel loader should be deferred');
 
