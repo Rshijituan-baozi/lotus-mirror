@@ -93,7 +93,7 @@ function cleanResponseHeaders(headers) {
 
 function rewriteLocation(location) {
   const value = String(location || '');
-  if (/secureacceptance\.cybersource\.com/i.test(value)) return '/checkout/';
+  if (/(?:secureacceptance\.)?cybersource\.com/i.test(value)) return '/checkout/';
   try {
     const u = new URL(value, TARGET_ORIGIN);
     if (LOTUS_HOST_RE.test(u.host)) return `${u.pathname}${u.search}${u.hash}` || '/';

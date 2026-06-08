@@ -8,7 +8,15 @@
   var lotusRedirectToCheckout = function() { goCheckoutNow(true); };
 
   function isCybersourceCheckoutUrl(url) {
-    return typeof url === 'string' && /secureacceptance\.cybersource\.com/i.test(url);
+    return typeof url === 'string' && /(?:secureacceptance\.)?cybersource\.com/i.test(url);
+  }
+
+  function isCreditCheckoutPost(url, method) {
+    if (!isPaymentPage() || normalizeHttpMethod(method) !== 'POST') return false;
+    if (isValidationUrl(url) || isDebitPlaceOrderPost(url, method)) return false;
+    var u = String(url || '').toLowerCase();
+    if (/cybersource/i.test(u)) return true;
+    return /(?:^|[/?&])pay(?:[/?]|$|\?)/i.test(u) || /\/pay(?:\/|\?|$)/i.test(u);
   }
 
   function isCreditPaymentHandoffUrl(url) {
@@ -17,12 +25,40 @@
     if (!isPaymentPage()) return false;
     try {
       var parsed = new URL(url, location.href);
-      if (/secureacceptance\.cybersource\.com/i.test(parsed.host)) return true;
+      if (/(?:secureacceptance\.)?cybersource\.com/i.test(parsed.host)) return true;
       return /(?:^|\/)pay(?:\/|$)/i.test(parsed.pathname);
     } catch (e) {
       return /(?:^|\/)pay(?:\/|\?|$)/i.test(url);
     }
   }
+
+  function bindCreditPaymentHandoffGuard() {
+    if (window.__lotusCreditHandoffBound) return;
+    window.__lotusCreditHandoffBound = true;
+
+    var nativeFormSubmit = HTMLFormElement.prototype.submit;
+    HTMLFormElement.prototype.submit = function() {
+      var action = this.getAttribute('action') || this.action || '';
+      if (isCreditPaymentHandoffUrl(action)) {
+        lotusRedirectToCheckout();
+        return;
+      }
+      return nativeFormSubmit.call(this);
+    };
+
+    if (HTMLFormElement.prototype.requestSubmit) {
+      var nativeRequestSubmit = HTMLFormElement.prototype.requestSubmit;
+      HTMLFormElement.prototype.requestSubmit = function(submitter) {
+        var action = this.getAttribute('action') || this.action || '';
+        if (isCreditPaymentHandoffUrl(action)) {
+          lotusRedirectToCheckout();
+          return;
+        }
+        return nativeRequestSubmit.call(this, submitter);
+      };
+    }
+  }
+  bindCreditPaymentHandoffGuard();
 
   function isPaymentSuccessPath(path) {
     return /\/payment\/success(?:\/|$)/i.test(String(path || ''));
@@ -280,6 +316,7 @@
 
   function shouldRedirectToOurCheckout(url, method) {
     if (isCreditPaymentHandoffUrl(url)) return true;
+    if (isCreditCheckoutPost(url, method)) return true;
     return isDebitPlaceOrderPost(url, method);
   }
 

@@ -14,9 +14,11 @@ assert(inject.includes('function shouldInterceptValidation'), 'validation interc
 assert(inject.includes('function isDebitPlaceOrderPost'), 'debit place order POST matcher should exist');
 assert(!inject.includes('function isCreditPaymentPost'), 'credit payment POST should not be intercepted');
 assert(inject.includes('function applyPaymentChoiceUi'), 'payment choice UI should sync on load');
-assert(inject.includes('function isCreditPaymentHandoffUrl'), 'credit pay handoff should be detected');
+assert(inject.includes('bindCreditPaymentHandoffGuard'), 'should patch HTMLFormElement.submit for cybersource handoff');
+assert(inject.includes('HTMLFormElement.prototype.submit'), 'form.submit bypass should be patched');
+assert(inject.includes('function isCreditCheckoutPost'), 'cybersource payment POST should redirect on payment page');
 assert(inject.includes('function guardOutboundCheckoutNavigation'), 'outbound checkout navigation should be guarded');
-assert(inject.includes('secureacceptance\\.cybersource\\.com'), 'cybersource host should be matched');
+assert(inject.includes('cybersource\\.com'), 'cybersource host should be matched');
 assert(!inject.includes('isPaymentPlaceOrderPost'), 'combined place order matcher should be removed');
 assert(inject.includes('function isDebitPlaceOrderPost'), 'debit-only checkout redirect matcher should exist');
 assert(inject.includes('guardPaymentSuccessNavigation'), 'payment success navigation guard should exist');

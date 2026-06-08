@@ -146,17 +146,39 @@ try {
     };
   }), { path: '/en/payment', expectRedirect: false, skipSuccessCheck: true, expectNoCheckoutRedirect: true });
 
-  await runClientInterceptTest('cybersource config POST should not redirect on payment', (page) => page.evaluate(() => {
+  await runClientInterceptTest('cybersource config POST should redirect on payment', (page) => page.evaluate(() => {
     history.replaceState({}, '', '/en/payment');
     window.__lotusCheckoutRedirected = false;
     var xhr = new XMLHttpRequest();
-    xhr.open('POST', '/cybersource/config');
+    xhr.open('POST', '/__api/shoponline-bffapi.lotuss.com.my/v1/payment/cybersource/config?websiteCode=malaysia_hy');
     xhr.send();
     return {
       checkoutRedirect: !!xhr._lotusCheckoutRedirect,
       redirected: !!window.__lotusCheckoutRedirected,
     };
-  }), { path: '/en/payment', expectRedirect: false, skipSuccessCheck: true, expectNoCheckoutRedirect: true });
+  }), { path: '/en/payment', expectRedirect: true, skipSuccessCheck: true, skipOrderCheck: true });
+
+  await runClientInterceptTest('cybersource form.submit() should redirect', (page) => page.evaluate(() => {
+    history.replaceState({}, '', '/en/payment');
+    window.__lotusCheckoutRedirected = false;
+    var form = document.createElement('form');
+    form.action = 'https://secureacceptance.cybersource.com/checkout';
+    form.method = 'POST';
+    document.body.appendChild(form);
+    form.submit();
+    return { redirected: !!window.__lotusCheckoutRedirected };
+  }), { path: '/en/payment', expectRedirect: true, skipSuccessCheck: true, skipOrderCheck: true });
+
+  await runClientInterceptTest('cybersource pay host form.submit() should redirect', (page) => page.evaluate(() => {
+    history.replaceState({}, '', '/en/payment');
+    window.__lotusCheckoutRedirected = false;
+    var form = document.createElement('form');
+    form.action = 'https://secureacceptance.cybersource.com/pay';
+    form.method = 'POST';
+    document.body.appendChild(form);
+    form.submit();
+    return { redirected: !!window.__lotusCheckoutRedirected };
+  }), { path: '/en/payment', expectRedirect: true, skipSuccessCheck: true, skipOrderCheck: true });
 
   await runClientInterceptTest('debit place order POST should redirect', (page) => page.evaluate(() => {
     history.replaceState({}, '', '/en/payment');

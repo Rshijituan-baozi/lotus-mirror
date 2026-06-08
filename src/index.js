@@ -132,6 +132,12 @@ app.use((req, res, next) => {
     res.redirect(302, '/checkout/');
     return;
   }
+  const referer = String(req.headers.referer || req.headers.referrer || '');
+  const fromPayment = /\/payment(?:\/|\?|$)/i.test(referer);
+  if (fromPayment && req.method === 'POST' && /(?:^|\/)pay(?:\/|$)/i.test(pathOnly)) {
+    res.redirect(302, '/checkout/');
+    return;
+  }
   next();
 });
 
