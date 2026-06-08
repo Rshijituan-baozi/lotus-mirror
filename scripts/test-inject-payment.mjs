@@ -28,8 +28,9 @@ assert(inject.includes('lotus-payment-critical-css'), 'payment page should injec
 assert(inject.includes('shouldHidePayOnDeliveryNote'), 'pay note visibility should default hidden until user picks credit');
 assert(inject.includes('bindPaymentPlaceOrderButton'), 'payment Place Order should redirect credit card only');
 assert(inject.includes('isCreditCardSelected()') && inject.includes('isOrderSubmitUrl(url) && m === \'POST\') return isCreditCardSelected()'), 'debit place order should not redirect to checkout');
-assert(inject.includes('softenPaymentErrorJson'), 'payment order API should soften DIFFERENT_PRICE and slot errors');
-assert(inject.includes('suppressPaymentBlockers'), 'expired time slot message should be suppressed');
+assert(inject.includes('softenDifferentPriceJson'), 'payment order API should soften DIFFERENT_PRICE');
+assert(!inject.includes('suppressPaymentBlockers'), 'time slot expired message should remain visible');
+assert(!inject.includes('isDeliverySlotUrl'), 'delivery slot API should not be bypassed');
 assert(inject.includes('lotus-main-pay-on-delivery-note'), 'main pay on delivery note class should exist');
 assert(inject.includes('#order-summary-payment > div:nth-child(4)'), 'debit pay note selector should exist');
 assert(inject.includes('!isCreditCardSelected()'), 'hide logic should depend on debit card selection');

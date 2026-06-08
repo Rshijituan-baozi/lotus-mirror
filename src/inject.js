@@ -208,38 +208,10 @@
     return isValidationUrl(String(url || ''));
   }
 
-  function isDeliverySlotUrl(url) {
-    return /(?:^|[/?&])(?:slot|timeslot|time[_-]?slot|delivery[_-]?slot|delivery[_-]?time)(?:[/?]|$|\?|&)/i.test(String(url || ''));
-  }
-
   function shouldSoftenDifferentPriceOnPayment(url) {
     if (!isPaymentPage()) return false;
     if (isValidationUrl(url)) return false;
-    if (isDeliverySlotUrl(url)) return true;
     return /\/(?:payment|order|checkout|cart)(?:\/|\?|$)/i.test(String(url || ''));
-  }
-
-  function softenPaymentErrorJson(text, url) {
-    var softened = softenDifferentPriceJson(text);
-    if (softened) return softened;
-    if (!isPaymentPage()) return null;
-    try {
-      var data = JSON.parse(text);
-      var msg = String((data.error && data.error.message) || data.message || data.description || '').toLowerCase();
-      if (
-        /time\s*slot|slot\s*expired|delivery\s*slot|different_price|4000[01]/.test(msg)
-        || /time\s*slot|slot\s*expired|delivery\s*slot/i.test(String(text || ''))
-        || (isDeliverySlotUrl(url) && data.success === false)
-      ) {
-        if (data.error) delete data.error;
-        if (data.code === 40001) data.code = 0;
-        data.success = true;
-        if (!data.data || typeof data.data !== 'object') data.data = {};
-        if (data.data.valid == null) data.data.valid = true;
-        return JSON.stringify(data);
-      }
-    } catch (e) {}
-    return null;
   }
 
   function softenDifferentPriceJson(text) {
@@ -259,7 +231,7 @@
   function paymentApiResponse(text, url) {
     if (shouldBypassCheckoutValidation(url, text)) return lotusCheckoutFakeBody;
     if (shouldSoftenDifferentPriceOnPayment(url)) {
-      var softened = softenPaymentErrorJson(text, url);
+      var softened = softenDifferentPriceJson(text);
       if (softened) return softened;
     }
     return null;
@@ -1423,18 +1395,6 @@
     }, true);
   }
 
-  function suppressPaymentBlockers() {
-    if (!isPaymentPage()) return;
-    Array.prototype.forEach.call(document.querySelectorAll('p, span, div, li, small, strong'), function(el) {
-      if (!el || el.children.length > 6) return;
-      var txt = (el.textContent || '').replace(/\s+/g, ' ').trim();
-      if (!txt || txt.length > 180) return;
-      if (/time slot has expired|please select a new time slot/i.test(txt)) {
-        el.style.setProperty('display', 'none', 'important');
-      }
-    });
-  }
-
   function bindPaymentChoiceTracking() {
     if (window.__lotusPaymentChoiceBound) return;
     window.__lotusPaymentChoiceBound = true;
@@ -1656,7 +1616,6 @@
 
     installPaymentAntiFlickerStyle();
     bindPaymentPlaceOrderButton();
-    suppressPaymentBlockers();
     if (!paymentSectionsReady()) return;
 
     clearStalePaymentChoice();

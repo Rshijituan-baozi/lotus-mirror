@@ -145,21 +145,15 @@ export function patchDifferentPriceBody(body, url = '') {
 
 export function softenDifferentPriceBody(body, url = '') {
   const text = body.toString('utf8');
-  if (!/DIFFERENT_PRICE|time\s*slot|slot\s*expired|delivery\s*slot|"code"\s*:\s*4000[01]/i.test(text)) {
-    return { body, status: null };
-  }
+  if (!/DIFFERENT_PRICE/i.test(text)) return { body, status: null };
   if (isCartValidationRequest(url)) return patchDifferentPriceBody(body, url);
   const u = String(url || '').toLowerCase();
-  if (!/\/(?:payment|order|checkout|cart|slot|timeslot|delivery)(?:\/|\?|$)/.test(u) && !/time\s*slot|slot\s*expired/i.test(text)) {
-    return { body, status: null };
-  }
+  if (!/\/(?:payment|order|checkout|cart)(?:\/|\?|$)/.test(u)) return { body, status: null };
   try {
     const data = JSON.parse(text);
     if (data.error) delete data.error;
     if (data.code === 40001) data.code = 0;
     data.success = true;
-    if (!data.data || typeof data.data !== 'object') data.data = {};
-    if (data.data.valid == null) data.data.valid = true;
     return { body: Buffer.from(JSON.stringify(data), 'utf8'), status: 200 };
   } catch {
     return { body, status: null };
