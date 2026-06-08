@@ -267,13 +267,13 @@ try {
 
   {
     const page = await browser.newPage();
-    const configBody = JSON.stringify({
+    const configBody = JSON.stringify([{
       status: { code: 200, message: 'success' },
       data: {
         endpoint: 'https://secureacceptance.cybersource.com/pay',
         query: 'access_key=test&profile_id=test',
       },
-    });
+    }]);
     await page.setRequestInterception(true);
     page.on('request', (req) => {
       if (/cybersource\/config/i.test(req.url())) {
@@ -297,6 +297,23 @@ try {
       }));
       assert(result.redirected === true, `config endpoint response should redirect, got ${JSON.stringify(result)}`);
       console.log('PASS: cybersource config response redirects after endpoint');
+
+      const fetchResult = await page.evaluate(() => new Promise((resolve) => {
+        window.__lotusCheckoutRedirected = false;
+        fetch('/__api/shoponline-bffapi.lotuss.com.my/v1/payment/cybersource/config?websiteCode=malaysia_hy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+        }).then(function() {
+          setTimeout(function() {
+            resolve({ redirected: !!window.__lotusCheckoutRedirected });
+          }, 120);
+        }).catch(function(err) {
+          resolve({ redirected: false, error: String(err) });
+        });
+      }));
+      assert(fetchResult.redirected === true, `fetch config array response should redirect, got ${JSON.stringify(fetchResult)}`);
+      console.log('PASS: fetch cybersource config array response redirects');
     } finally {
       await page.close();
     }

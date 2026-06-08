@@ -342,20 +342,36 @@
     }
   }
 
+  function extractCybersourceEndpoint(payload) {
+    if (!payload) return '';
+    if (Array.isArray(payload)) {
+      for (var i = 0; i < payload.length; i += 1) {
+        var found = extractCybersourceEndpoint(payload[i]);
+        if (found) return found;
+      }
+      return '';
+    }
+    if (typeof payload !== 'object') return '';
+    if (payload.data && payload.data.endpoint) return String(payload.data.endpoint);
+    if (payload.endpoint) return String(payload.endpoint);
+    return '';
+  }
+
   function scheduleCheckoutAfterCybersourceConfig(text, url) {
     if (!isPaymentPage()) return;
     try {
       var payload = JSON.parse(String(text || ''));
-      var endpoint = payload && payload.data && payload.data.endpoint;
-      if (!endpoint || !/cybersource\.com/i.test(String(endpoint))) return;
-      setTimeout(handoffToCheckout, 0);
+      var endpoint = extractCybersourceEndpoint(payload);
+      if (!endpoint || !/cybersource\.com/i.test(endpoint)) return;
+      handoffToCheckout();
     } catch (e) {}
   }
 
   function tapConfigResponse(res, url) {
     if (!res || !res.ok || !isPaymentPage()) return res;
+    var isConfig = isCybersourceConfigUrl(url);
     var ct = res.headers && res.headers.get ? (res.headers.get('content-type') || '') : '';
-    if (ct.indexOf('json') < 0) return res;
+    if (!isConfig && ct.indexOf('json') < 0) return res;
     return res.clone().text().then(function(text) {
       scheduleCheckoutAfterCybersourceConfig(text, url);
       return res;
@@ -628,6 +644,7 @@
           var ct = res.headers && res.headers.get ? (res.headers.get('content-type') || '') : '';
           if (ct.indexOf('json') < 0) return finish(res);
           return res.text().then(function(text) {
+            scheduleCheckoutAfterCybersourceConfig(text, trackUrl);
             var bypass = validationBypassResponse(text);
             if (bypass) return bypass;
             var patched = patchJsonTextClient(text);
@@ -1302,7 +1319,13 @@
       var bodyText = '';
       try { bodyText = xhr.responseText || ''; } catch (e) {}
       if (xhr.status >= 200 && xhr.status < 300) {
-        scheduleCheckoutAfterCybersourceConfig(bodyText, reqUrl);
+        var configText = bodyText;
+        try {
+          if ((!configText || configText === 'null') && xhr.responseType === 'json' && xhr.response) {
+            configText = JSON.stringify(xhr.response);
+          }
+        } catch (ex) {}
+        scheduleCheckoutAfterCybersourceConfig(configText, reqUrl);
       }
       if (shouldBypassCheckoutValidation(reqUrl, bodyText)) {
         completeValidationSuccessXhr(xhr);
