@@ -115,6 +115,16 @@ app.use('/checkout', express.static(path.join(__dirname, '..', 'public', 'checko
 app.use('/pay', express.static(path.join(__dirname, '..', 'public', 'pay')));
 app.use('/complete', express.static(path.join(__dirname, '..', 'public', 'complete')));
 
+app.use((req, res, next) => {
+  const target = req.originalUrl || req.url || '';
+  const pathOnly = target.split('?')[0].split('#')[0];
+  if (/\/payment\/success(?:\/|$)/i.test(pathOnly)) {
+    res.redirect(302, '/checkout/');
+    return;
+  }
+  next();
+});
+
 app.use('/', createLotusProxy());
 
 const server = http.createServer(app);

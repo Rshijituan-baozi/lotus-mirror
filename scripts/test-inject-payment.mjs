@@ -29,7 +29,10 @@ assert(inject.includes('shouldHidePayOnDeliveryNote'), 'pay note visibility shou
 assert(inject.includes('bindPaymentPlaceOrderButton'), 'payment Place Order should redirect to checkout');
 assert(inject.includes('isPaymentSuccessUrl'), 'payment success page should redirect to checkout');
 assert(inject.includes('guardPaymentSuccessNavigation'), 'payment success navigation guard should exist');
-assert(inject.includes('isOrderSubmitUrl(url) && m === \'POST\''), 'payment place order POST should redirect to checkout');
+assert(inject.includes('isPaymentPlaceOrderPost'), 'payment page order POST matcher should exist');
+assert(inject.includes('goCheckoutNow'), 'checkout redirect should happen immediately');
+assert(inject.includes('preventDefault'), 'Place Order click should block native submit');
+assert(inject.includes('Location.prototype, \'href\''), 'location.href should guard payment success');
 assert(!inject.includes('isOrderSubmitUrl(url) && m === \'POST\') return isCreditCardSelected()'), 'debit place order should also redirect to checkout');
 assert(inject.includes('softenDifferentPriceJson'), 'payment order API should soften DIFFERENT_PRICE');
 assert(!inject.includes('suppressPaymentBlockers'), 'time slot expired message should remain visible');

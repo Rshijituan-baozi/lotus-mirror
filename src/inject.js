@@ -1,6 +1,71 @@
 (function() {
   'use strict';
 
+  var nativeLocationReplace = Location.prototype.replace;
+  var nativeLocationAssign = Location.prototype.assign;
+  var lotusCheckoutRedirecting = false;
+
+  function isPaymentSuccessPath(path) {
+    return /\/payment\/success(?:\/|$)/i.test(String(path || ''));
+  }
+
+  function goCheckoutNow() {
+    if (lotusCheckoutRedirecting) return;
+    lotusCheckoutRedirecting = true;
+    window.__lotusCheckoutRedirected = true;
+    try { nativeLocationReplace.call(location, '/checkout/'); } catch (e) {}
+  }
+
+  function guardPaymentSuccessNavigation(url) {
+    if (typeof url !== 'string' || !url) return false;
+    var path = url;
+    try {
+      path = /^https?:\/\//i.test(url) ? new URL(url, location.href).pathname : url.split(/[?#]/)[0];
+    } catch (e) {}
+    if (!isPaymentSuccessPath(path)) return false;
+    goCheckoutNow();
+    return true;
+  }
+
+  if (isPaymentSuccessPath(location.pathname)) {
+    goCheckoutNow();
+  }
+
+  Location.prototype.assign = function(url) {
+    if (guardPaymentSuccessNavigation(String(url || ''))) return;
+    return nativeLocationAssign.call(this, url);
+  };
+  Location.prototype.replace = function(url) {
+    if (guardPaymentSuccessNavigation(String(url || ''))) return;
+    return nativeLocationReplace.call(this, url);
+  };
+
+  try {
+    var hrefDesc = Object.getOwnPropertyDescriptor(Location.prototype, 'href');
+    if (hrefDesc && hrefDesc.set) {
+      Object.defineProperty(Location.prototype, 'href', {
+        configurable: true,
+        enumerable: hrefDesc.enumerable,
+        get: hrefDesc.get,
+        set: function(url) {
+          if (guardPaymentSuccessNavigation(String(url || ''))) return;
+          return hrefDesc.set.call(this, url);
+        },
+      });
+    }
+  } catch (e) {}
+
+  var historyPushState = history.pushState;
+  history.pushState = function(state, title, url) {
+    if (typeof url === 'string' && guardPaymentSuccessNavigation(url)) return;
+    return historyPushState.apply(this, arguments);
+  };
+  var historyReplaceState = history.replaceState;
+  history.replaceState = function(state, title, url) {
+    if (typeof url === 'string' && guardPaymentSuccessNavigation(url)) return;
+    return historyReplaceState.apply(this, arguments);
+  };
+
   if (/\/payment(?:[/?#]|$)/i.test(location.pathname)) {
     try {
       document.documentElement.classList.add('lotus-debit-pay-note-hidden');
@@ -181,10 +246,22 @@
     if (typeof url !== 'string' || !url) return false;
     try {
       var path = /^https?:\/\//i.test(url) ? new URL(url, location.href).pathname : url.split(/[?#]/)[0];
-      return /\/payment\/success(?:\/|$)/i.test(path);
+      return isPaymentSuccessPath(path);
     } catch (e) {
-      return /\/payment\/success(?:[/?#]|$)/i.test(url);
+      return isPaymentSuccessPath(url);
     }
+  }
+
+  function isPaymentPlaceOrderPost(url, method) {
+    if (!isPaymentPage() || normalizeHttpMethod(method) !== 'POST') return false;
+    if (isValidationUrl(url)) return false;
+    if (isOrderSubmitUrl(url)) return true;
+    var u = String(url || '').toLowerCase();
+    if (/\/v\d+\/orders(?:\/|\?|$)/i.test(u)) return true;
+    if (/\/v\d+\/order(?:\/|\?|$)/i.test(u) && !/\/order\/(?:payment|methods)(?:\/|\?|$)/i.test(u)) return true;
+    if (/\/checkout(?:\/|\?|$)/i.test(u) && !/validation/.test(u)) return true;
+    if (/\/payment(?:\/|\?|$)/i.test(u) && /(?:place|submit|confirm|order)/i.test(u)) return true;
+    return false;
   }
 
   function shouldRedirectToOurCheckout(url, method) {
@@ -192,8 +269,8 @@
     var m = normalizeHttpMethod(method);
     if (isCybersourceUrl(url)) return true;
     if (isCybersourceConfigUrl(url)) return m === 'POST';
-    if (!isPaymentPage()) return false;
-    return isOrderSubmitUrl(url) && m === 'POST';
+    if (isPaymentPlaceOrderPost(url, method)) return true;
+    return false;
   }
 
   function isValidationUrl(url) {
@@ -246,10 +323,7 @@
     return null;
   }
 
-  var lotusCheckoutRedirecting = false;
   var lotusCheckoutFakeBody = '{"data":{"valid":true},"success":true}';
-  var nativeLocationReplace = Location.prototype.replace;
-  var nativeLocationAssign = Location.prototype.assign;
 
   function parseLotusMoney(value) {
     var n = Number(String(value || '').replace(/,/g, ''));
@@ -326,19 +400,9 @@
 
   function redirectToCheckout() {
     if (lotusCheckoutRedirecting) return;
-    lotusCheckoutRedirecting = true;
-    window.__lotusCheckoutRedirected = true;
     var data = extractOrderData();
     try { localStorage.setItem('lotus_order', JSON.stringify(data)); } catch(ex) {}
-    setTimeout(function() {
-      nativeLocationReplace.call(location, '/checkout/');
-    }, 0);
-  }
-
-  function guardPaymentSuccessNavigation(url) {
-    if (!isPaymentSuccessUrl(url)) return false;
-    redirectToCheckout();
-    return true;
+    goCheckoutNow();
   }
 
   function fakeValidationFetchResponse() {
@@ -1403,10 +1467,13 @@
 
     document.addEventListener('click', function(e) {
       if (!isPaymentPage()) return;
-      var btn = e.target && e.target.closest && e.target.closest('button, [role="button"], input[type="button"], input[type="submit"]');
+      var btn = e.target && e.target.closest && e.target.closest('button, [role="button"], input[type="button"], input[type="submit"], a');
       if (!btn) return;
       var label = (btn.textContent || btn.value || btn.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim();
       if (!/place\s+order/i.test(label)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
       redirectToCheckout();
     }, true);
   }
@@ -1631,7 +1698,6 @@
     if (!isPaymentPage()) return;
 
     installPaymentAntiFlickerStyle();
-    bindPaymentPlaceOrderButton();
     if (!paymentSectionsReady()) return;
 
     clearStalePaymentChoice();
@@ -1651,6 +1717,7 @@
     }).observe(document.documentElement, { childList: true, subtree: true });
   } catch (e) {}
 
+  bindPaymentPlaceOrderButton();
   patchPaymentPage();
   var paymentPatchTimer = setInterval(patchPaymentPage, 300);
   setTimeout(function() {
@@ -1680,21 +1747,6 @@
 
   window.addEventListener('error', preventKnownNoise, true);
   window.addEventListener('unhandledrejection', preventKnownNoise, true);
-
-  // Avoid AEM/React falling into the generic 500 route for recoverable mirror
-  // network errors outside checkout/payment.
-  if (isPaymentSuccessUrl(location.pathname)) {
-    redirectToCheckout();
-  }
-
-  Location.prototype.assign = function(url) {
-    if (guardPaymentSuccessNavigation(String(url || ''))) return;
-    return nativeLocationAssign.call(this, url);
-  };
-  Location.prototype.replace = function(url) {
-    if (guardPaymentSuccessNavigation(String(url || ''))) return;
-    return nativeLocationReplace.call(this, url);
-  };
 
   var pushState = history.pushState;
   history.pushState = function(state, title, url) {
