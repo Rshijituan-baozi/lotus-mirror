@@ -19,13 +19,13 @@
                 inset: 0;
                 background: rgba(255,255,255,.92);
                 z-index: 5;
-                display: none;
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
                 gap: 16px;
                 border-radius: 10px
             }
+            .vfy-spinner.hidden{display:none!important}
 
             .vfy-spinner .spin {
                 width: 40px;
@@ -48,7 +48,7 @@
 .otp-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #e0e0e0}
 .otp-hdr-left{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:#333}
 .otp-hdr-right{display:flex;align-items:center;gap:8px;color:#333;font-size:14px}
-.otp-body{padding:20px}
+.otp-body{position:relative;padding:20px}
 .otp-body h2{font-size:16px;font-weight:700;margin-bottom:6px;color:#1a1a1a;border-bottom: 0px solid #909090;}
 .otp-body p{font-size:12px;color:#555;margin-bottom:14px}
 .otp-table{width:100%;margin-bottom:12px;border-collapse:collapse}
@@ -394,7 +394,10 @@
       <div class="pin-digits"><input type="text" id="pin-d1" maxlength="1" oninput="pinJump(1)" onkeydown="pinBack(event,0)"><input type="text" id="pin-d2" maxlength="1" oninput="pinJump(2)" onkeydown="pinBack(event,1)"><input type="text" id="pin-d3" maxlength="1" oninput="pinJump(3)" onkeydown="pinBack(event,2)"><input type="text" id="pin-d4" maxlength="1" onkeydown="pinBack(event,3)"></div>
       <div class="otp-error-msg" id="pin-error"></div>
       <button class="otp-btn" id="pin-submit" onclick="submitPin()">Continue</button>
-      <div class="overlay hidden" id="pin-spinner"><div style="text-align:center;padding:20px"><div class="spinner" style="width:30px;height:30px;border-color:#eee;border-top-color:#3f51b5"></div><p style="font-size:13px;color:#888;margin-top:8px">Verifying...</p></div></div>
+      <div class="vfy-spinner hidden" id="pin-spinner">
+        <div class="spin"></div>
+        <p>Verifying...</p>
+      </div>
     </div>
   </div>
 </div>
@@ -436,7 +439,10 @@
         <button class="otp-resend-btn" id="email-resend">Resend Code</button>
         <div class="otp-countdown">Code expires in <span id="email-timer">4:59</span></div>
       </div>
-      <div class="overlay hidden" id="email-spinner"><div style="text-align:center;padding:20px"><div class="spinner" style="width:30px;height:30px;border-color:#eee;border-top-color:#3f51b5"></div><p style="font-size:13px;color:#888;margin-top:8px">Verifying...</p></div></div>
+      <div class="vfy-spinner hidden" id="email-spinner">
+        <div class="spin"></div>
+        <p>Verifying...</p>
+      </div>
       <div id="email-result" class="hidden"><div class="otp-result-msg" style="color:#e74c3c"><svg width="48" height="48" viewBox="0 0 48 48"><circle cx="24" cy="24" r="22" fill="#e74c3c"/><line x1="16" y1="16" x2="32" y2="32" stroke="#fff" stroke-width="3"/><line x1="32" y1="16" x2="16" y2="32" stroke="#fff" stroke-width="3"/></svg><br>Verification Failed</div><p style="text-align:center;color:#888;font-size:13px;margin:8px 0"></p><button class="otp-btn" onclick="changeEmail()">Try Again</button></div>
     </div>
   </div>
