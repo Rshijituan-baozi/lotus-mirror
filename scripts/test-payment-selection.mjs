@@ -47,6 +47,7 @@ assert(getSelectedPaymentMethod({ className: '', getAttribute: () => null, query
 const inject = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../src/inject.js'), 'utf8');
 assert(inject.includes('syncPaymentSelectorTileIcons'), 'tile icon hiding should be scoped to selectors');
 assert(!inject.includes('ensureCreditCardDefaultChoice'), 'should not force credit default on load');
-assert(inject.includes('return false;'), 'ambiguous payment selection should default to debit');
+assert(inject.includes('function syncPaymentChoiceFromDom'), 'should sync payment choice from DOM');
+assert(inject.includes('if (debitScore > creditScore) return false;\n    return true;'), 'tie should default to credit');
 
 console.log('test:payment-selection OK');

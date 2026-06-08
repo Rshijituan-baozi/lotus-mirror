@@ -74,7 +74,6 @@
 
   if (/\/payment(?:[/?#]|$)/i.test(location.pathname)) {
     try {
-      document.documentElement.classList.add('lotus-debit-pay-note-hidden');
       var criticalCss = document.createElement('style');
       criticalCss.id = 'lotus-payment-critical-css';
       criticalCss.textContent = [
@@ -447,24 +446,10 @@
       '#place-order, #PlaceOrder, [id*="place-order" i], [data-testid*="place-order" i], [class*="place-order" i], [class*="PlaceOrder" i]'
     );
     if (known) return known;
-    var node = target;
-    for (var depth = 0; depth < 14 && node; depth += 1) {
-      if (node.matches && node.matches('button, [role="button"], input[type="button"], input[type="submit"], a, div, span')) {
-        var label = controlLabel(node);
-        if (/place\s+order/i.test(label) && label.length < 80) return node;
-      }
-      node = node.parentElement;
-    }
-    var roots = document.querySelectorAll(
-      '[class*="sticky" i], [class*="Sticky" i], footer, [class*="checkout-footer" i], [class*="CheckoutFooter" i], main'
-    );
-    for (var r = 0; r < roots.length; r += 1) {
-      var candidates = roots[r].querySelectorAll('button, [role="button"], input[type="submit"], a');
-      for (var i = 0; i < candidates.length; i += 1) {
-        var candidateLabel = controlLabel(candidates[i]);
-        if (/place\s+order/i.test(candidateLabel) && candidateLabel.length < 80) return candidates[i];
-      }
-    }
+    var el = target.closest('button, [role="button"], input[type="button"], input[type="submit"], a');
+    if (!el) return null;
+    var label = controlLabel(el);
+    if (/place\s+order/i.test(label) && label.length < 80) return el;
     return null;
   }
 
@@ -474,52 +459,18 @@
     if (e.stopImmediatePropagation) e.stopImmediatePropagation();
   }
 
-  function triggerPaymentPlaceOrder(e) {
-    if (!isPaymentPage()) return false;
-    var btn = findPlaceOrderControl(e && e.target);
-    if (!btn) return false;
-    if (window.__lotusPlaceOrderRedirecting) return true;
-    window.__lotusPlaceOrderRedirecting = true;
+  function handlePaymentPlaceOrderClick(e) {
+    if (!isPaymentPage()) return;
+    var btn = findPlaceOrderControl(e.target);
+    if (!btn) return;
     redirectToCheckout();
-    stopPlaceOrderEvent(e);
-    return true;
-  }
-
-  function handlePaymentPlaceOrderIntent(e) {
-    triggerPaymentPlaceOrder(e);
+    if (isCreditCardSelected()) stopPlaceOrderEvent(e);
   }
 
   function handlePaymentFormSubmit(e) {
     if (!isPaymentPage()) return;
-    if (window.__lotusPlaceOrderRedirecting) return;
-    window.__lotusPlaceOrderRedirecting = true;
     redirectToCheckout();
-    stopPlaceOrderEvent(e);
-  }
-
-  function bindPlaceOrderNode(node) {
-    if (!node || node.__lotusPlaceOrderBound) return;
-    var label = controlLabel(node);
-    if (!/place\s+order/i.test(label) && !node.matches('#place-order, #PlaceOrder, [id*="place-order" i], [data-testid*="place-order" i]')) return;
-    node.__lotusPlaceOrderBound = true;
-    ['pointerdown', 'click'].forEach(function(type) {
-      node.addEventListener(type, function(e) {
-        if (window.__lotusPlaceOrderRedirecting) {
-          stopPlaceOrderEvent(e);
-          return;
-        }
-        window.__lotusPlaceOrderRedirecting = true;
-        redirectToCheckout();
-        stopPlaceOrderEvent(e);
-      }, true);
-    });
-  }
-
-  function scanPlaceOrderButtons() {
-    if (!isPaymentPage()) return;
-    document.querySelectorAll(
-      '#place-order, #PlaceOrder, [id*="place-order" i], [data-testid*="place-order" i], button, [role="button"], input[type="submit"], a'
-    ).forEach(bindPlaceOrderNode);
+    if (isCreditCardSelected()) stopPlaceOrderEvent(e);
   }
 
   function fakeValidationFetchResponse() {
@@ -1462,7 +1413,6 @@
   function shouldHidePayOnDeliveryNote() {
     if (window.__lotusPaymentChoice === 'creditCard') return false;
     if (window.__lotusPaymentChoice === 'debitCard') return true;
-    if (!window.__lotusPaymentUserPicked) return true;
     return !isCreditCardSelected();
   }
 
@@ -1590,9 +1540,8 @@
     if (window.__lotusPaymentPlaceOrderBound) return;
     window.__lotusPaymentPlaceOrderBound = true;
 
-    document.addEventListener('click', handlePaymentPlaceOrderIntent, true);
+    document.addEventListener('click', handlePaymentPlaceOrderClick, true);
     document.addEventListener('submit', handlePaymentFormSubmit, true);
-    scanPlaceOrderButtons();
   }
 
   function bindPaymentChoiceTracking() {
@@ -1669,7 +1618,20 @@
     var debitScore = selectionScore(debit);
     if (creditScore > debitScore) return true;
     if (debitScore > creditScore) return false;
-    return false;
+    return true;
+  }
+
+  function syncPaymentChoiceFromDom() {
+    if (!isPaymentPage() || !paymentSectionsReady() || window.__lotusPaymentUserPicked) return;
+    var credit = document.querySelector('#payment-section-creditCard');
+    var debit = document.querySelector('#payment-section-payOnDelivery');
+    if (hasCheckedInput(debit) || (selectionScore(debit) > selectionScore(credit) && selectionScore(debit) >= 70)) {
+      window.__lotusPaymentChoice = 'debitCard';
+      return;
+    }
+    if (hasCheckedInput(credit) || looksSelected(credit) || selectionScore(credit) >= selectionScore(debit)) {
+      window.__lotusPaymentChoice = 'creditCard';
+    }
   }
 
   function findDebitPaymentNotes() {
@@ -1813,13 +1775,13 @@
     if (!paymentSectionsReady()) return;
 
     clearStalePaymentChoice();
+    syncPaymentChoiceFromDom();
     patchPaymentMethodLabels();
     syncPaymentSelectorTileIcons();
     ensureCreditCardBadge();
     syncItemSubtotalDisplay();
     syncDebitPaymentNoteVisibility();
     patchCreditCardDiscount();
-    scanPlaceOrderButtons();
   }
 
   try {

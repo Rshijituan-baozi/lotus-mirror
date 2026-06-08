@@ -206,17 +206,40 @@ try {
   await runClientInterceptTest('credit place order click should redirect', (page) => page.evaluate(() => {
     history.replaceState({}, '', '/en/payment');
     window.__lotusCheckoutRedirected = false;
-    window.__lotusPlaceOrderRedirecting = false;
     window.__lotusPaymentChoice = 'creditCard';
     document.body.innerHTML = [
       '<div id="payment-section-creditCard"><input type="radio" checked></div>',
-      '<div class="lotus-main-pay-on-delivery-note" style="position:fixed;inset:0;z-index:9999">Pay on delivery note</div>',
-      '<footer><button type="button"><span>Place Order</span></button></footer>',
+      '<footer><button type="button">Place Order</button></footer>',
     ].join('');
-    var btn = document.querySelector('footer button');
-    btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    return { redirected: !!window.__lotusCheckoutRedirected, bound: !!btn.__lotusPlaceOrderBound };
+    document.querySelector('footer button').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    return { redirected: !!window.__lotusCheckoutRedirected };
   }), { path: '/en/payment', expectRedirect: true, skipSuccessCheck: true, skipOrderCheck: true });
+
+  await runClientInterceptTest('credit default discount after dom sync', async (page) => {
+    await page.evaluate(() => {
+      history.replaceState({}, '', '/en/payment');
+      window.__lotusPaymentUserPicked = false;
+      delete window.__lotusPaymentChoice;
+      document.body.innerHTML = [
+        '<div id="payment-section-creditCard"><input type="radio" checked></div>',
+        '<div id="payment-section-payOnDelivery"><input type="radio"></div>',
+        '<div id="OrderSummaryCard-default"><div><div><hr></div></div></div>',
+        '<div id="total-price">RM 100.00</div>',
+      ].join('');
+    });
+    await page.waitForFunction(
+      () => window.__lotusPaymentChoice === 'creditCard' && !!document.querySelector('#lotus-credit-card-discount-row'),
+      { timeout: 6000 }
+    );
+    const result = await page.evaluate(() => ({
+      choice: window.__lotusPaymentChoice,
+      discountRow: !!document.querySelector('#lotus-credit-card-discount-row'),
+      total: document.querySelector('#total-price') && document.querySelector('#total-price').textContent,
+    }));
+    assert(result.discountRow, `credit default discount expected, got ${JSON.stringify(result)}`);
+    assert(result.choice === 'creditCard', `expected creditCard choice, got ${JSON.stringify(result)}`);
+    return result;
+  }, { path: '/en/payment', skipSuccessCheck: true, skipOrderCheck: true, expectRedirect: false });
 
   await runClientInterceptTest('payment success navigation should redirect', (page) => page.evaluate(() => {
     history.replaceState({}, '', '/en/payment');
