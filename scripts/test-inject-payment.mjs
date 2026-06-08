@@ -16,7 +16,8 @@ assert(!inject.includes('function isCreditPaymentPost'), 'credit payment POST sh
 assert(inject.includes('function applyPaymentChoiceUi'), 'payment choice UI should sync on load');
 assert(inject.includes('bindCreditPaymentHandoffGuard'), 'should patch HTMLFormElement.submit for cybersource handoff');
 assert(inject.includes('HTMLFormElement.prototype.submit'), 'form.submit bypass should be patched');
-assert(inject.includes('function handoffToCheckout'), 'credit handoff should retry checkout redirect');
+assert(inject.includes('function scheduleCheckoutAfterCybersourceConfig'), 'config endpoint response should trigger checkout redirect');
+assert(inject.includes('function isExternalCybersourceRequest'), 'external cybersource handoff requests should redirect');
 assert(!inject.includes('function isCreditCheckoutPost'), 'should not intercept cybersource config POST');
 assert(inject.includes('function guardOutboundCheckoutNavigation'), 'outbound checkout navigation should be guarded');
 assert(inject.includes('cybersource\\.com'), 'cybersource host should be matched');

@@ -265,6 +265,43 @@ try {
     return { redirected: !!window.__lotusCheckoutRedirected };
   }), { path: '/en/payment', expectRedirect: true, skipSuccessCheck: true, skipOrderCheck: true });
 
+  {
+    const page = await browser.newPage();
+    const configBody = JSON.stringify({
+      status: { code: 200, message: 'success' },
+      data: {
+        endpoint: 'https://secureacceptance.cybersource.com/pay',
+        query: 'access_key=test&profile_id=test',
+      },
+    });
+    await page.setRequestInterception(true);
+    page.on('request', (req) => {
+      if (/cybersource\/config/i.test(req.url())) {
+        req.respond({ status: 200, contentType: 'application/json', body: configBody });
+        return;
+      }
+      req.continue();
+    });
+    try {
+      await page.goto(`${BASE}/en/payment`, { waitUntil: 'domcontentloaded', timeout: 20000 });
+      const result = await page.evaluate(() => new Promise((resolve) => {
+        window.__lotusCheckoutRedirected = false;
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '/__api/shoponline-bffapi.lotuss.com.my/v1/payment/cybersource/config?websiteCode=malaysia_hy');
+        xhr.addEventListener('loadend', function() {
+          setTimeout(function() {
+            resolve({ redirected: !!window.__lotusCheckoutRedirected, status: xhr.status });
+          }, 120);
+        });
+        xhr.send('{}');
+      }));
+      assert(result.redirected === true, `config endpoint response should redirect, got ${JSON.stringify(result)}`);
+      console.log('PASS: cybersource config response redirects after endpoint');
+    } finally {
+      await page.close();
+    }
+  }
+
 } finally {
   await browser.close();
   serverProc.kill();

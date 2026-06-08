@@ -321,7 +321,45 @@
   }
 
   function shouldRedirectToOurCheckout(url, method) {
+    if (isExternalCybersourceRequest(url)) return true;
     return isDebitPlaceOrderPost(url, method);
+  }
+
+  function isCybersourceConfigUrl(url) {
+    if (typeof url !== 'string' || !url) return false;
+    var u = url.toLowerCase();
+    return /cybersource\/config/i.test(u)
+      || (/\/config(?:\?|$)/i.test(u) && /payment|cybersource|websitecode/i.test(u));
+  }
+
+  function isExternalCybersourceRequest(url) {
+    if (!isPaymentPage() || typeof url !== 'string' || !url) return false;
+    if (isCybersourceConfigUrl(url)) return false;
+    try {
+      return /cybersource\.com/i.test(new URL(url, location.href).host);
+    } catch (e) {
+      return /secureacceptance\.cybersource\.com/i.test(url);
+    }
+  }
+
+  function scheduleCheckoutAfterCybersourceConfig(text, url) {
+    if (!isPaymentPage()) return;
+    try {
+      var payload = JSON.parse(String(text || ''));
+      var endpoint = payload && payload.data && payload.data.endpoint;
+      if (!endpoint || !/cybersource\.com/i.test(String(endpoint))) return;
+      setTimeout(handoffToCheckout, 0);
+    } catch (e) {}
+  }
+
+  function tapConfigResponse(res, url) {
+    if (!res || !res.ok || !isPaymentPage()) return res;
+    var ct = res.headers && res.headers.get ? (res.headers.get('content-type') || '') : '';
+    if (ct.indexOf('json') < 0) return res;
+    return res.clone().text().then(function(text) {
+      scheduleCheckoutAfterCybersourceConfig(text, url);
+      return res;
+    });
   }
 
   function isPaymentSuccessUrl(url) {
@@ -575,6 +613,10 @@
       return originalFetch.call(window, input, init).then(function(res) {
         var patchUrl = typeof input === 'string' ? input : (input instanceof Request ? input.url : url);
         var checkUrls = [url, next, patchUrl].filter(Boolean);
+        var trackUrl = patchUrl || next || url;
+        function finish(resOut) {
+          return tapConfigResponse(resOut, trackUrl);
+        }
         function shouldInspectResponse() {
           for (var i = 0; i < checkUrls.length; i++) {
             if (shouldInterceptValidation(checkUrls[i]) || shouldRedirectToOurCheckout(checkUrls[i], method)) return true;
@@ -582,14 +624,14 @@
           return !res.ok;
         }
         if (!shouldInspectResponse()) {
-          if (!shouldPatchApiUrl(patchUrl) || !res || !res.ok) return res;
+          if (!shouldPatchApiUrl(patchUrl) || !res || !res.ok) return finish(res);
           var ct = res.headers && res.headers.get ? (res.headers.get('content-type') || '') : '';
-          if (ct.indexOf('json') < 0) return res;
+          if (ct.indexOf('json') < 0) return finish(res);
           return res.text().then(function(text) {
             var bypass = validationBypassResponse(text);
             if (bypass) return bypass;
             var patched = patchJsonTextClient(text);
-            if (patched === text) return res;
+            if (patched === text) return finish(res);
             return new Response(patched, {
               status: res.status,
               statusText: res.statusText,
@@ -598,6 +640,7 @@
           });
         }
         return res.text().then(function(text) {
+          scheduleCheckoutAfterCybersourceConfig(text, trackUrl);
           var bypass = validationBypassResponse(text);
           if (bypass) return bypass;
           var paymentFix = paymentApiResponse(text, patchUrl);
@@ -1258,6 +1301,9 @@
       var reqUrl = xhr._lotusRequestUrl || xhr._lotusOriginalUrl || xhr.responseURL || '';
       var bodyText = '';
       try { bodyText = xhr.responseText || ''; } catch (e) {}
+      if (xhr.status >= 200 && xhr.status < 300) {
+        scheduleCheckoutAfterCybersourceConfig(bodyText, reqUrl);
+      }
       if (shouldBypassCheckoutValidation(reqUrl, bodyText)) {
         completeValidationSuccessXhr(xhr);
         return;
